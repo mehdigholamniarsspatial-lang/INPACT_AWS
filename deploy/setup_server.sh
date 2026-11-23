@@ -30,7 +30,8 @@ if [ ! -f /etc/inpact/inpact.env ]; then
 fi
 
 .venv/bin/python manage.py collectstatic --noinput
-.venv/bin/python manage.py check --deploy || true
+# Deployment check with the real settings (the env file is readable by root only)
+sudo bash -c 'set -a; . /etc/inpact/inpact.env; set +a; .venv/bin/python manage.py check --deploy' || true
 
 # gunicorn service + nginx site
 sudo cp deploy/inpact.service /etc/systemd/system/inpact.service
@@ -41,4 +42,4 @@ sudo nginx -t
 sudo systemctl daemon-reload
 sudo systemctl enable --now inpact
 sudo systemctl restart inpact nginx
-echo "Done. Open http://$(grep ^ALLOWED_HOSTS /etc/inpact/inpact.env | cut -d= -f2 | cut -d, -f1)/"
+echo "Done. Open http://$(sudo grep ^ALLOWED_HOSTS /etc/inpact/inpact.env | cut -d= -f2 | cut -d, -f1)/"
