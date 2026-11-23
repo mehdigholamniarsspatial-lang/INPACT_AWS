@@ -1327,6 +1327,31 @@ html.hdr-slim .tab-nav{
 .fb-tip.on{opacity:1}
 .fb-tip b{color:#7FE0A8}
 
+/* results: tabs and SVG charts */
+.fb-tabs{display:flex;flex-wrap:wrap;gap:.15rem;border-bottom:2px solid var(--grey-border);margin:0 0 1.1rem}
+.fb-tabs button{border:0;background:none;padding:.6rem .75rem .55rem;font:inherit;font-size:.86rem;font-weight:700;color:var(--text-muted);cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;display:inline-flex;align-items:center;gap:.45rem;border-radius:8px 8px 0 0}
+.fb-tabs button i{color:var(--gc)}
+.fb-tabs button small{font-size:.7rem;font-weight:700;background:var(--grey-panel);border:1px solid var(--grey-border);border-radius:999px;padding:0 .45rem;color:var(--text-muted)}
+.fb-tabs button:hover{background:var(--grey-panel);color:var(--navy)}
+.fb-tabs button[aria-selected=true]{color:var(--navy);border-bottom-color:var(--gc);background:#fff}
+.fb-tabs button[aria-selected=true] small{background:var(--gc);border-color:var(--gc);color:#fff}
+.fb-tabs button:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+.fb-svg{width:100%;height:auto;display:block;overflow:visible}
+.fb-svg text{font-family:inherit;fill:#5C6B7A}
+.fb-svg .ax{font-size:11px}
+.fb-svg .ax2{font-size:11px;font-style:italic}
+.fb-svg .lb{font-size:12.5px;fill:#1F2D3A;font-weight:600}
+.fb-svg .lb.b{font-weight:800;fill:#16324F}
+.fb-svg .vl{font-size:12.5px;font-weight:800;fill:#16324F}
+.fb-svg .q{font-size:11px;font-weight:700;fill:#00843D}
+.fb-svg .pl{font-size:11px;font-weight:700;fill:#1F2D3A;paint-order:stroke;stroke:#fff;stroke-width:3px}
+.fb-svg circle[data-tip]{cursor:pointer}
+.fb-svg circle[data-tip]:hover{stroke:#16324F}
+.fb-cols span.st{display:flex;flex-direction:column-reverse;background:none;opacity:1;overflow:hidden}
+.fb-cols span.st i{display:block;width:100%;min-height:1px}
+.fb-cols span.st:hover{filter:brightness(1.08)}
+
 /* Research-team download */
 .fb-admin{background:var(--grey-panel);border:1px solid var(--grey-border);border-radius:12px;padding:.2rem 1.1rem}
 .fb-admin summary{display:flex;align-items:center;gap:.6rem;padding:.8rem 0;cursor:pointer;font-weight:800;color:var(--navy);font-size:.9rem;list-style:none}
@@ -12612,13 +12637,18 @@ function downloadTrendPng(){
     b.innerHTML = msg; b.hidden = false;
   }
 
-  /* =================== Results dashboard (key holders only) =================== */
-  const R = { data: null, filter: "all", deep: null, sort: { k: "n", dir: -1 }, allPol: false };
+  /* =================== Results dashboard (key holders who completed the questionnaire) ===================
+   * Tabs: "All respondents" compares the groups on the questions they share; one tab per group shows
+   * that group's own questionnaire, step by step. Groups with fewer than min_cell responses are counted
+   * but not charted (the server leaves their answers out). */
+  const R = { data: null, tab: "all", sort: { k: "n", dir: -1 }, allPol: false };
   const resBody = $("fbResultsBody"), tip = $("fbTip");
+  const NAVY = "#16324F";
   const fmt = (v, d = 1) => v == null || isNaN(v) ? "–" : (+v).toFixed(d);
   const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
   const sum = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
-  const gLabel = c => (S.gmap[c] || {}).plural || c;
+  const gLabel = c => c === "all" ? "All respondents" : (S.gmap[c] || {}).plural || c;
+  const gCol = c => c === "all" ? NAVY : GCOL[c];
   const findQ = (qid, g) => {
     const flows = g ? [S.schema.flows[g] || []] : Object.values(S.schema.flows);
     for (const f of flows) for (const st of f) for (const q of st.questions) if (q.id === qid) return q;
@@ -12637,7 +12667,6 @@ function downloadTrendPng(){
     const lum = (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255;
     return { bg: `rgb(${c.join(",")})`, fg: lum > .62 ? "#1F2D3A" : "#fff" };
   }
-
   // Merge the per-group counts of one question over several groups
   function merge(a, b){
     if (!b) return a;
@@ -12655,9 +12684,17 @@ function downloadTrendPng(){
     }
     return a;
   }
-  const shownGroups = () => R.filter === "all" ? S.groups.map(g => g.code) : [R.filter];
-  const agg = (qid, gs) => (gs || shownGroups()).reduce((acc, g) => merge(acc, (R.data.q[qid] || {})[g]), null);
+  const charted = () => S.groups.map(g => g.code).filter(g => Object.values(R.data.q).some(x => x[g]));
+  const agg = (qid, gs) => gs.reduce((acc, g) => merge(acc, (R.data.q[qid] || {})[g]), null);
   const meanOf = a => { if (!a || !a.c) return null; let s = 0, n = 0; for (const k in a.c){ s += +k * a.c[k]; n += a.c[k]; } return n ? s / n : null; };
+  function statsOf(a){                                     // mean, n and 95% confidence interval from counts
+    if (!a || !a.c) return null;
+    let n = 0, s = 0, ss = 0;
+    for (const k in a.c){ n += a.c[k]; s += +k * a.c[k]; ss += (+k) * (+k) * a.c[k]; }
+    if (!n) return null;
+    const m = s / n, sd = n > 1 ? Math.sqrt(Math.max(0, (ss - n * m * m) / (n - 1))) : 0;
+    return { m, n, lo: Math.max(1, m - 1.96 * sd / Math.sqrt(n)), hi: Math.min(5, m + 1.96 * sd / Math.sqrt(n)) };
+  }
 
   // ---- Chart pieces ----
   function legendHtml(scale, dk){
@@ -12665,7 +12702,7 @@ function downloadTrendPng(){
       dk ? `<span><i style="background:${DK}"></i>Don't know</span>` : ""}</div>`;
   }
   function likRow(label, a, scale, dot){
-    const lab = `<span class="l">${dot ? `<i class="dot" style="--gc:${GCOL[dot]}"></i>` : ""}<span>${label}</span></span>`;
+    const lab = `<span class="l">${dot ? `<i class="dot" style="--gc:${gCol(dot)}"></i>` : ""}<span>${label}</span></span>`;
     if (!a || !(sum(a.c) + (a.dk || 0))) return lab + '<span class="na">No answers yet</span>';
     const keys = Object.keys(scale.labels), tot = sum(a.c) + (a.dk || 0);
     const parts = keys.map((k, i) => [scale.labels[k], (a.c || {})[k] || 0, palFor(scale)[i], i === 2]).concat(a.dk ? [["Don't know", a.dk, DK, true]] : []);
@@ -12674,7 +12711,7 @@ function downloadTrendPng(){
       return `<span class="${light ? "lt" : ""}" style="width:${w}%;background:${col}" data-tip="<b>${E(l)}</b><br>${n} of ${tot} (${Math.round(w)}%)">${w >= 9 ? Math.round(w) + "%" : ""}</span>`;
     }).join("");
     const m = meanOf(a);
-    return `${lab}<div class="fb-stack" role="img" aria-label="${E(label)}: ${parts.map(p => `${p[0]} ${p[1]}`).join(", ")}">${segsH}</div>
+    return `${lab}<div class="fb-stack" role="img" aria-label="${E(label.replace(/<[^>]+>/g, ""))}: ${parts.map(p => `${p[0]} ${p[1]}`).join(", ")}">${segsH}</div>
       <span class="m" data-tip="Mean of ${sum(a.c)} answers on the 1&ndash;${keys.length} scale${a.dk ? " (don't know excluded)" : ""}">${fmt(m)}<small>n=${tot}</small></span>`;
   }
   function hbars(items, colour){
@@ -12683,26 +12720,26 @@ function downloadTrendPng(){
     return `<div class="fb-hbars">${items.map(i => `<span class="l">${E(i.label)}</span><span class="t" style="--gc:${i.colour || colour || "var(--teal)"}">
       <span style="width:${Math.max(1.5, 100 * i.v / max)}%" data-tip="${i.tip || ""}"></span></span><span class="v">${i.text}</span>`).join("")}</div>`;
   }
-  function choiceBars(qid, a, top){
+  function choiceBars(qid, a, top, colour){
     if (!a || !a.a) return hbars([]);
     const items = Object.entries(a.c || {}).sort((x, y) => y[1] - x[1]).slice(0, top || 99).map(([code, n]) => ({
       label: optLabel(qid, code), v: n, text: `${pct(n, a.a)}%`, tip: `<b>${E(optLabel(qid, code))}</b><br>${n} of ${a.a} respondents (${pct(n, a.a)}%)` }));
-    return hbars(items);
+    return hbars(items, colour);
   }
   const panel = (title, sub, inner, wide) => `<div class="fb-panel${wide ? " wide" : ""}"><h5>${title}</h5>${sub ? `<p class="sub">${sub}</p>` : ""}${inner}</div>`;
+  const section = (title, inner) => inner ? `<div class="fb-dsec">${title}</div><div class="fb-dgrid">${inner}</div>` : "";
 
-  function kpis(gs){
+  function kpis(gs, label){
     const n = gs.reduce((s, g) => s + (R.data.groups[g] || 0), 0);
     const o = agg("overall_effectiveness", gs), t = agg("target_2030", gs), p = agg("pace", gs), pr = agg("policy_ratings", gs);
     const om = meanOf(o), likely = t ? ((t.c || {})["4"] || 0) + ((t.c || {})["5"] || 0) : 0, tOp = t ? sum(t.c) : 0;
     const slow = p ? (p.c || {}).too_slow || 0 : 0;
     const ratings = pr ? Object.values(pr.p || {}).reduce((s, x) => s + x.n, 0) : 0, npol = pr ? Object.keys(pr.p || {}).length : 0;
-    const med = R.data.median_duration_s;
     return `<div class="fb-kpis">
-      <div class="fb-kpi"><div class="k">Responses</div><div class="v">${n.toLocaleString("en-IE")}</div><div class="s">${R.filter === "all" ? `from ${S.groups.filter(g => R.data.groups[g.code]).length} groups` : E(gLabel(R.filter))}${med ? ` · median ${Math.max(1, Math.round(med / 60))} min to complete` : ""}</div></div>
+      <div class="fb-kpi"><div class="k">Responses</div><div class="v">${n.toLocaleString("en-IE")}</div><div class="s">${E(label)}</div></div>
       <div class="fb-kpi"><div class="k">Overall effectiveness</div><div class="v">${fmt(om)}<small> / 5</small></div><div class="s">${om == null ? "No answers yet" : E(findQ("overall_effectiveness").scale.labels[Math.round(om)]) + " on average"}</div>
         <div class="meter"><span style="width:${om ? 100 * (om - 1) / 4 : 0}%;background:${om ? meanColour(om).bg : "transparent"}"></span></div></div>
-      <div class="fb-kpi"><div class="k">Expect 2030 target met</div><div class="v">${tOp ? pct(likely, tOp) : "–"}<small>%</small></div><div class="s">say likely or very likely (of ${tOp} with a view)</div>
+      <div class="fb-kpi"><div class="k">Expect 2030 target met</div><div class="v">${tOp ? pct(likely, tOp) : "–"}<small>%</small></div><div class="s">likely or very likely (of ${tOp} with a view)</div>
         <div class="meter"><span style="width:${pct(likely, tOp)}%"></span></div></div>
       <div class="fb-kpi"><div class="k">Pace too slow</div><div class="v">${p && p.a ? pct(slow, p.a) : "–"}<small>%</small></div><div class="s">of ${p ? p.a : 0} who answered</div>
         <div class="meter"><span style="width:${p ? pct(slow, p.a) : 0}%"></span></div></div>
@@ -12713,7 +12750,8 @@ function downloadTrendPng(){
     const tot = R.data.n || 1;
     const items = S.groups.map(g => ({ label: g.plural, v: R.data.groups[g.code] || 0, colour: GCOL[g.code],
       text: `${R.data.groups[g.code] || 0}`, tip: `<b>${E(g.plural)}</b><br>${R.data.groups[g.code] || 0} responses (${pct(R.data.groups[g.code] || 0, tot)}%)` }));
-    return panel("Responses by group", "Groups with fewer than " + R.data.min_cell + " responses are counted but not charted.", hbars(items));
+    const med = R.data.median_duration_s;
+    return panel("Responses by group", `${R.data.n} responses${med ? ` · median ${Math.max(1, Math.round(med / 60))} min to complete` : ""}`, hbars(items));
   }
   function timelinePanel(){
     const days = Object.keys(R.data.timeline);
@@ -12726,38 +12764,145 @@ function downloadTrendPng(){
     });
     const max = Math.max(1, ...bins.map(b => sum(b)));
     const lab = i => new Date(d0.getTime() + i * step * 864e5).toLocaleDateString("en-IE", { day: "numeric", month: "short" });
-    const cols = bins.map((b, i) => `<span style="height:${100 * sum(b) / max}%" data-tip="<b>${step === 7 ? "Week of " : ""}${lab(i)}</b><br>${sum(b)} responses${
-      Object.keys(b).length ? "<br>" + Object.entries(b).map(([g, n]) => `${E(gLabel(g))}: ${n}`).join("<br>") : ""}"></span>`).join("");
-    return panel("Responses over time", step === 7 ? "Responses per week" : "Responses per day",
+    // stacked by group, in the fixed group order and colours
+    const cols = bins.map((b, i) => `<span class="st" style="height:${100 * sum(b) / max}%" data-tip="<b>${step === 7 ? "Week of " : ""}${lab(i)}</b><br>${sum(b)} responses${
+      Object.keys(b).length ? "<br>" + S.groups.filter(g => b[g.code]).map(g => `${E(g.plural)}: ${b[g.code]}`).join("<br>") : ""}">${
+      S.groups.filter(g => b[g.code]).map(g => `<i style="flex:${b[g.code]};background:${GCOL[g.code]}"></i>`).join("")}</span>`).join("");
+    return panel("Responses over time", (step === 7 ? "Responses per week" : "Responses per day") + ", by group",
       `<div class="fb-cols">${cols}</div><div class="fb-cols-x"><span>${lab(0)}</span><span>${lab(nb - 1)}</span></div>`);
   }
-  function byGroupLikert(qid, title){
-    const q = findQ(qid); if (!q) return "";
-    const gs = shownGroups().filter(g => (R.data.q[qid] || {})[g]);
-    let rows = gs.map(g => likRow(E(gLabel(g)), R.data.q[qid][g], q.scale, g)).join("");
-    if (R.filter === "all" && gs.length > 1) rows = likRow("<b>All groups</b>", agg(qid, gs), q.scale) + rows;
-    return panel(title, E(q.label), legendHtml(q.scale, q.dk) + `<div class="fb-lik">${rows || '<span class="na">No answers yet</span>'}</div>`, true);
+  function groupLegend(gs, withAll){
+    return `<div class="fb-legend">${(withAll ? ["all"] : []).concat(gs).map(g => `<span><i style="background:${gCol(g)};border-radius:50%"></i>${E(gLabel(g))}</span>`).join("")}</div>`;
   }
-  function heatPanel(qid, title, sub){
+
+  // Dot plot: mean and 95% confidence interval per group on the 1..5 scale (one SVG per question)
+  function dotPlot(qid, gs){
     const q = findQ(qid); if (!q) return "";
-    const gs = shownGroups().filter(g => (R.data.q[qid] || {})[g]);
-    if (!gs.length) return "";
-    const cols = (R.filter === "all" && gs.length > 1 ? ["all"] : []).concat(gs);
+    const rows = gs.map(g => [g, statsOf((R.data.q[qid] || {})[g])]).filter(r => r[1]);
+    if (!rows.length) return "";
+    if (rows.length > 1) rows.unshift(["all", statsOf(agg(qid, gs))]);
+    const W = 420, L = 116, Rt = 38, rowH = 30, top = 10, H = top + rows.length * rowH + 30;
+    const x = v => L + (v - 1) / 4 * (W - L - Rt);
+    let svg = "";
+    for (let k = 1; k <= 5; k++){
+      svg += `<line x1="${x(k)}" x2="${x(k)}" y1="${top - 4}" y2="${top + rows.length * rowH}" stroke="#E3E8EE" stroke-width="1"${k === 3 ? ' stroke-dasharray="3 3" stroke="#C5CFD8"' : ""}/>`;
+      svg += `<text x="${x(k)}" y="${top + rows.length * rowH + 14}" text-anchor="middle" class="ax">${k}</text>`;
+    }
+    svg += `<text x="${x(1)}" y="${H - 2}" class="ax2">${E(q.scale.labels[1])}</text><text x="${x(5)}" y="${H - 2}" text-anchor="end" class="ax2">${E(q.scale.labels[5])}</text>`;
+    rows.forEach(([g, s], i) => {
+      const y = top + i * rowH + rowH / 2, col = gCol(g), tipTxt = `<b>${E(gLabel(g))}</b><br>Mean ${fmt(s.m, 2)} (95% CI ${fmt(s.lo, 2)}–${fmt(s.hi, 2)})<br>n = ${s.n}`;
+      if (g === "all") svg += `<rect x="0" y="${y - rowH / 2 + 2}" width="${W}" height="${rowH - 4}" rx="6" fill="#F3F6F9"/>`;
+      svg += `<text x="${L - 12}" y="${y + 4}" text-anchor="end" class="lb${g === "all" ? " b" : ""}">${E(gLabel(g))}</text>`;
+      svg += `<line x1="${x(s.lo)}" x2="${x(s.hi)}" y1="${y}" y2="${y}" stroke="${col}" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>`;
+      svg += `<circle cx="${x(s.m)}" cy="${y}" r="${g === "all" ? 7 : 6}" fill="${col}" stroke="#fff" stroke-width="2" data-tip="${tipTxt}"/>`;
+      svg += `<text x="${W - 4}" y="${y + 4}" text-anchor="end" class="vl">${fmt(s.m)}</text>`;
+      svg += `<rect x="${L}" y="${y - rowH / 2}" width="${W - L - Rt}" height="${rowH}" fill="transparent" data-tip="${tipTxt}"/>`;
+    });
+    return `<svg class="fb-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${E(q.label)}: mean by group">${svg}</svg>`;
+  }
+  function byGroupLikert(qid, gs, title){
+    const q = findQ(qid); if (!q) return "";
+    const have = gs.filter(g => (R.data.q[qid] || {})[g]);
+    if (!have.length) return "";
+    let rows = have.map(g => likRow(E(gLabel(g)), R.data.q[qid][g], q.scale, g)).join("");
+    if (have.length > 1) rows = likRow("<b>All respondents</b>", agg(qid, have), q.scale, "all") + rows;
+    return panel(title, E(q.label), legendHtml(q.scale, q.dk) + `<div class="fb-lik">${rows}</div>`, true);
+  }
+  // A categorical single-choice question as 100% bars per group (pace of climate action)
+  const PACE_COL = { too_slow: "#D9822B", about_right: "#00843D", too_fast: "#2F5FA8", dk: DK };
+  function paceByGroup(gs){
+    const q = findQ("pace"); const have = gs.filter(g => (R.data.q.pace || {})[g]); if (!q || !have.length) return "";
+    const row = (g, a) => {
+      const tot = a.a || 1;
+      return `<span class="l"><i class="dot" style="--gc:${gCol(g)}"></i><span>${g === "all" ? "<b>All respondents</b>" : E(gLabel(g))}</span></span><div class="fb-stack">${
+        q.options.filter(o => (a.c || {})[o.code]).map(o => { const n = a.c[o.code], w = 100 * n / tot;
+          return `<span class="${o.code === "dk" ? "lt" : ""}" style="width:${w}%;background:${PACE_COL[o.code]}" data-tip="<b>${E(o.label)}</b><br>${n} of ${tot} (${Math.round(w)}%)">${w >= 9 ? Math.round(w) + "%" : ""}</span>`; }).join("")}</div><span class="m">n=${tot}</span>`;
+    };
+    const rows = (have.length > 1 ? [row("all", agg("pace", have))] : []).concat(have.map(g => row(g, R.data.q.pace[g]))).join("");
+    return panel("Pace of climate action", E(q.label), `<div class="fb-legend">${q.options.map(o => `<span><i style="background:${PACE_COL[o.code]}"></i>${E(o.label)}</span>`).join("")}</div><div class="fb-lik">${rows}</div>`, true);
+  }
+  function heatPanel(qid, gs, title, sub){
+    const q = findQ(qid); if (!q) return "";
+    const have = gs.filter(g => (R.data.q[qid] || {})[g]);
+    if (!have.length) return "";
+    const cols = (have.length > 1 ? ["all"] : []).concat(have);
     const cell = (a, row) => {
       const r = a && a.rows && a.rows[row]; const m = meanOf(r), n = r ? sum(r.c) : 0;
       if (m == null) return '<td class="c none" data-tip="No ratings">–</td>';
       const c = meanColour(m, q.scale);
       return `<td class="c" style="background:${c.bg};color:${c.fg}" data-tip="<b>${fmt(m, 2)}</b> mean of ${n} ratings${r.dk ? `<br>${r.dk} don't know` : ""}">${fmt(m)}</td>`;
     };
-    const aggs = Object.fromEntries(cols.map(g => [g, g === "all" ? agg(qid, gs) : R.data.q[qid][g]]));
+    const aggs = Object.fromEntries(cols.map(g => [g, g === "all" ? agg(qid, have) : R.data.q[qid][g]]));
     const rows = q.rows.map(r => `<tr><td>${E(r.label)}</td>${cols.map(g => cell(aggs[g], r.code)).join("")}</tr>`).join("");
     const lo = q.scale.labels[1], hi = q.scale.labels[q.scale.max];
     return panel(title, sub || E(q.label), `<div style="overflow:auto"><table class="fb-heat"><thead><tr><th></th>${cols.map(g => `<th>${g === "all" ? "All" : E(gLabel(g))}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>
       <div class="fb-scalekey"><span>1 ${E(lo)}</span><span class="g" style="background:linear-gradient(90deg,${palFor(q.scale).join(",")})"></span><span>${q.scale.max} ${E(hi)}</span><span style="margin-left:auto">mean score</span></div>`, true);
   }
+  // A multiple-choice question compared across groups: % of each group choosing each option
+  function choiceMatrix(qid, gs, title){
+    const have = gs.filter(g => (R.data.q[qid] || {})[g]); if (!have.length) return "";
+    const all = agg(qid, have), cols = (have.length > 1 ? ["all"] : []).concat(have);
+    const aggs = Object.fromEntries(cols.map(g => [g, g === "all" ? all : R.data.q[qid][g]]));
+    const codes = Object.entries(all.c || {}).sort((a, b) => b[1] - a[1]).map(x => x[0]);
+    const rows = codes.map(code => `<tr><td>${E(optLabel(qid, code))}</td>${cols.map(g => {
+      const a = aggs[g], n = (a.c || {})[code] || 0, p = pct(n, a.a);
+      return `<td class="c" style="background:rgba(15,157,138,${(0.08 + 0.85 * p / 100).toFixed(2)});color:${p > 55 ? "#fff" : "#1F2D3A"}" data-tip="<b>${E(gLabel(g))}</b><br>${n} of ${a.a} chose this (${p}%)">${p}%</td>`;
+    }).join("")}</tr>`).join("");
+    return panel(title, `% of each group choosing the option (up to three per person) · ${all.a} respondents asked`,
+      `<div style="overflow:auto"><table class="fb-heat"><thead><tr><th></th>${cols.map(g => `<th>${g === "all" ? "All" : E(gLabel(g))}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`, true);
+  }
+  // Policies: effectiveness against fairness (the two criteria every group rates); bubble size = number of raters
+  function policyScatter(gs){
+    const a = agg("policy_ratings", gs); if (!a || !a.p) return "";
+    const pts = Object.entries(a.p).map(([name, x]) => {
+      const e = x.crit.effectiveness, f = x.crit.equity;
+      return e && f && e.n >= 2 && f.n >= 2 ? { name, n: x.n, e: e.s / e.n, f: f.s / f.n, p: polByName.get(name) || {} } : null;
+    }).filter(Boolean);
+    if (pts.length < 2) return "";
+    const W = 900, H = 400, L = 50, B = 46, T = 16, Rr = 16;
+    const lo = Math.max(1, Math.floor(Math.min(...pts.map(p => Math.min(p.e, p.f))) * 2) / 2 - .5), hi = 5;
+    const x = v => L + (v - lo) / (hi - lo) * (W - L - Rr), y = v => T + (hi - v) / (hi - lo) * (H - T - B);
+    const nMax = Math.max(...pts.map(p => p.n)), rad = n => 5 + 11 * Math.sqrt(n / nMax);
+    let svg = "";
+    for (let v = Math.ceil(lo); v <= hi; v += .5){
+      const major = Number.isInteger(v);
+      svg += `<line x1="${x(v)}" x2="${x(v)}" y1="${T}" y2="${H - B}" stroke="${major ? "#E3E8EE" : "#F1F4F7"}"/><line x1="${L}" x2="${W - Rr}" y1="${y(v)}" y2="${y(v)}" stroke="${major ? "#E3E8EE" : "#F1F4F7"}"/>`;
+      if (major) svg += `<text x="${x(v)}" y="${H - B + 16}" text-anchor="middle" class="ax">${v}</text><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" class="ax">${v}</text>`;
+    }
+    if (lo < 3){                                           // midpoint lines and quadrant labels
+      svg += `<line x1="${x(3)}" x2="${x(3)}" y1="${T}" y2="${H - B}" stroke="#AAB6C2" stroke-dasharray="4 4"/><line x1="${L}" x2="${W - Rr}" y1="${y(3)}" y2="${y(3)}" stroke="#AAB6C2" stroke-dasharray="4 4"/>`;
+    }
+    svg += `<text x="${W - Rr - 4}" y="${T + 14}" text-anchor="end" class="q">Effective and fair</text>`;
+    svg += `<text x="${(L + W - Rr) / 2}" y="${H - 8}" text-anchor="middle" class="ax2">Effectiveness (mean rating, 1–5) →</text>`;
+    svg += `<text transform="translate(13 ${(T + H - B) / 2}) rotate(-90)" text-anchor="middle" class="ax2">Fairness (mean rating, 1–5) →</text>`;
+    const labelled = new Set(pts.slice().sort((p, q) => q.n - p.n).slice(0, 8).map(p => p.name)), placed = [];
+    const hit = b => placed.some(o => b.x < o.x + o.w && o.x < b.x + b.w && b.y < o.y + o.h && o.y < b.y + b.h) ||
+      pts.some(q => { const cx = x(q.e), cy = y(q.f), r = rad(q.n) - 2; return cx + r > b.x && cx - r < b.x + b.w && cy + r > b.y && cy - r < b.y + b.h; });
+    pts.sort((p, q) => q.n - p.n).forEach(p => {
+      const col = p.p.color || "#5C6B7A";
+      const t = `<b>${E(p.name)}</b><br>${E(p.p.year || "")} · ${E(p.p.cat || p.p.level || "")}<br>Effectiveness ${fmt(p.e, 2)} · Fairness ${fmt(p.f, 2)}<br>Rated by ${p.n}`;
+      svg += `<circle cx="${x(p.e)}" cy="${y(p.f)}" r="${rad(p.n)}" fill="${col}" fill-opacity=".72" stroke="#fff" stroke-width="2" data-tip="${t}"/>`;
+      if (labelled.has(p.name)){
+        const short = p.p.short || p.name, txt = short.length > 28 ? short.slice(0, 27) + "…" : short;
+        const w = txt.length * 6.4, cy = y(p.f), r = rad(p.n) + 4;
+        // try right, left, above, below; leave the label out if every side collides (the tooltip still names it)
+        const tries = [[x(p.e) + r, cy - 7, "start"], [x(p.e) - r - w, cy - 7, "end"], [x(p.e) - w / 2, cy - r - 14, "middle"], [x(p.e) - w / 2, cy + r, "middle"]];
+        const ok = tries.find(([bx, by]) => bx >= L && bx + w <= W - Rr && by >= T && by + 14 <= H - B && !hit({ x: bx, y: by, w, h: 14 }));
+        if (ok){
+          const [bx, by, anchor] = ok; placed.push({ x: bx, y: by, w, h: 14 });
+          const tx = anchor === "start" ? bx : anchor === "end" ? bx + w : bx + w / 2;
+          svg += `<text x="${tx}" y="${by + 11}" text-anchor="${anchor}" class="pl">${E(txt)}</text>`;
+        }
+      }
+    });
+    const levels = [...new Map(pts.map(p => [p.p.cat || p.p.level || "Other", p.p.color || "#5C6B7A"])).entries()];
+    return panel("Policies: effectiveness and fairness", `Each bubble is a policy rated by at least two people; bubble size = number of raters, colour = policy level. Hover for details.`,
+      `<div class="fb-legend">${levels.map(([l, c]) => `<span><i style="background:${c};border-radius:50%"></i>${E(l)}</span>`).join("")}</div>
+       <svg class="fb-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Scatter of policies by effectiveness and fairness">${svg}</svg>`, true);
+  }
   const CRIT_ORDER = ["effectiveness", "efficiency", "equity", "implementation", "evidence", "design", "feasibility"];
-  function scorecard(){
-    const a = agg("policy_ratings");
+  function scorecard(gs){
+    const a = agg("policy_ratings", gs);
     if (!a || !a.p || !Object.keys(a.p).length) return panel("Policy scorecard", "", '<p class="fb-empty" style="font-size:.8rem"><i class="bi bi-dash-circle"></i>No policies rated yet.</p>', true);
     const critLabel = {};
     Object.values(S.schema.flows).forEach(f => f.forEach(st => st.questions.forEach(q => (q.criteria || []).forEach(c => { critLabel[c.code] = c.label; }))));
@@ -12780,34 +12925,49 @@ function downloadTrendPng(){
         return `<td><span class="chip" style="background:${col.bg};color:${col.fg}" data-tip="<b>${E(critLabel[c])}</b>: ${fmt(r.m[c], 2)}<br>${r.cn[c]} ratings">${fmt(r.m[c])}</span></td>`;
       }).join("")}</tr>`;
     }).join("");
-    return panel("Policy scorecard", "Mean rating from 1 (very poor) to 5 (very good). Click a column to sort. Criteria differ by group, so not every policy has every score.",
+    return panel("Policy scorecard", "Mean rating from 1 (very poor) to 5 (very good). Click a column to sort." + (gs.length > 1 ? " Criteria differ by group, so not every policy has every score." : ""),
       `<div class="fb-score-wrap"><table class="fb-score"><thead><tr>${th("name", "Policy")}${th("n", "Rated by")}${crits.map(c => th(c, E(critLabel[c] || c))).join("")}</tr></thead><tbody>${body}</tbody></table></div>
       ${total > 12 ? `<button type="button" class="fb-more" id="fbPolMore">${R.allPol ? "Show the top 12" : `Show all ${total} policies`}</button>` : ""}`, true);
   }
-  // Questions that only one group answers, drawn by type
-  const SHARED = new Set(["overall_effectiveness", "target_2030", "pace", "barriers", "instruments", "sector_effectiveness", "policy_ratings", "group", "consent"]);
-  function deepDive(){
-    const avail = S.groups.filter(g => Object.keys(R.data.q).some(q => (R.data.q[q] || {})[g.code]));
-    if (!avail.length) return "";
-    const g = R.filter !== "all" ? R.filter : (avail.some(x => x.code === R.deep) ? R.deep : avail[0].code);
-    const picker = R.filter === "all" ? `<div class="fb-filter" style="margin-bottom:.8rem">${avail.map(x =>
-      `<button type="button" data-deep="${x.code}" aria-pressed="${x.code === g}" style="--gc:${GCOL[x.code]}"><i class="dot"></i>${E(x.plural)}</button>`).join("")}</div>` : "";
-    const panels = [];
-    (S.schema.flows[g] || []).forEach(st => st.questions.forEach(q => {
-      if (SHARED.has(q.id) || ["text", "email", "check"].includes(q.type)) return;
-      const a = (R.data.q[q.id] || {})[g]; if (!a) return;
-      const sub = `${E(st.title)} · ${a.a} answered`;
-      if (q.type === "matrix"){
-        const rows = q.rows.map(r => likRow(E(r.label), a.rows[r.code], q.scale)).join("");
-        panels.push(panel(E(q.label), sub, legendHtml(q.scale, q.dk) + `<div class="fb-lik">${rows}</div>`, true));
-      } else if (q.type === "scale"){
-        panels.push(panel(E(q.label), sub, legendHtml(q.scale, q.dk) + `<div class="fb-lik">${likRow(E(gLabel(g)), a, q.scale, g)}</div>`));
-      } else {
-        panels.push(panel(E(q.label), sub + (q.type === "multi" ? " · % of respondents choosing each option" : ""), choiceBars(q.id, a)));
-      }
-    }));
-    if (!panels.length) return "";
-    return `<div class="fb-dsec">In depth: ${E(gLabel(g))}</div>${picker}<div class="fb-dgrid">${panels.join("")}</div>`;
+
+  // ---- Tab: all respondents (questions the groups share) ----
+  function viewAll(){
+    const gs = charted();
+    let h = kpis(gs, `from ${gs.length} groups`);
+    h += section("Who took part", whoPanel() + timelinePanel());
+    h += section("Group comparison", ["overall_effectiveness", "target_2030", "platform_usefulness"].map(qid => {
+      const plot = dotPlot(qid, gs); if (!plot) return "";
+      const titles = { overall_effectiveness: "Overall effectiveness of climate policy", target_2030: "Likelihood of meeting the 2030 target", platform_usefulness: "Usefulness of this dashboard" };
+      return panel(titles[qid], "Mean score and 95% confidence interval by group", plot);
+    }).join("") + `<div class="fb-panel"><h5>How to read the comparison</h5><p class="sub" style="margin:0;line-height:1.6">Each dot is a group's average answer on the 1&ndash;5 scale and the line around it its 95% confidence interval. Where the lines of two groups do not overlap, their views differ clearly; with small groups the lines are wide. The dashed line marks the neutral middle of the scale.</p>${groupLegend(gs, true)}</div>`);
+    h += section("Headline judgements", byGroupLikert("overall_effectiveness", gs, "Overall effectiveness of climate policy") +
+      byGroupLikert("target_2030", gs, "Will Ireland meet the 2030 target?") + paceByGroup(gs));
+    h += section("Sectors", heatPanel("sector_effectiveness", gs, "Effectiveness of policy by sector", "Mean rating, 1 (very ineffective) to 5 (very effective). Members of the public are not asked this question."));
+    h += section("Barriers and priorities", choiceMatrix("barriers", gs, "Main barriers to more effective policy") + choiceMatrix("instruments", gs, "Measures to strengthen most"));
+    h += section("Policies", policyScatter(gs) + scorecard(gs));
+    return h;
+  }
+  // ---- Tab: one group (its own questionnaire, step by step) ----
+  const SKIP = ["text", "email", "check", "group"];
+  function viewGroup(g){
+    const info = S.gmap[g], n = R.data.groups[g] || 0;
+    if (!charted().includes(g)) return `<p class="fb-empty"><i class="bi bi-shield-lock"></i>${n} response${n === 1 ? "" : "s"} from ${E(info.plural.toLowerCase())} so far. Their answers are shown once at least ${R.data.min_cell} people from this group have responded, so that no individual can be recognised.</p>`;
+    let h = kpis([g], `${info.plural} · ${pct(n, R.data.n)}% of all responses`);
+    (S.schema.flows[g] || []).forEach(st => {
+      const panels = st.questions.filter(q => !SKIP.includes(q.type)).map(q => {
+        const a = (R.data.q[q.id] || {})[g]; if (!a) return "";
+        const sub = `${a.a} answered`;
+        if (q.type === "policies") return policyScatter([g]) + scorecard([g]);
+        if (q.type === "matrix"){
+          const rows = q.rows.map(r => likRow(E(r.label), a.rows[r.code], q.scale)).join("");
+          return panel(E(q.label), sub, legendHtml(q.scale, q.dk) + `<div class="fb-lik">${rows}</div>`, true);
+        }
+        if (q.type === "scale") return panel(E(q.label), sub, legendHtml(q.scale, q.dk) + `<div class="fb-lik">${likRow(E(info.plural), a, q.scale, g)}</div>`);
+        return panel(E(q.label), sub + (q.type === "multi" ? " · % choosing each option" : ""), choiceBars(q.id, a, 0, GCOL[g]));
+      }).join("");
+      h += section(E(st.title), panels);
+    });
+    return h;
   }
 
   function renderDash(){
@@ -12817,34 +12977,13 @@ function downloadTrendPng(){
     const top = `<div class="fb-dash-top"><div><div class="fb-sec-h"><i class="bi bi-bar-chart-line"></i>Consultation results</div>
         <p class="fb-sec-sub">Aggregated, anonymous results · updated ${new Date(d.updated_utc).toLocaleString("en-IE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · questionnaire ${E(d.version)} · viewing as ${E((viewer.label || "").toLowerCase())}</p></div>
       <div class="fb-dash-btns"><button type="button" id="fbResRefresh"><i class="bi bi-arrow-clockwise"></i>Refresh</button></div></div>`;
-    const filter = `<div class="fb-filter" role="group" aria-label="Show results for">
-      <button type="button" data-filter="all" aria-pressed="${R.filter === "all"}">All groups <small>${d.n}</small></button>${S.groups.map(g => {
-        const n = d.groups[g.code] || 0, has = Object.values(d.q).some(x => x[g.code]);
-        return `<button type="button" data-filter="${g.code}" aria-pressed="${R.filter === g.code}" style="--gc:${GCOL[g.code]}"${has ? "" : ` disabled title="Shown from ${d.min_cell} responses"`}><i class="dot"></i>${E(g.plural)} <small>${n}</small></button>`;
-      }).join("")}</div>`;
-    if (!d.n){
-      resBody.innerHTML = top + '<p class="fb-empty"><i class="bi bi-hourglass-split"></i>No responses yet. Results appear here as soon as people take part.</p>';
-      return;
-    }
-    if (!Object.keys(d.q).length){
-      resBody.innerHTML = top + `<div class="fb-dgrid">${whoPanel()}${timelinePanel()}</div><p class="fb-empty"><i class="bi bi-shield-lock"></i>Answers are charted once a group has at least ${d.min_cell} responses, so that no individual can be recognised.</p>`;
-      return;
-    }
-    const gs = shownGroups();
-    const hasQ = qid => gs.some(g => (R.data.q[qid] || {})[g]);
-    let html = top + filter + kpis(gs);
-    html += `<div class="fb-dsec">Who took part</div><div class="fb-dgrid">${whoPanel()}${timelinePanel()}</div>`;
-    html += `<div class="fb-dsec">Headline judgements</div><div class="fb-dgrid">${byGroupLikert("overall_effectiveness", "Overall effectiveness of climate policy")}${byGroupLikert("target_2030", "Will Ireland meet the 2030 target?")}</div>`;
-    if (hasQ("sector_effectiveness") || hasQ("ambition_gap")) html += `<div class="fb-dsec">Sectors</div><div class="fb-dgrid">${heatPanel("sector_effectiveness", "Effectiveness of policy by sector", "Mean rating, 1 (very ineffective) to 5 (very effective). The public is not asked this question.")}${
-      hasQ("ambition_gap") ? heatPanel("ambition_gap", "Ambition compared with the 2030 target (experts)", "Mean rating, 1 (far too weak) to 5 (far too strong); 3 = about right.") : ""}</div>`;
-    const bar = agg("barriers"), ins = agg("instruments");
-    if (bar || ins) html += `<div class="fb-dsec">Barriers and priorities</div><div class="fb-dgrid">${
-      bar ? panel("Main barriers to more effective policy", `% of ${bar.a} respondents choosing each (up to three)`, choiceBars("barriers", bar, 8)) : ""}${
-      ins ? panel("Measures to strengthen most", `% of ${ins.a} respondents choosing each (up to three)`, choiceBars("instruments", ins, 8)) : ""}</div>`;
-    html += `<div class="fb-dsec">Policies</div><div class="fb-dgrid">${scorecard()}</div>`;
-    html += deepDive();
-    html += `<p class="fb-note"><i class="bi bi-info-circle me-1"></i>Respondents choose to take part, so the results describe them, not the population. Groups with fewer than ${d.min_cell} responses are counted but not charted, and a policy score needs at least two ratings. Free-text answers are not shown here; the research team analyses them from the export.</p>`;
-    resBody.innerHTML = html;
+    if (!d.n){ resBody.innerHTML = top + '<p class="fb-empty"><i class="bi bi-hourglass-split"></i>No responses yet.</p>'; return; }
+    const tabs = [["all", "All respondents", d.n, "bi-people-fill"]].concat(S.groups.map(g => [g.code, g.plural, d.groups[g.code] || 0, g.icon]));
+    const tabBar = `<div class="fb-tabs" role="tablist" aria-label="Results by group">${tabs.map(([c, l, n, ic]) =>
+      `<button type="button" role="tab" id="fbTab-${c}" aria-controls="fbTabPanel" aria-selected="${R.tab === c}" tabindex="${R.tab === c ? 0 : -1}" data-tab="${c}" style="--gc:${gCol(c)}"><i class="bi ${E(ic)}"></i>${E(l)}<small>${n}</small></button>`).join("")}</div>`;
+    const body = R.tab === "all" ? viewAll() : viewGroup(R.tab);
+    resBody.innerHTML = top + tabBar + `<div id="fbTabPanel" role="tabpanel" aria-labelledby="fbTab-${R.tab}">${body}</div>` +
+      `<p class="fb-note"><i class="bi bi-info-circle me-1"></i>Respondents choose to take part, so the results describe them, not the population. Groups with fewer than ${d.min_cell} responses are counted but not charted, and a policy score needs at least two ratings. Free-text answers are not shown here; the research team analyses them from the export.</p>`;
   }
   function renderLock(msg){
     $("fbHeroStat").hidden = true;
@@ -12853,12 +12992,16 @@ function downloadTrendPng(){
   function showResults(fresh){ $("fbResults").hidden = false; loadResults(fresh); }
   resBody.addEventListener("click", e => {
     const t = e.target;
-    const f = t.closest("[data-filter]"); if (f && !f.disabled){ R.filter = f.dataset.filter; renderDash(); return; }
-    const dd = t.closest("[data-deep]"); if (dd){ R.deep = dd.dataset.deep; renderDash(); return; }
+    const tb = t.closest("[data-tab]"); if (tb){ R.tab = tb.dataset.tab; R.allPol = false; renderDash(); $("fbTab-" + R.tab)?.focus(); return; }
     const so = t.closest("[data-sort]");
     if (so){ const k = so.dataset.sort; R.sort = { k, dir: R.sort.k === k ? -R.sort.dir : (k === "name" ? 1 : -1) }; renderDash(); return; }
     if (t.closest("#fbPolMore")){ R.allPol = !R.allPol; renderDash(); return; }
     if (t.closest("#fbResRefresh")){ loadResults(true); return; }
+  });
+  resBody.addEventListener("keydown", e => {                // arrow keys move between tabs
+    const tb = e.target.closest("[role=tab]"); if (!tb || !["ArrowLeft", "ArrowRight"].includes(e.key)) return;
+    const all = [...resBody.querySelectorAll("[role=tab]")], i = all.indexOf(tb), nx = all[(i + (e.key === "ArrowRight" ? 1 : all.length - 1)) % all.length];
+    R.tab = nx.dataset.tab; renderDash(); $("fbTab-" + R.tab)?.focus();
   });
   // Tooltips for every mark with data-tip
   resBody.addEventListener("mousemove", e => {
@@ -12881,7 +13024,6 @@ function downloadTrendPng(){
       const d = await resp.json();
       if (!d.ok) throw new Error(d.detail);
       R.data = d;
-      if (R.filter !== "all" && !Object.values(d.q).some(x => x[R.filter])) R.filter = "all";
       renderDash();
     } catch (e){
       resBody.innerHTML = '<p class="fb-empty"><i class="bi bi-wifi-off"></i>The results could not be loaded. Please try again later.</p>';
@@ -12917,7 +13059,7 @@ function downloadTrendPng(){
     if (d && d.v === schema.version && d.answers && Object.keys(d.answers).length){
       Object.assign(S, { answers: d.answers, step: d.step || 0, max: d.max || 0, started: d.started });
       if (!S.gmap[S.answers.group]) delete S.answers.group;
-      banner(`<i class="bi bi-clock-history"></i><span>Welcome back. Your unfinished answers from ${new Date(d.saved).toLocaleDateString("en-IE", { day: "numeric", month: "long" })} have been restored.</span><button type="button" id="fbRestart">Start again</button>`);
+      banner(`<i class="bi bi-clock-history"></i><span>Welcome back. Your unfinished answers from ${new Date(d.saved).toLocaleDateString("en-IE", { day: "numeric", month: "long" })} have been restored.</span>${resultsOk() ? '<button type="button" id="fbViewResults">View the results</button>' : ""}<button type="button" id="fbRestart">Start again</button>`);
     } else if (done && done.at){
       banner(`<i class="bi bi-check2-circle"></i><span>You already responded on ${new Date(done.at).toLocaleDateString("en-IE", { day: "numeric", month: "long", year: "numeric" })}. You are welcome to answer again if you speak from a different perspective (for example as an expert and as a citizen).</span>${resultsOk() ? '<button type="button" id="fbViewResults">View the results</button>' : ""}`);
     }
