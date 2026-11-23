@@ -34,8 +34,9 @@ validation, the results and the export codebook; bump `SURVEY_VERSION` when ques
 Respondents choose one of five groups, each with its own questionnaire. Members of the public
 need no key; stakeholders, researchers, experts and policy makers enter their group's access key
 (`FEEDBACK_KEY_STAKEHOLDER`, `_RESEARCHER`, `_EXPERT`, `_POLICYMAKER` in `/etc/inpact/inpact.env`,
-created by `deploy/ensure_feedback.sh`). The same keys open the results dashboard; a group's answers
-are charted from `FEEDBACK_MIN_CELL` responses (default 3).
+created by `deploy/ensure_feedback.sh`). Key holders see the results dashboard as the last step, once
+they have submitted (the server then issues a results pass kept in their browser for 90 days); members
+of the public do not see results. A group's answers are charted from `FEEDBACK_MIN_CELL` responses (default 3).
 
 * **The group keys:** `ssh inpact-aws 'sudo grep FEEDBACK_KEY_ /etc/inpact/inpact.env'`. To change a key,
   edit (or delete) its line, run `bash deploy/ensure_feedback.sh` to create a missing one, then

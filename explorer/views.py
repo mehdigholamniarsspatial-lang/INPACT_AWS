@@ -508,6 +508,8 @@ _FB_RATE_MAX, _FB_RATE_WINDOW = 5, 3600
 _FB_KEYFAIL = {}                   # client address -> recent wrong-key times
 _FB_KEYFAIL_MAX, _FB_KEYFAIL_WINDOW = 8, 900
 ACCESS_SALT, ACCESS_HOURS = "inpact.feedback.access", 12
+# A key holder who submits gets a results pass: the results open only after completing the questionnaire
+RESULTS_SALT, RESULTS_DAYS = "inpact.feedback.results", 90
 
 
 def _client_addr(request):
@@ -521,6 +523,18 @@ def _access_group(token):
         return None
     try:
         data = signing.loads(str(token), salt=ACCESS_SALT, max_age=ACCESS_HOURS * 3600)
+    except signing.BadSignature:
+        return None
+    g = data.get("g") if isinstance(data, dict) else None
+    return g if g in feedback_survey.KEYED_GROUPS else None
+
+
+def _results_group(token):
+    """The keyed group a results pass (issued on submission) belongs to, or None."""
+    if not token:
+        return None
+    try:
+        data = signing.loads(str(token), salt=RESULTS_SALT, max_age=RESULTS_DAYS * 86400)
     except signing.BadSignature:
         return None
     g = data.get("g") if isinstance(data, dict) else None
@@ -579,11 +593,12 @@ def feedback_access(request):
 
 
 def feedback_summary(request):
-    """Aggregated results for the dashboard: only with a valid access token of a keyed group."""
-    group = _access_group(request.headers.get("X-Feedback-Access"))
+    """Aggregated results: only for key holders who completed the questionnaire (results pass)."""
+    group = _results_group(request.headers.get("X-Feedback-Results"))
     if not group:
-        return JsonResponse({"ok": False, "detail": "The results are open to stakeholders, researchers, "
-                                                    "experts and policy makers with an access key."}, status=403)
+        return JsonResponse({"ok": False, "detail": "The results are shown to stakeholders, researchers, experts "
+                                                    "and policy makers after they complete the questionnaire."},
+                            status=403)
     try:
         data = feedback_store.summary()
     except Exception:
@@ -633,6 +648,9 @@ def submit_feedback(request):
         return JsonResponse({"ok": False, "detail": "Your answers could not be saved on the server. "
                                                     "Please try again later."}, status=500)
     _FB_RATE[addr] = recent + [now]
+    if group in feedback_survey.KEYED_GROUPS:
+        result["results_token"] = signing.dumps({"g": group}, salt=RESULTS_SALT, compress=True)
+        result["results_days"] = RESULTS_DAYS
     return JsonResponse(result)
 
 

@@ -5618,7 +5618,7 @@ a.ug-go.alt:hover{color:var(--navy)}
           <li><i class="bi bi-incognito"></i>Anonymous</li>
           <li><i class="bi bi-people"></i>Five respondent groups</li>
           <li><i class="bi bi-floppy"></i>Progress kept on this device</li>
-          <li><i class="bi bi-key"></i>Results for key holders</li>
+          <li><i class="bi bi-bar-chart-line"></i>Results for key holders who take part</li>
         </ul>
       </div>
       <div class="fb-hero-stat" id="fbHeroStat" hidden><b id="fbHeroN">0</b><span>responses so far</span></div>
@@ -5645,12 +5645,12 @@ a.ug-go.alt:hover{color:var(--navy)}
       <p>Your response has been recorded (reference <code id="fbRef">&ndash;</code>). It will be analysed together with the other responses and the emission trends in this dashboard.</p>
       <p id="fbThanksMore"></p>
       <div class="fb-thanks-actions">
-        <button type="button" class="btn fb-btn-ghost" id="fbSeeResults" hidden><i class="bi bi-bar-chart-line me-1"></i>Open the results dashboard</button>
+        <button type="button" class="btn fb-btn-ghost" id="fbSeeResults" hidden><i class="bi bi-bar-chart-line me-1"></i>Go to the results</button>
         <button type="button" class="btn fb-btn-ghost" id="fbAgain"><i class="bi bi-arrow-repeat me-1"></i>Answer again from another perspective</button>
       </div>
     </section>
 
-    <section class="fb-card" id="fbResults" aria-labelledby="fbResultsH">
+    <section class="fb-card" id="fbResults" hidden aria-label="Consultation results">
       <div id="fbResultsBody"><p class="fb-empty"><i class="bi bi-hourglass-split"></i>Loading&hellip;</p></div>
     </section>
     <div class="fb-tip" id="fbTip" role="tooltip"></div>
@@ -12090,16 +12090,17 @@ function downloadTrendPng(){
   const $ = id => document.getElementById(id);
   const form = $("fbForm"); if (!form) return;
   const E = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const KEY_DRAFT = "inpact.survey.draft2", KEY_DONE = "inpact.survey.submitted", KEY_CLIENT = "inpact.survey.client", KEY_ACCESS = "inpact.survey.access";
+  const KEY_DRAFT = "inpact.survey.draft2", KEY_DONE = "inpact.survey.submitted", KEY_CLIENT = "inpact.survey.client", KEY_ACCESS = "inpact.survey.access", KEY_RESULTS = "inpact.survey.results";
   const mk = st => ({
     get(k){ try { return JSON.parse(st.getItem(k)); } catch (e){ return null; } },
     set(k, v){ try { st.setItem(k, JSON.stringify(v)); } catch (e){ /* private mode */ } },
     del(k){ try { st.removeItem(k); } catch (e){ /* ignore */ } },
   });
   const store = mk(localStorage), sess = mk(sessionStorage);
+  const RESULTS_STEP = { id: "results", title: "Results", icon: "bi-bar-chart-line", questions: [] };
   const REVIEW = { id: "review", title: "Review", icon: "bi-check2-square", intro: "Check your answers. Use Edit to change anything before you submit.", questions: [] };
   const S = { schema: null, groups: [], gmap: {}, steps: [], step: 0, max: 0, answers: {}, started: null, lab: {}, polQ: "", polLevel: "all",
-              access: sess.get(KEY_ACCESS), keyMsg: "", keyErr: false };
+              access: sess.get(KEY_ACCESS), results: store.get(KEY_RESULTS), submitted: false, keyMsg: "", keyErr: false };
   let client = store.get(KEY_CLIENT);
   if (!client){
     client = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -12127,11 +12128,13 @@ function downloadTrendPng(){
   const qById = id => curQuestions().find(q => q.id === id);
   const accessOk = g => !!(S.access && S.access.token && S.access.exp > Date.now() && (!g || S.access.group === g));
   const groupOf = () => S.gmap[S.answers.group];
+  const resultsOk = () => !!(S.results && S.results.token && S.results.exp > Date.now());
 
   // ---- Steps depend on the group ----
   function buildSteps(){
     const g = S.answers.group, flow = (g && S.schema.flows[g]) || [];
-    S.steps = flow.length ? [S.schema.welcome, ...flow, REVIEW] : [S.schema.welcome];
+    // key holders see the results as the last step, after submitting
+    S.steps = flow.length ? [S.schema.welcome, ...flow, REVIEW].concat(S.gmap[g].keyed ? [RESULTS_STEP] : []) : [S.schema.welcome];
     S.step = Math.min(S.step, S.steps.length - 1);
     S.max = Math.min(S.max, S.steps.length - 1);
     S.lab = {};
@@ -12226,7 +12229,7 @@ function downloadTrendPng(){
   }
   function keyBoxHtml(){
     const g = groupOf(); if (!g || !g.keyed) return "";
-    if (accessOk(g.code)) return `<div class="fb-keybox ok"><i class="bi bi-patch-check-fill"></i><span>Key verified: you are answering as <b>${E(g.label.toLowerCase())}</b>. The key also opens the results dashboard below.</span>
+    if (accessOk(g.code)) return `<div class="fb-keybox ok"><i class="bi bi-patch-check-fill"></i><span>Key verified: you are answering as <b>${E(g.label.toLowerCase())}</b>. When you submit, the last step shows the results of the consultation.</span>
       <button type="button" id="fbKeyChange">Enter another key</button></div>`;
     return `<div class="fb-keybox"><label for="fbKeyInput"><i class="bi bi-key-fill"></i>Access key for ${E(g.plural.toLowerCase())}</label>
       <div class="fb-keyrow"><input type="text" class="form-control" id="fbKeyInput" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="8 characters" aria-describedby="fbKeyMsg">
@@ -12265,7 +12268,6 @@ function downloadTrendPng(){
       S.keyMsg = ""; S.keyErr = false;
       body.querySelector('[data-qbox="group"]')?.classList.remove("invalid");
       refreshKeyBox(false);
-      loadResults();
     } catch (err){
       S.keyMsg = err.message; S.keyErr = true;
       refreshKeyBox(true);
@@ -12324,7 +12326,7 @@ function downloadTrendPng(){
   // ---- Welcome step extras ----
   const WELCOME = `<div class="fb-info-grid">
       <div class="fb-info"><b><i class="bi bi-list-check"></i>What we ask</b><p>Each group has its own questions: everyday experience for the public, sector impacts for stakeholders, evidence and methods for researchers, technologies and delivery for experts, governance for policy makers. Everyone rates the policies they know.</p></div>
-      <div class="fb-info"><b><i class="bi bi-key"></i>Access keys</b><p>Members of the public answer without a key. Stakeholders, researchers, experts and policy makers use the key of their group, sent by the INPACT team. Key holders can also see the results.</p></div>
+      <div class="fb-info"><b><i class="bi bi-key"></i>Access keys</b><p>Members of the public answer without a key. Stakeholders, researchers, experts and policy makers use the key of their group, sent by the INPACT team. Key holders see the results of the consultation as the last step, once they have submitted.</p></div>
       <div class="fb-info"><b><i class="bi bi-graph-up-arrow"></i>How it is used</b><p>Answers are compared with the emission trends and structural breaks in this dashboard, and reported only as aggregated results.</p></div>
     </div>
     <div class="fb-privacy"><b>Your data</b>
@@ -12387,7 +12389,7 @@ function downloadTrendPng(){
     const ghost = S.answers.group ? "" : '<span class="fb-step ghost"><span class="n">2</span><span class="t">Questions for your group</span></span>';
     $("fbSteps").innerHTML = S.steps.map((s, i) => {
       const cur = i === S.step, done = !cur && i < S.max;            // a step is done once the respondent moved past it
-      return `<button type="button" class="fb-step${cur ? " cur" : done ? " done" : ""}" data-goto="${i}"${i > S.max ? " disabled" : ""}${
+      return `<button type="button" class="fb-step${cur ? " cur" : done ? " done" : ""}" data-goto="${i}"${i > S.max || S.submitted ? " disabled" : ""}${
         cur ? ' aria-current="step"' : ""}><span class="n">${done ? '<i class="bi bi-check-lg"></i>' : i + 1}</span><span class="t">${E(s.title)}</span></button>`;
     }).join("") + ghost;
     const pct = S.steps.length > 1 ? Math.round(100 * S.step / (S.steps.length - 1)) : 0;
@@ -12451,7 +12453,7 @@ function downloadTrendPng(){
   body.addEventListener("click", e => {
     const t = e.target;
     if (t.closest("#fbKeyBtn")){ verifyKey(); return; }
-    if (t.closest("#fbKeyChange")){ setAccess(null); refreshKeyBox(true); renderLock(); return; }
+    if (t.closest("#fbKeyChange")){ setAccess(null); refreshKeyBox(true); return; }
     const go = t.closest("[data-goto]"); if (go){ goTo(+go.dataset.goto); return; }
     const lv = t.closest("[data-level]");
     if (lv){ S.polLevel = lv.dataset.level; body.querySelectorAll("[data-level]").forEach(b => b.setAttribute("aria-pressed", b === lv)); refreshPolicies(qById("policy_ratings"), true, false); return; }
@@ -12567,22 +12569,29 @@ function downloadTrendPng(){
       if (r.code === "access"){                                // key expired: back to the first page, answers kept
         setAccess(null); S.step = 0; render(true); validate();
         setStatus("err", `<i class="bi bi-exclamation-triangle-fill"></i>${E(r.detail)}`);
-        renderLock();
         return;
       }
       if (!resp.ok || !r.ok) throw new Error(r.detail || "The answers could not be saved. Please try again.");
       clearDraft();
-      store.set(KEY_DONE, { at: new Date().toISOString(), ref: r.response_id });
+      store.set(KEY_DONE, { at: new Date().toISOString(), ref: r.response_id, group: g.code });
       $("fbRef").textContent = r.response_id;
-      const keyed = g.keyed && accessOk();
-      $("fbThanksMore").textContent = keyed ? "As a key holder you can follow the aggregated results of the consultation in the dashboard below."
-        : "The INPACT team will publish the aggregated results in its reports and in this dashboard.";
+      const keyed = !!r.results_token;
+      if (keyed){
+        S.results = { group: g.code, token: r.results_token, exp: Date.now() + (r.results_days || 90) * 864e5 };
+        store.set(KEY_RESULTS, S.results);
+      }
+      $("fbThanksMore").textContent = keyed ? `Below are the results of the consultation so far: the aggregated answers of all groups, by sector and by policy. You can come back to them on this device for ${r.results_days || 90} days.`
+        : "The INPACT team will publish the aggregated results in its reports.";
       $("fbSeeResults").hidden = !keyed;
-      $("fbSurvey").hidden = true;
+      S.submitted = true;
+      if (keyed){                                         // last step: Results
+        form.hidden = true; $("fbBanner").hidden = true;
+        S.step = S.max = S.steps.length - 1; renderNav();
+      } else $("fbSurvey").hidden = true;
       $("fbThanks").hidden = false;
       $("fbThanks").scrollIntoView({ behavior: "smooth", block: "start" });
       $("fbThanks").focus({ preventScroll: true });
-      loadResults(true);
+      if (keyed) showResults(true);
     } catch (err){
       setStatus("err", `<i class="bi bi-exclamation-triangle-fill"></i>${E(err.message || "Network error: the server could not be reached.")}`);
     } finally {
@@ -12590,8 +12599,9 @@ function downloadTrendPng(){
     }
   }
   $("fbAgain").addEventListener("click", () => {
-    S.answers = {}; S.step = 0; S.max = 0; S.started = null; S.polQ = ""; S.polLevel = "all";
+    S.answers = {}; S.step = 0; S.max = 0; S.started = null; S.polQ = ""; S.polLevel = "all"; S.submitted = false;
     buildSteps();
+    form.hidden = false; $("fbResults").hidden = true;
     $("fbThanks").hidden = true; $("fbSurvey").hidden = false; banner(); render(true);
   });
   $("fbSeeResults").addEventListener("click", () => $("fbResults").scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -12806,7 +12816,7 @@ function downloadTrendPng(){
     const viewer = S.gmap[d.viewer] || {};
     const top = `<div class="fb-dash-top"><div><div class="fb-sec-h"><i class="bi bi-bar-chart-line"></i>Consultation results</div>
         <p class="fb-sec-sub">Aggregated, anonymous results · updated ${new Date(d.updated_utc).toLocaleString("en-IE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · questionnaire ${E(d.version)} · viewing as ${E((viewer.label || "").toLowerCase())}</p></div>
-      <div class="fb-dash-btns"><button type="button" id="fbResRefresh"><i class="bi bi-arrow-clockwise"></i>Refresh</button><button type="button" id="fbResLock"><i class="bi bi-lock"></i>Lock</button></div></div>`;
+      <div class="fb-dash-btns"><button type="button" id="fbResRefresh"><i class="bi bi-arrow-clockwise"></i>Refresh</button></div></div>`;
     const filter = `<div class="fb-filter" role="group" aria-label="Show results for">
       <button type="button" data-filter="all" aria-pressed="${R.filter === "all"}">All groups <small>${d.n}</small></button>${S.groups.map(g => {
         const n = d.groups[g.code] || 0, has = Object.values(d.q).some(x => x[g.code]);
@@ -12836,26 +12846,11 @@ function downloadTrendPng(){
     html += `<p class="fb-note"><i class="bi bi-info-circle me-1"></i>Respondents choose to take part, so the results describe them, not the population. Groups with fewer than ${d.min_cell} responses are counted but not charted, and a policy score needs at least two ratings. Free-text answers are not shown here; the research team analyses them from the export.</p>`;
     resBody.innerHTML = html;
   }
-  function renderLock(msg, err){
+  function renderLock(msg){
     $("fbHeroStat").hidden = true;
-    resBody.innerHTML = `<div class="fb-lock"><span class="ico"><i class="bi bi-bar-chart-line"></i></span>
-      <div><h4>Consultation results</h4><p>Charts and statistics of the responses so far, by group, sector and policy. They are open to stakeholders, researchers, experts and policy makers: enter the access key of your group to see them.</p></div>
-      <form id="fbLockForm" autocomplete="off"><div class="fb-keyrow"><input type="text" class="form-control" id="fbLockKey" maxlength="16" spellcheck="false" autocapitalize="characters" placeholder="Access key" aria-label="Access key">
-        <button type="submit" class="btn btn-submit text-white"><i class="bi bi-unlock"></i>Show results</button></div>
-        <div class="fb-keymsg${err ? " err" : ""}" id="fbLockMsg" role="status">${msg ? E(msg) : ""}</div></form></div>`;
+    resBody.innerHTML = `<p class="fb-empty"><i class="bi bi-lock"></i>${E(msg || "The results are shown to stakeholders, researchers, experts and policy makers once they have completed the questionnaire.")}</p>`;
   }
-  resBody.addEventListener("submit", async e => {
-    if (e.target.id !== "fbLockForm") return;
-    e.preventDefault();
-    const key = $("fbLockKey").value.trim(), msg = $("fbLockMsg");
-    if (!key){ msg.className = "fb-keymsg err"; msg.textContent = "Please enter your access key."; return; }
-    msg.className = "fb-keymsg"; msg.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Checking&hellip;';
-    try {
-      await postAccess({ key });
-      if (S.step === 0 && $("fbKeyBox")) refreshKeyBox(false);
-      loadResults(true);
-    } catch (err){ msg.className = "fb-keymsg err"; msg.textContent = err.message; }
-  });
+  function showResults(fresh){ $("fbResults").hidden = false; loadResults(fresh); }
   resBody.addEventListener("click", e => {
     const t = e.target;
     const f = t.closest("[data-filter]"); if (f && !f.disabled){ R.filter = f.dataset.filter; renderDash(); return; }
@@ -12864,7 +12859,6 @@ function downloadTrendPng(){
     if (so){ const k = so.dataset.sort; R.sort = { k, dir: R.sort.k === k ? -R.sort.dir : (k === "name" ? 1 : -1) }; renderDash(); return; }
     if (t.closest("#fbPolMore")){ R.allPol = !R.allPol; renderDash(); return; }
     if (t.closest("#fbResRefresh")){ loadResults(true); return; }
-    if (t.closest("#fbResLock")){ setAccess(null); R.data = null; renderLock(); if (S.step === 0 && $("fbKeyBox")) refreshKeyBox(false); }
   });
   // Tooltips for every mark with data-tip
   resBody.addEventListener("mousemove", e => {
@@ -12879,11 +12873,11 @@ function downloadTrendPng(){
 
   async function loadResults(fresh){
     if (!S.schema) return;
-    if (!accessOk()){ renderLock(); return; }
+    if (!resultsOk()){ renderLock(); return; }
     if (!R.data) resBody.innerHTML = '<p class="fb-empty"><span class="spinner-border spinner-border-sm"></span>Loading the results&hellip;</p>';
     try {
-      const resp = await fetch("/api/feedback/summary/" + (fresh ? "?t=" + Date.now() : ""), { headers: { "X-Feedback-Access": S.access.token }, cache: "no-store" });
-      if (resp.status === 403){ setAccess(null); renderLock("Your access has expired. Please enter your key again.", true); return; }
+      const resp = await fetch("/api/feedback/summary/" + (fresh ? "?t=" + Date.now() : ""), { headers: { "X-Feedback-Results": S.results.token }, cache: "no-store" });
+      if (resp.status === 403){ S.results = null; store.del(KEY_RESULTS); renderLock("Your access to the results has expired. Complete the questionnaire again to see the latest results."); return; }
       const d = await resp.json();
       if (!d.ok) throw new Error(d.detail);
       R.data = d;
@@ -12925,18 +12919,18 @@ function downloadTrendPng(){
       if (!S.gmap[S.answers.group]) delete S.answers.group;
       banner(`<i class="bi bi-clock-history"></i><span>Welcome back. Your unfinished answers from ${new Date(d.saved).toLocaleDateString("en-IE", { day: "numeric", month: "long" })} have been restored.</span><button type="button" id="fbRestart">Start again</button>`);
     } else if (done && done.at){
-      banner(`<i class="bi bi-check2-circle"></i><span>You already responded on ${new Date(done.at).toLocaleDateString("en-IE", { day: "numeric", month: "long", year: "numeric" })}. You are welcome to answer again if you speak from a different perspective (for example as an expert and as a citizen).</span>`);
+      banner(`<i class="bi bi-check2-circle"></i><span>You already responded on ${new Date(done.at).toLocaleDateString("en-IE", { day: "numeric", month: "long", year: "numeric" })}. You are welcome to answer again if you speak from a different perspective (for example as an expert and as a citizen).</span>${resultsOk() ? '<button type="button" id="fbViewResults">View the results</button>' : ""}`);
     }
     buildSteps();
     const g = groupOf();
     if (g && g.keyed && !accessOk(g.code) && S.step > 0){ S.step = 0; }   // key needed again (new browser session)
     render(false);
-    loadResults(false);
   }).catch(() => {
     body.innerHTML = '<p class="fb-empty"><i class="bi bi-exclamation-triangle"></i>The survey could not be loaded. Please reload the page.</p>';
     resBody.innerHTML = "";
   });
   $("fbBanner").addEventListener("click", e => {
+    if (e.target.id === "fbViewResults"){ showResults(true); $("fbResults").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
     if (e.target.id !== "fbRestart") return;
     clearDraft(); S.answers = {}; S.step = 0; S.max = 0; S.started = null; buildSteps(); banner(); render(true);
   });
