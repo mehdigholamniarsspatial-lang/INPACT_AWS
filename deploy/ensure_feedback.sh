@@ -19,6 +19,17 @@ if ! sudo grep -q '^FEEDBACK_ADMIN_KEY=' "$ENV"; then
   echo "FEEDBACK_ADMIN_KEY=$KEY" | sudo tee -a "$ENV" >/dev/null
   echo "Created the research-team download key. Show it with:  sudo grep FEEDBACK_ADMIN_KEY $ENV"
 fi
+# Access keys of the four keyed respondent groups: 8 characters, a 2-letter group prefix
+# (SH stakeholder, RS researcher, EX expert, PM policy maker) and 6 random characters without
+# look-alikes (no 0/O, 1/I/L, 2/Z, 5/S, 8/B). Show them with:  sudo grep FEEDBACK_KEY_ $ENV
+for pair in STAKEHOLDER:SH RESEARCHER:RS EXPERT:EX POLICYMAKER:PM; do
+  NAME=${pair%%:*}; PFX=${pair##*:}
+  if ! sudo grep -q "^FEEDBACK_KEY_${NAME}=" "$ENV"; then
+    KEY=$(python3 -c "import secrets; a='ACDEFGHJKMNPQRTUVWXY34679'; print('$PFX' + ''.join(secrets.choice(a) for _ in range(6)))")
+    echo "FEEDBACK_KEY_${NAME}=$KEY" | sudo tee -a "$ENV" >/dev/null
+    echo "Created the access key for the ${NAME,,} group."
+  fi
+done
 
 # Daily backup at 02:15 (keeps 30 days)
 CRON=/etc/cron.d/inpact-feedback-backup

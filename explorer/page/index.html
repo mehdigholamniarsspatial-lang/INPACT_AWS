@@ -971,10 +971,10 @@ html.hdr-slim .tab-nav{
   display:flex;align-items:center;justify-content:center;
 }
 
-/* ============ FEEDBACK TAB: stakeholder survey ============
-   A step-by-step questionnaire (steps and questions come from /api/feedback/schema/), a review
-   page, a thank-you page with the respondent's answer next to the average, public aggregate
-   results and a key-protected research download. */
+/* ============ FEEDBACK TAB: policy consultation ============
+   Five respondent groups, each with its own step-by-step questionnaire (from /api/feedback/schema/);
+   four groups verify an access key first. A review page, a thank-you page, a results dashboard
+   for key holders only, and a key-protected research download. */
 .fb-wrap{max-width:1020px;margin:0 auto;padding:1.6rem 1.4rem 2.5rem}
 .fb-hero{
   display:flex;gap:1.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap;
@@ -1188,29 +1188,144 @@ html.hdr-slim .tab-nav{
 .fb-thanks h3{font-weight:800;color:var(--navy);font-size:1.35rem;margin:0 0 .4rem}
 .fb-thanks p{color:var(--text-muted);font-size:.92rem;margin:0 auto .8rem;max-width:620px;line-height:1.6}
 .fb-thanks code{background:var(--grey-panel);border:1px solid var(--grey-border);border-radius:6px;padding:.05rem .4rem;color:var(--navy)}
-.fb-compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.8rem;max-width:720px;margin:1rem auto;text-align:left}
-.fb-compare div{border:1px solid var(--grey-border);border-radius:12px;padding:.8rem 1rem;background:var(--grey-panel);font-size:.82rem;color:var(--text-muted)}
-.fb-compare b{display:block;color:var(--navy);font-size:1.15rem}
 .fb-thanks-actions{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-top:.6rem}
 
-/* Aggregate results */
-.fb-sec-h{display:flex;align-items:center;gap:.5rem;font-weight:800;color:var(--navy);font-size:1rem;margin-bottom:.3rem}
+/* Respondent groups (welcome page) */
+.fb-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:.6rem}
+@media (min-width:1100px){.fb-groups{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.fb-gcard{position:relative;min-width:0}
+.fb-gcard input{position:absolute;opacity:0;pointer-events:none}
+.fb-gcard label{display:flex;flex-direction:column;gap:.35rem;height:100%;padding:.85rem .9rem .75rem;border:1.5px solid var(--grey-border);border-radius:12px;
+  background:#fff;cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s}
+.fb-gcard label:hover{border-color:#A9C9B6;box-shadow:var(--shadow-sm)}
+.fb-gcard .gi{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;
+  color:var(--gc);background:color-mix(in srgb,var(--gc) 12%,#fff)}
+.fb-gcard b{color:var(--navy);font-size:.92rem;line-height:1.25}
+.fb-gcard .gd{font-size:.74rem;line-height:1.45;color:var(--text-muted);flex:1}
+.fb-gcard .gm{display:flex;flex-wrap:wrap;gap:.3rem .6rem;font-size:.68rem;font-weight:700;color:var(--text-muted)}
+.fb-gcard .gm span{display:inline-flex;align-items:center;gap:.25rem}
+.fb-gcard .gm .lk{color:#8A5A00}
+.fb-gcard .gm .op{color:var(--emerald-dark)}
+.fb-gcard input:checked + label{border-color:var(--emerald);background:var(--emerald-light);box-shadow:0 0 0 1px var(--emerald)}
+.fb-gcard input:checked + label::after{content:"\F26B";font-family:"bootstrap-icons";position:absolute;top:.55rem;right:.65rem;color:var(--emerald);font-size:1.1rem}
+.fb-gcard input:focus-visible + label{box-shadow:0 0 0 .2rem rgba(0,132,61,.25)}
+.fb-gcard input:disabled + label{opacity:.5;cursor:not-allowed}
+.fb-q.invalid .fb-gcard label{border-color:#E7B4AE}
+.fb-keybox{margin-top:.8rem;border:1.5px solid #E9D3A6;background:#FFF9EC;border-radius:12px;padding:.85rem 1rem}
+.fb-keybox > label{display:flex;align-items:center;gap:.45rem;font-weight:800;color:var(--navy);font-size:.88rem;margin-bottom:.5rem}
+.fb-keybox > label i{color:#B7791F}
+.fb-keyrow{display:flex;gap:.5rem;flex-wrap:wrap}
+.fb-keyrow input{flex:0 1 230px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:1.05rem;letter-spacing:.18em;text-transform:uppercase;
+  border-radius:10px;border:1.5px solid var(--grey-border)}
+.fb-keyrow input::placeholder{letter-spacing:normal;text-transform:none;font-family:inherit;font-size:.9rem}
+.fb-keyrow input:focus{border-color:var(--emerald);box-shadow:0 0 0 .2rem rgba(0,132,61,.15)}
+.fb-keyrow .btn{display:inline-flex;align-items:center;gap:.4rem;border-radius:10px;font-weight:700}
+.fb-keymsg{font-size:.76rem;color:var(--text-muted);margin-top:.45rem;line-height:1.45}
+.fb-keymsg.err{color:var(--red);font-weight:700}
+.fb-keybox.ok{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;border-color:#A9D8BC;background:var(--emerald-light);font-size:.86rem;color:var(--emerald-dark)}
+.fb-keybox.ok > i{font-size:1.2rem}
+.fb-keybox.ok span{flex:1;min-width:200px}
+.fb-keybox.ok button{border:0;background:none;padding:0;font:inherit;font-weight:700;color:var(--teal);cursor:pointer}
+.fb-step.ghost{opacity:.5;font-style:italic;cursor:default}
+.fb-asgroup{display:inline-flex;align-items:center;gap:.4rem;font-size:.78rem;font-weight:700;color:var(--navy);background:var(--grey-panel);
+  border:1px solid var(--grey-border);border-radius:999px;padding:.2rem .7rem;margin:0 0 1rem}
+
+/* Results dashboard (keyed groups only) */
+.fb-sec-h{display:flex;align-items:center;gap:.5rem;font-weight:800;color:var(--navy);font-size:1.1rem;margin-bottom:.2rem}
 .fb-sec-sub{font-size:.8rem;color:var(--text-muted);margin:0 0 1rem}
 .fb-empty{display:flex;align-items:center;gap:.6rem;color:var(--text-muted);font-size:.88rem;margin:0;padding:.8rem 1rem;background:var(--grey-panel);border-radius:10px}
-.fb-res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:1rem}
-.fb-res{border:1px solid var(--grey-border);border-radius:12px;padding:.9rem 1rem}
-.fb-res h5{font-size:.84rem;font-weight:800;color:var(--navy);margin:0 0 .6rem;display:flex;justify-content:space-between;gap:.5rem}
-.fb-res h5 small{font-weight:600;color:var(--text-muted)}
-.fb-dist{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--grey-border)}
-.fb-dist span{display:block;height:100%}
-.fb-dist-legend{display:flex;flex-wrap:wrap;gap:.3rem .7rem;margin-top:.45rem;font-size:.7rem;color:var(--text-muted)}
-.fb-dist-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:.25rem;vertical-align:-1px}
-.fb-bars{display:grid;gap:.4rem}
-.fb-bar{display:grid;grid-template-columns:minmax(110px,1.1fr) 2fr auto;gap:.5rem;align-items:center;font-size:.78rem;color:var(--text-main)}
-.fb-bar .tr{height:10px;border-radius:999px;background:var(--grey-border);overflow:hidden}
-.fb-bar .tr span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--teal),var(--emerald))}
-.fb-bar .v{font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;font-size:.76rem}
-.fb-bar .v small{font-weight:600;color:var(--text-muted)}
+.fb-lock{display:grid;grid-template-columns:auto 1fr;gap:1rem 1.2rem;align-items:center;border:1px dashed #C5CFD8;border-radius:14px;padding:1.2rem 1.3rem;background:var(--grey-panel)}
+.fb-lock .ico{width:52px;height:52px;border-radius:14px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+.fb-lock h4{margin:0 0 .2rem;font-size:1rem;font-weight:800;color:var(--navy)}
+.fb-lock p{margin:0;font-size:.82rem;color:var(--text-muted);line-height:1.5}
+.fb-lock form{grid-column:1/-1;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.fb-lock .fb-keymsg{flex-basis:100%;margin:0}
+.fb-lock .fb-keyrow{flex:1 1 100%}
+@media (max-width:575px){.fb-lock{grid-template-columns:1fr}}
+.fb-dash-top{display:flex;align-items:flex-start;gap:.8rem;flex-wrap:wrap;margin-bottom:.9rem}
+.fb-dash-top > div:first-child{flex:1;min-width:240px}
+.fb-dash-top .fb-sec-sub{margin:0}
+.fb-dash-btns{display:flex;gap:.4rem}
+.fb-dash-btns button{border:1.5px solid var(--grey-border);background:#fff;border-radius:9px;padding:.3rem .7rem;font:inherit;font-size:.76rem;font-weight:700;color:var(--navy);cursor:pointer;display:inline-flex;gap:.35rem;align-items:center}
+.fb-dash-btns button:hover{background:var(--grey-panel)}
+.fb-filter{display:flex;gap:.3rem;flex-wrap:wrap;padding:.3rem;background:var(--grey-panel);border:1px solid var(--grey-border);border-radius:12px;margin-bottom:1rem}
+.fb-filter button{border:0;background:none;border-radius:9px;padding:.4rem .8rem;font:inherit;font-size:.8rem;font-weight:700;color:var(--text-muted);cursor:pointer;display:inline-flex;align-items:center;gap:.4rem}
+.fb-filter button i.dot{width:9px;height:9px;border-radius:50%;background:var(--gc)}
+.fb-filter button small{font-weight:600;opacity:.8}
+.fb-filter button[aria-pressed=true]{background:#fff;color:var(--navy);box-shadow:var(--shadow-sm)}
+.fb-filter button:disabled{opacity:.45;cursor:not-allowed}
+.fb-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:.7rem;margin-bottom:1rem}
+.fb-kpi{border:1px solid var(--grey-border);border-radius:12px;padding:.8rem .95rem;background:#fff}
+.fb-kpi .k{font-size:.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px}
+.fb-kpi .v{font-size:1.7rem;font-weight:800;color:var(--navy);line-height:1.15;font-variant-numeric:tabular-nums;margin:.2rem 0 .1rem}
+.fb-kpi .v small{font-size:.85rem;font-weight:700;color:var(--text-muted)}
+.fb-kpi .s{font-size:.74rem;color:var(--text-muted);line-height:1.35}
+.fb-kpi .meter{height:6px;border-radius:999px;background:var(--grey-border);margin-top:.45rem;overflow:hidden}
+.fb-kpi .meter span{display:block;height:100%;border-radius:999px;background:var(--navy)}
+.fb-dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:1rem;margin-bottom:1rem}
+.fb-panel{border:1px solid var(--grey-border);border-radius:12px;padding:.95rem 1.05rem;background:#fff;min-width:0}
+.fb-panel.wide{grid-column:1/-1}
+.fb-panel h5{font-size:.88rem;font-weight:800;color:var(--navy);margin:0 0 .15rem;line-height:1.35}
+.fb-panel .sub{font-size:.74rem;color:var(--text-muted);margin:0 0 .75rem}
+.fb-dsec{display:flex;align-items:center;gap:.5rem;margin:1.4rem 0 .7rem;font-size:.78rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text-muted)}
+.fb-dsec::after{content:"";flex:1;height:1px;background:var(--grey-border)}
+.fb-legend{display:flex;flex-wrap:wrap;gap:.25rem .8rem;font-size:.7rem;color:var(--text-muted);margin:0 0 .6rem}
+.fb-legend span{display:inline-flex;align-items:center;gap:.3rem}
+.fb-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+/* stacked 100% (Likert) rows */
+.fb-lik{display:grid;grid-template-columns:minmax(96px,.9fr) 3fr 52px;gap:.35rem .6rem;align-items:center}
+.fb-lik .l{font-size:.78rem;font-weight:700;color:var(--text-main);line-height:1.25;display:flex;align-items:center;gap:.35rem;min-width:0}
+.fb-lik .l i.dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px;background:var(--gc)}
+.fb-lik .l small{font-weight:600;color:var(--text-muted)}
+.fb-stack{display:flex;gap:2px;height:22px}
+.fb-stack span{display:flex;align-items:center;justify-content:center;font-size:.64rem;font-weight:700;color:#fff;min-width:0;overflow:hidden;white-space:nowrap}
+.fb-stack span:first-child{border-radius:4px 0 0 4px}
+.fb-stack span:last-child{border-radius:0 4px 4px 0}
+.fb-stack span.lt{color:var(--text-main)}
+.fb-lik .m{font-size:.78rem;font-weight:800;color:var(--navy);text-align:right;font-variant-numeric:tabular-nums}
+.fb-lik .m small{display:block;font-size:.62rem;font-weight:600;color:var(--text-muted)}
+.fb-lik .na{grid-column:2/4;font-size:.72rem;color:var(--text-muted);font-style:italic}
+/* horizontal bars */
+.fb-hbars{display:grid;grid-template-columns:minmax(120px,1.2fr) 2fr 58px;gap:.4rem .6rem;align-items:center}
+.fb-hbars .l{font-size:.78rem;color:var(--text-main);line-height:1.25}
+.fb-hbars .t{height:12px;display:flex}
+.fb-hbars .t span{display:block;height:100%;border-radius:0 4px 4px 0;background:var(--gc,var(--teal));min-width:2px}
+.fb-hbars .v{font-size:.76rem;font-weight:800;color:var(--navy);text-align:right;font-variant-numeric:tabular-nums}
+.fb-hbars .v small{font-weight:600;color:var(--text-muted)}
+/* responses over time */
+.fb-cols{display:flex;align-items:flex-end;gap:2px;height:120px;border-bottom:1px solid #C5CFD8;padding-top:.3rem}
+.fb-cols span{flex:1;min-width:3px;background:var(--navy);border-radius:3px 3px 0 0;opacity:.85}
+.fb-cols span:hover{opacity:1}
+.fb-cols-x{display:flex;justify-content:space-between;font-size:.68rem;color:var(--text-muted);margin-top:.3rem}
+/* sector heatmap */
+.fb-heat{width:auto;min-width:min(100%,520px);border-collapse:separate;border-spacing:3px;font-size:.78rem}
+.fb-heat th{font-size:.7rem;font-weight:700;color:var(--text-muted);text-align:center;padding:.2rem;line-height:1.2}
+.fb-heat th:first-child,.fb-heat td:first-child{text-align:left;color:var(--text-main);font-weight:700;font-size:.78rem}
+.fb-heat td.c{text-align:center;font-weight:800;border-radius:6px;padding:.45rem .2rem;font-variant-numeric:tabular-nums;min-width:84px}
+.fb-heat td:first-child{padding-right:1rem}
+.fb-heat td.c.none{background:var(--grey-panel);color:#9AA6B2;font-weight:600}
+.fb-scalekey{display:flex;align-items:center;gap:.5rem;font-size:.68rem;color:var(--text-muted);margin-top:.5rem}
+.fb-scalekey .g{flex:0 0 140px;height:8px;border-radius:999px;background:linear-gradient(90deg,#C84B3C,#E58A5C,#C9CED4,#5BB381,#00843D)}
+/* policy scorecard */
+.fb-score-wrap{overflow:auto;border:1px solid var(--grey-border);border-radius:10px}
+.fb-score{width:100%;border-collapse:collapse;font-size:.8rem}
+.fb-score th{position:sticky;top:0;background:var(--grey-panel);font-size:.7rem;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;
+  padding:.5rem .5rem;text-align:center;white-space:nowrap;border-bottom:1px solid var(--grey-border)}
+.fb-score th button{border:0;background:none;font:inherit;color:inherit;text-transform:inherit;letter-spacing:inherit;cursor:pointer;padding:0;display:inline-flex;gap:.2rem;align-items:center}
+.fb-score th button[aria-sort]{color:var(--navy)}
+.fb-score th:first-child{text-align:left}
+.fb-score td{padding:.4rem .5rem;border-bottom:1px solid var(--grey-border);text-align:center;font-variant-numeric:tabular-nums}
+.fb-score tr:last-child td{border-bottom:0}
+.fb-score td:first-child{text-align:left;font-weight:700;color:var(--text-main);min-width:220px}
+.fb-score td:first-child small{display:block;font-weight:600;color:var(--text-muted);font-size:.7rem}
+.fb-score .chip{display:inline-block;min-width:38px;padding:.15rem .35rem;border-radius:6px;font-weight:800}
+.fb-score .muted{color:#9AA6B2}
+.fb-more{border:0;background:none;font:inherit;font-size:.78rem;font-weight:700;color:var(--teal);cursor:pointer;margin-top:.5rem;padding:0}
+.fb-note{font-size:.74rem;color:var(--text-muted);line-height:1.5;margin:.6rem 0 0}
+.fb-tip{position:fixed;z-index:3000;pointer-events:none;background:#16324F;color:#fff;font-size:.74rem;line-height:1.4;padding:.4rem .6rem;border-radius:8px;
+  box-shadow:0 6px 18px rgba(0,0,0,.18);max-width:280px;opacity:0;transition:opacity .1s}
+.fb-tip.on{opacity:1}
+.fb-tip b{color:#7FE0A8}
 
 /* Research-team download */
 .fb-admin{background:var(--grey-panel);border:1px solid var(--grey-border);border-radius:12px;padding:.2rem 1.1rem}
@@ -3566,7 +3681,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <div class="flex-grow-1" style="min-width:220px">
                 <div class="fw-bold mb-1" style="color:var(--navy)">Tell us what you think</div>
                 <div class="text-muted" style="font-size:.86rem;line-height:1.5">
-                  Share your view on how effective Ireland&rsquo;s climate policies have been. Take the INPACT stakeholder survey: about six minutes, anonymous, and used for research.
+                  Share your view on how effective Ireland&rsquo;s climate policies have been. Take the INPACT policy consultation: 5 to 8 minutes, anonymous, and used for research.
                 </div>
               </div>
               <button class="btn btn-submit text-white px-4" id="goFeedbackBtn">
@@ -5488,21 +5603,22 @@ a.ug-go.alt:hover{color:var(--navy)}
 </div><!-- /tab-guide -->
 
 <!-- ================= TAB: FEEDBACK ================= -->
-<!-- Stakeholder survey on the effectiveness of Ireland's climate policies. The questions are defined in
+<!-- Policy consultation on the effectiveness of Ireland's climate policies. The questions are defined in
      explorer/feedback_survey.py and rendered by section 10 of the script; answers go to /api/feedback/. -->
 <div class="tab-pane" id="tab-feedback" role="tabpanel">
   <div class="fb-wrap">
 
     <header class="fb-hero">
       <div class="fb-hero-txt">
-        <div class="eyebrow"><i class="bi bi-people-fill"></i>Stakeholder consultation</div>
+        <div class="eyebrow"><i class="bi bi-people-fill"></i>Policy consultation</div>
         <h2>How effective are Ireland&rsquo;s climate policies?</h2>
-        <p>Tell us how you judge the policies shown in this dashboard. Your answers are analysed alongside the statistical evidence in INPACT, a research project funded by the Environmental Protection Agency, and help explain which policies have worked, for whom, and why.</p>
+        <p>Tell us how you judge the policies shown in this dashboard. Members of the public, stakeholders, researchers, experts and policy makers each answer their own short questionnaire. Answers are analysed alongside the statistical evidence in INPACT, a research project funded by the Environmental Protection Agency, and help explain which policies have worked, for whom, and why.</p>
         <ul class="fb-hero-facts">
-          <li><i class="bi bi-clock"></i>About 6 minutes</li>
+          <li><i class="bi bi-clock"></i>5&ndash;8 minutes</li>
           <li><i class="bi bi-incognito"></i>Anonymous</li>
+          <li><i class="bi bi-people"></i>Five respondent groups</li>
           <li><i class="bi bi-floppy"></i>Progress kept on this device</li>
-          <li><i class="bi bi-bar-chart-line"></i>See how others answered</li>
+          <li><i class="bi bi-key"></i>Results for key holders</li>
         </ul>
       </div>
       <div class="fb-hero-stat" id="fbHeroStat" hidden><b id="fbHeroN">0</b><span>responses so far</span></div>
@@ -5527,18 +5643,17 @@ a.ug-go.alt:hover{color:var(--navy)}
       <div class="fb-thanks-ico"><i class="bi bi-check2-circle"></i></div>
       <h3 id="fbThanksH">Thank you for taking part</h3>
       <p>Your response has been recorded (reference <code id="fbRef">&ndash;</code>). It will be analysed together with the other responses and the emission trends in this dashboard.</p>
-      <div class="fb-compare" id="fbCompare"></div>
+      <p id="fbThanksMore"></p>
       <div class="fb-thanks-actions">
-        <button type="button" class="btn fb-btn-ghost" id="fbSeeResults"><i class="bi bi-bar-chart-line me-1"></i>See all results</button>
+        <button type="button" class="btn fb-btn-ghost" id="fbSeeResults" hidden><i class="bi bi-bar-chart-line me-1"></i>Open the results dashboard</button>
         <button type="button" class="btn fb-btn-ghost" id="fbAgain"><i class="bi bi-arrow-repeat me-1"></i>Answer again from another perspective</button>
       </div>
     </section>
 
     <section class="fb-card" id="fbResults" aria-labelledby="fbResultsH">
-      <div class="fb-sec-h" id="fbResultsH"><i class="bi bi-bar-chart-line"></i>What respondents say so far</div>
-      <p class="fb-sec-sub">Aggregated, anonymous results, updated as responses arrive. Individual answers are never shown.</p>
-      <div id="fbResultsBody"><p class="fb-empty"><i class="bi bi-hourglass-split"></i>Loading results&hellip;</p></div>
+      <div id="fbResultsBody"><p class="fb-empty"><i class="bi bi-hourglass-split"></i>Loading&hellip;</p></div>
     </section>
+    <div class="fb-tip" id="fbTip" role="tooltip"></div>
 
     <details class="fb-admin">
       <summary><span class="ico"><i class="bi bi-shield-lock"></i></span>Research team: download the responses</summary>
@@ -11964,22 +12079,27 @@ function downloadTrendPng(){
   a.click();
 }
 
-/* ---------------------- 10. Stakeholder survey (Feedback tab) ----------------------
- * The questionnaire is defined once on the server (explorer/feedback_survey.py) and fetched from
- * /api/feedback/schema/. This section renders it as steps, keeps a draft in localStorage, checks
- * required answers, shows a review page, submits to /api/feedback/, and draws the public aggregate
- * results from /api/feedback/summary/. The policy step lists the dashboard's own POLICIES. */
+/* ---------------------- 10. Policy consultation (Feedback tab) ----------------------
+ * The questionnaires are defined once on the server (explorer/feedback_survey.py) and fetched from
+ * /api/feedback/schema/. The respondent first chooses a group; members of the public go straight on,
+ * the four other groups verify their group's access key at /api/feedback/access/ and receive a signed
+ * token (kept in sessionStorage). Each group then answers its own steps. This section keeps a draft
+ * in localStorage, checks required answers, shows a review page, submits to /api/feedback/, and, for
+ * key holders only, draws the results dashboard from /api/feedback/summary/. */
 (function stakeholderSurvey(){
   const $ = id => document.getElementById(id);
   const form = $("fbForm"); if (!form) return;
   const E = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const KEY_DRAFT = "inpact.survey.draft", KEY_DONE = "inpact.survey.submitted", KEY_CLIENT = "inpact.survey.client";
-  const store = {
-    get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch (e){ return null; } },
-    set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e){ /* private mode */ } },
-    del(k){ try { localStorage.removeItem(k); } catch (e){ /* ignore */ } },
-  };
-  const S = { schema: null, steps: [], step: 0, max: 0, answers: {}, started: null, lab: {}, polQ: "", polLevel: "all" };
+  const KEY_DRAFT = "inpact.survey.draft2", KEY_DONE = "inpact.survey.submitted", KEY_CLIENT = "inpact.survey.client", KEY_ACCESS = "inpact.survey.access";
+  const mk = st => ({
+    get(k){ try { return JSON.parse(st.getItem(k)); } catch (e){ return null; } },
+    set(k, v){ try { st.setItem(k, JSON.stringify(v)); } catch (e){ /* private mode */ } },
+    del(k){ try { st.removeItem(k); } catch (e){ /* ignore */ } },
+  });
+  const store = mk(localStorage), sess = mk(sessionStorage);
+  const REVIEW = { id: "review", title: "Review", icon: "bi-check2-square", intro: "Check your answers. Use Edit to change anything before you submit.", questions: [] };
+  const S = { schema: null, groups: [], gmap: {}, steps: [], step: 0, max: 0, answers: {}, started: null, lab: {}, polQ: "", polLevel: "all",
+              access: sess.get(KEY_ACCESS), keyMsg: "", keyErr: false };
   let client = store.get(KEY_CLIENT);
   if (!client){
     client = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -11989,7 +12109,10 @@ function downloadTrendPng(){
   const POLS = (typeof POLICIES !== "undefined" ? POLICIES : []).filter(p => p && p.name);
   const polByName = new Map(POLS.map(p => [p.name, p]));
   const LEVELS = [["all", "All"], ["International", "International"], ["EU", "EU"], ["National", "National"], ["Target", "Targets"]];
-  const DIST_COL = ["#C84B3C", "#E58A5C", "#C9CED4", "#5BB381", "#00843D"];
+  // Likert colours: red (1) -> neutral grey (3) -> green (5); "don't know" a pale grey
+  const DIV = ["#C84B3C", "#E58A5C", "#C9CED4", "#5BB381", "#00843D"], DK = "#E6EBF0";
+  // Fixed colour per respondent group (follows the group, never its rank)
+  const GCOL = { public: "#5C6B7A", stakeholder: "#D9822B", researcher: "#2F6FDE", expert: "#0F9D8A", policymaker: "#9C3D8F" };
 
   function setStatus(kind, html, el){
     el = el || $("fbStatusMsg");
@@ -11997,14 +12120,33 @@ function downloadTrendPng(){
     el.innerHTML = html || "";
   }
   const questionsOf = step => step.questions || [];
-  const allQuestions = () => S.steps.flatMap(questionsOf);
-  const qById = id => allQuestions().find(q => q.id === id);
+  const curQuestions = () => S.steps.flatMap(questionsOf);
+  const qById = id => curQuestions().find(q => q.id === id);
+  const accessOk = g => !!(S.access && S.access.token && S.access.exp > Date.now() && (!g || S.access.group === g));
+  const groupOf = () => S.gmap[S.answers.group];
+
+  // ---- Steps depend on the group ----
+  function buildSteps(){
+    const g = S.answers.group, flow = (g && S.schema.flows[g]) || [];
+    S.steps = flow.length ? [S.schema.welcome, ...flow, REVIEW] : [S.schema.welcome];
+    S.step = Math.min(S.step, S.steps.length - 1);
+    S.max = Math.min(S.max, S.steps.length - 1);
+    S.lab = {};
+    curQuestions().forEach(q => {
+      S.lab[q.id] = {};
+      (q.options || []).concat(q.rows || []).forEach(o => { S.lab[q.id][o.code] = o.label; });
+    });
+  }
 
   // ---- Draft (answers stay on this device until submitted) ----
   function saveDraft(){
     store.set(KEY_DRAFT, { v: S.schema.version, step: S.step, max: S.max, answers: S.answers, started: S.started, saved: Date.now() });
   }
   function clearDraft(){ store.del(KEY_DRAFT); }
+  function setAccess(a){
+    S.access = a;
+    if (a) sess.set(KEY_ACCESS, a); else sess.del(KEY_ACCESS);
+  }
 
   // ---- Rendering helpers ----
   const reqMark = q => q.required ? '<span class="req" aria-hidden="true">*</span>' : '<span class="opt">optional</span>';
@@ -12066,6 +12208,68 @@ function downloadTrendPng(){
     return `<input type="email" class="form-control" id="q-${q.id}" data-q="${q.id}" value="${E(S.answers[q.id] || "")}" placeholder="name@example.ie" maxlength="254" autocomplete="email">`;
   }
 
+  // ---- Group choice and access key ----
+  function groupQ(){
+    const v = S.answers.group;
+    const cards = S.groups.map(g => {
+      const on = v === g.code, closed = g.open === false;
+      return `<span class="fb-gcard"><input type="radio" name="q-group" id="q-group-${g.code}" value="${g.code}"${on ? " checked" : ""}${closed ? " disabled" : ""}>
+        <label for="q-group-${g.code}"><span class="gi" style="--gc:${GCOL[g.code]}"><i class="bi ${E(g.icon)}"></i></span>
+        <b>${E(g.label)}</b><span class="gd">${E(g.desc)}</span>
+        <span class="gm"><span><i class="bi bi-clock"></i>${g.minutes} min</span>${closed ? '<span class="lk"><i class="bi bi-slash-circle"></i>Not open yet</span>'
+          : g.keyed ? '<span class="lk"><i class="bi bi-key-fill"></i>Access key</span>' : '<span class="op"><i class="bi bi-unlock-fill"></i>Open to all</span>'}</span></label></span>`;
+    }).join("");
+    return `<div class="fb-groups" data-q="group" role="radiogroup" aria-label="Respondent group">${cards}</div><div id="fbKeyBox">${keyBoxHtml()}</div>`;
+  }
+  function keyBoxHtml(){
+    const g = groupOf(); if (!g || !g.keyed) return "";
+    if (accessOk(g.code)) return `<div class="fb-keybox ok"><i class="bi bi-patch-check-fill"></i><span>Key verified: you are answering as <b>${E(g.label.toLowerCase())}</b>. The key also opens the results dashboard below.</span>
+      <button type="button" id="fbKeyChange">Enter another key</button></div>`;
+    return `<div class="fb-keybox"><label for="fbKeyInput"><i class="bi bi-key-fill"></i>Access key for ${E(g.plural.toLowerCase())}</label>
+      <div class="fb-keyrow"><input type="text" class="form-control" id="fbKeyInput" maxlength="16" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="8 characters" aria-describedby="fbKeyMsg">
+        <button type="button" class="btn btn-submit text-white" id="fbKeyBtn"><i class="bi bi-shield-check"></i>Verify key</button></div>
+      <div class="fb-keymsg${S.keyErr ? " err" : ""}" id="fbKeyMsg" role="status">${S.keyMsg ? E(S.keyMsg) : "Use the key you received from the INPACT team. Every member of your group has the same key."}</div></div>`;
+  }
+  function refreshKeyBox(focus){
+    const kb = $("fbKeyBox"); if (!kb) return;
+    kb.innerHTML = keyBoxHtml();
+    if (focus) $("fbKeyInput")?.focus();
+  }
+  function setGroup(code){
+    if (S.answers.group === code) return;
+    S.answers.group = code; S.keyMsg = ""; S.keyErr = false; S.max = 0;
+    buildSteps(); saveDraft();
+    const box = body.querySelector('[data-qbox="group"]'); if (box) box.classList.remove("invalid");
+    refreshKeyBox(groupOf()?.keyed && !accessOk(code));
+    renderNav();
+  }
+  async function postAccess(payload){
+    const resp = await fetch("/api/feedback/access/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const r = await resp.json().catch(() => ({}));
+    if (!resp.ok || !r.ok) throw new Error(r.detail || "The key could not be checked. Please try again.");
+    const a = { group: r.group, label: r.label, token: r.token, exp: Date.now() + (r.hours || 12) * 3600e3 };
+    setAccess(a);
+    return a;
+  }
+  async function verifyKey(){
+    const inp = $("fbKeyInput"), btn = $("fbKeyBtn"), g = groupOf();
+    if (!inp || !g) return;
+    const key = inp.value.trim();
+    if (!key){ S.keyMsg = "Please enter your access key."; S.keyErr = true; $("fbKeyMsg").className = "fb-keymsg err"; $("fbKeyMsg").textContent = S.keyMsg; inp.focus(); return; }
+    btn.disabled = true; $("fbKeyMsg").className = "fb-keymsg"; $("fbKeyMsg").innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Checking&hellip;';
+    try {
+      await postAccess({ group: g.code, key });
+      S.keyMsg = ""; S.keyErr = false;
+      body.querySelector('[data-qbox="group"]')?.classList.remove("invalid");
+      refreshKeyBox(false);
+      loadResults();
+    } catch (err){
+      S.keyMsg = err.message; S.keyErr = true;
+      refreshKeyBox(true);
+      $("fbKeyInput").value = key;
+    }
+  }
+
   // ---- Policy picker ----
   function levelBadge(p){
     return `<span class="lv" style="background:${E(p.color || "#5C6B7A")}">${E(p.cat || p.level)}</span>`;
@@ -12116,15 +12320,15 @@ function downloadTrendPng(){
 
   // ---- Welcome step extras ----
   const WELCOME = `<div class="fb-info-grid">
-      <div class="fb-info"><b><i class="bi bi-list-check"></i>What we ask</b><p>Your background, your overall view, how well policy has worked in each sector, and a closer look at the policies you know best.</p></div>
-      <div class="fb-info"><b><i class="bi bi-person-check"></i>Who should answer</b><p>Everyone: members of the public, people working in the sectors concerned, researchers and policy experts.</p></div>
+      <div class="fb-info"><b><i class="bi bi-list-check"></i>What we ask</b><p>Each group has its own questions: everyday experience for the public, sector impacts for stakeholders, evidence and methods for researchers, technologies and delivery for experts, governance for policy makers. Everyone rates the policies they know.</p></div>
+      <div class="fb-info"><b><i class="bi bi-key"></i>Access keys</b><p>Members of the public answer without a key. Stakeholders, researchers, experts and policy makers use the key of their group, sent by the INPACT team. Key holders can also see the results.</p></div>
       <div class="fb-info"><b><i class="bi bi-graph-up-arrow"></i>How it is used</b><p>Answers are compared with the emission trends and structural breaks in this dashboard, and reported only as aggregated results.</p></div>
     </div>
     <div class="fb-privacy"><b>Your data</b>
       <ul>
         <li>The survey is anonymous: we do not record your name, IP address or location. Please do not include personal details in the text boxes.</li>
         <li>Nothing is sent until you press <b>Submit</b> on the last page. Until then your answers are kept only in this browser, so you can stop and come back later.</li>
-        <li>Answers are stored on the project&rsquo;s server and used only for research. Aggregated results may appear in this dashboard, reports and scientific publications.</li>
+        <li>Answers are stored on the project&rsquo;s server and used only for research. Aggregated results may appear in this dashboard, reports and scientific publications. Results for a group are shown only once at least three people from that group have answered.</li>
         <li>An e-mail address is asked for only if you volunteer for a follow-up interview. It is kept separately from your answers and deleted after the study.</li>
         <li>Taking part is voluntary. You can skip any optional question and leave at any time.</li>
       </ul></div>`;
@@ -12133,6 +12337,7 @@ function downloadTrendPng(){
   function renderQuestion(q){
     let inner = "";
     switch (q.type){
+      case "group": inner = groupQ(); break;
       case "single": inner = choiceQ(q, false); break;
       case "multi": inner = choiceQ(q, true); break;
       case "scale": inner = scaleQ(q); break;
@@ -12143,12 +12348,13 @@ function downloadTrendPng(){
       case "check": return `<div class="fb-q" data-qbox="${q.id}">${checkQ(q)}${errBox()}</div>`;
     }
     const hidden = q.depends_on && !S.answers[q.depends_on] ? " hidden" : "";
-    const tag = ["single", "multi", "scale", "matrix"].includes(q.type) ? "fieldset" : "div";
+    const tag = ["single", "multi", "scale", "matrix", "group"].includes(q.type) ? "fieldset" : "div";
     const legend = tag === "fieldset" ? `<legend>${E(q.label)}${reqMark(q)}</legend>`
       : `<label class="fb-label" for="q-${q.id}">${E(q.label)}${reqMark(q)}</label>`;
     return `<${tag} class="fb-q" data-qbox="${q.id}"${hidden}>${legend}${q.hint ? `<p class="fb-hint">${E(q.hint)}</p>` : ""}${inner}${errBox()}</${tag}>`;
   }
   function renderReview(){
+    const g = groupOf();
     const secs = S.steps.slice(1, -1).map((st, i) => {
       const rows = questionsOf(st).map(q => {
         if (q.depends_on && !S.answers[q.depends_on]) return "";
@@ -12171,27 +12377,32 @@ function downloadTrendPng(){
       return `<div class="fb-review-sec"><h4><i class="bi ${E(st.icon)}"></i><span>${E(st.title)}</span>
         <button type="button" data-goto="${i + 1}"><i class="bi bi-pencil me-1"></i>Edit</button></h4><dl>${rows}</dl></div>`;
     }).join("");
-    return secs + `<p class="fb-hint" style="margin:.8rem 0 0">Press <b>Submit</b> to send your answers. You cannot change them afterwards.</p>`;
+    return (g ? `<div class="fb-asgroup"><i class="bi ${E(g.icon)}"></i>Answering as ${E(g.label.toLowerCase())}${g.keyed ? ' · <i class="bi bi-patch-check-fill"></i>key verified' : ""}</div>` : "") +
+      secs + `<p class="fb-hint" style="margin:.8rem 0 0">Press <b>Submit</b> to send your answers. You cannot change them afterwards.</p>`;
   }
-  function render(focus){
-    const st = S.steps[S.step], last = S.step === S.steps.length - 1;
-    const head = `<div class="fb-step-h"><span class="ico"><i class="bi ${E(st.icon)}"></i></span><div>
-      <div class="k">Step ${S.step + 1} of ${S.steps.length}</div><h3>${E(st.title)}</h3></div></div>
-      ${st.intro ? `<p class="fb-step-intro">${E(st.intro)}</p>` : ""}`;
-    body.innerHTML = head + (st.id === "consent" ? WELCOME : "") +
-      (st.id === "review" ? renderReview() : questionsOf(st).map(renderQuestion).join(""));
-    prevBtn.hidden = S.step === 0;
-    nextBtn.disabled = false;
-    nextBtn.innerHTML = last ? '<i class="bi bi-send"></i>Submit' : S.step === 0 ? 'Start the survey<i class="bi bi-arrow-right"></i>'
-      : 'Next<i class="bi bi-arrow-right"></i>';
+  function renderNav(){
+    const ghost = S.answers.group ? "" : '<span class="fb-step ghost"><span class="n">2</span><span class="t">Questions for your group</span></span>';
     $("fbSteps").innerHTML = S.steps.map((s, i) => {
       const cur = i === S.step, done = !cur && i < S.max;            // a step is done once the respondent moved past it
       return `<button type="button" class="fb-step${cur ? " cur" : done ? " done" : ""}" data-goto="${i}"${i > S.max ? " disabled" : ""}${
         cur ? ' aria-current="step"' : ""}><span class="n">${done ? '<i class="bi bi-check-lg"></i>' : i + 1}</span><span class="t">${E(s.title)}</span></button>`;
-    }).join("");
-    const pct = Math.round(100 * S.step / (S.steps.length - 1));
+    }).join("") + ghost;
+    const pct = S.steps.length > 1 ? Math.round(100 * S.step / (S.steps.length - 1)) : 0;
     $("fbProgressBar").style.width = pct + "%";
     $("fbProgress").setAttribute("aria-valuenow", pct);
+  }
+  function render(focus){
+    const st = S.steps[S.step], isReview = st.id === "review";
+    const g = groupOf();
+    const head = `<div class="fb-step-h"><span class="ico"><i class="bi ${E(st.icon)}"></i></span><div>
+      <div class="k">Step ${S.step + 1}${S.answers.group ? " of " + S.steps.length : ""}${g && S.step > 0 ? " · " + E(g.label) : ""}</div><h3>${E(st.title)}</h3></div></div>
+      ${st.intro ? `<p class="fb-step-intro">${E(st.intro)}</p>` : ""}`;
+    body.innerHTML = head + (S.step === 0 ? WELCOME : "") + (isReview ? renderReview() : questionsOf(st).map(renderQuestion).join(""));
+    prevBtn.hidden = S.step === 0;
+    nextBtn.disabled = false;
+    nextBtn.innerHTML = isReview ? '<i class="bi bi-send"></i>Submit' : S.step === 0 ? 'Start the questionnaire<i class="bi bi-arrow-right"></i>'
+      : 'Next<i class="bi bi-arrow-right"></i>';
+    renderNav();
     setStatus("", "");
     if (focus){
       const top = $("fbSteps").getBoundingClientRect().top;
@@ -12207,15 +12418,16 @@ function downloadTrendPng(){
     else S.answers[id] = v;
     const box = body.querySelector(`[data-qbox="${id}"]`); if (box) box.classList.remove("invalid");
     // questions shown only after another answer (the follow-up e-mail)
-    allQuestions().filter(q => q.depends_on === id).forEach(q => {
+    curQuestions().filter(q => q.depends_on === id).forEach(q => {
       const b = body.querySelector(`[data-qbox="${q.id}"]`); if (b) b.hidden = !S.answers[id];
     });
     saveDraft();
   }
   function setPolicies(items){ S.answers.policy_ratings = items; saveDraft(); }
   // A radio answer. With toggle (a mouse click on the answer that is already chosen) it is cleared,
-  // so optional scales and single sector rows can be left blank again.
+  // so optional scales and single grid rows can be left blank again.
   function applyRadio(t, toggle){
+    if (t.name === "q-group"){ setGroup(t.value); return; }
     const qbox = t.closest("[data-q]"), qid = qbox ? qbox.dataset.q : null;
     const val = t.value === "dk" ? "dk" : (/^\d+$/.test(t.value) ? +t.value : t.value);
     if (t.dataset.pidx != null){
@@ -12225,7 +12437,7 @@ function downloadTrendPng(){
       saveDraft(); return;
     }
     if (!qid) return;
-    const q = qById(qid);
+    const q = qById(qid); if (!q) return;
     if (q.type === "matrix"){
       const m = { ...(S.answers[qid] || {}) }, row = t.dataset.row;
       if (toggle && m[row] === val){ delete m[row]; t.checked = false; } else m[row] = val;
@@ -12235,6 +12447,8 @@ function downloadTrendPng(){
   }
   body.addEventListener("click", e => {
     const t = e.target;
+    if (t.closest("#fbKeyBtn")){ verifyKey(); return; }
+    if (t.closest("#fbKeyChange")){ setAccess(null); refreshKeyBox(true); renderLock(); return; }
     const go = t.closest("[data-goto]"); if (go){ goTo(+go.dataset.goto); return; }
     const lv = t.closest("[data-level]");
     if (lv){ S.polLevel = lv.dataset.level; body.querySelectorAll("[data-level]").forEach(b => b.setAttribute("aria-pressed", b === lv)); refreshPolicies(qById("policy_ratings"), true, false); return; }
@@ -12242,6 +12456,9 @@ function downloadTrendPng(){
     if (un){ setPolicies(polItems().filter(i => i.policy !== un.dataset.unpick)); refreshPolicies(qById("policy_ratings"), true, true); return; }
     // a click on the answer already chosen fires no "change": clear it here
     if (t.matches("input[type=radio]")){ applyRadio(t, t.dataset.was === "1"); delete t.dataset.was; }
+  });
+  body.addEventListener("keydown", e => {
+    if (e.key === "Enter" && e.target.id === "fbKeyInput"){ e.preventDefault(); verifyKey(); }
   });
   body.addEventListener("pointerdown", e => {                // remember whether the radio was chosen before the click
     const r = e.target.closest(".fb-seg, .fb-mcell, .fb-chip")?.querySelector("input[type=radio]");
@@ -12284,6 +12501,12 @@ function downloadTrendPng(){
     const out = {};
     questionsOf(S.steps[stepIdx]).forEach(q => {
       const v = S.answers[q.id];
+      if (q.type === "group"){
+        const g = groupOf();
+        if (!g) out[q.id] = "Please choose the group you are answering as.";
+        else if (g.keyed && !accessOk(g.code)) out[q.id] = `Enter and verify the access key for ${g.plural.toLowerCase()}, or choose another group.`;
+        return;
+      }
       if (q.required && (v == null || v === false || (Array.isArray(v) && !v.length)))
         out[q.id] = q.type === "check" ? "Please tick this box to continue." : "Please answer this question.";
       if (q.type === "email" && S.answers[q.depends_on] && !(v && EMAIL_OK.test(v)))
@@ -12312,39 +12535,51 @@ function downloadTrendPng(){
   }
   prevBtn.addEventListener("click", () => goTo(S.step - 1));
   nextBtn.addEventListener("click", () => {
-    if (S.step === S.steps.length - 1){ submit(); return; }
+    if (S.steps[S.step].id === "review"){ submit(); return; }
     if (!validate()) return;
     if (!S.started) S.started = new Date().toISOString();
     S.step += 1; S.max = Math.max(S.max, S.step); saveDraft(); render(true);
   });
-  $("fbSteps").addEventListener("click", e => { const b = e.target.closest("[data-goto]"); if (b && !b.disabled) goTo(+b.dataset.goto); });
+  $("fbSteps").addEventListener("click", e => { const b = e.target.closest("button[data-goto]"); if (b && !b.disabled) goTo(+b.dataset.goto); });
 
   // ---- Submit ----
   async function submit(){
     const badStep = S.steps.findIndex((_, i) => Object.keys(problems(i)).length);   // re-check every step
     if (badStep >= 0){ S.step = badStep; render(true); validate(); return; }
+    const g = groupOf(), ids = new Set(curQuestions().map(q => q.id));
+    const answers = Object.fromEntries(Object.entries(S.answers).filter(([k]) => ids.has(k)));   // only this group's questions
     const started = S.started ? new Date(S.started) : new Date();
     const payload = {
-      answers: S.answers, started_at: started.toISOString(), client_id: client,
+      answers, started_at: started.toISOString(), client_id: client,
       elapsed_s: Math.round((Date.now() - started.getTime()) / 1000),
       device: matchMedia("(max-width: 767px)").matches ? "mobile" : "desktop",
       website: $("fbWebsite").value,
+      access: g.keyed && accessOk(g.code) ? S.access.token : null,
     };
     nextBtn.disabled = true; prevBtn.disabled = true;
     setStatus("sending", '<span class="spinner-border spinner-border-sm"></span>Sending your answers&hellip;');
     try {
       const resp = await fetch("/api/feedback/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const r = await resp.json().catch(() => ({}));
+      if (r.code === "access"){                                // key expired: back to the first page, answers kept
+        setAccess(null); S.step = 0; render(true); validate();
+        setStatus("err", `<i class="bi bi-exclamation-triangle-fill"></i>${E(r.detail)}`);
+        renderLock();
+        return;
+      }
       if (!resp.ok || !r.ok) throw new Error(r.detail || "The answers could not be saved. Please try again.");
-      const mine = { ...S.answers };
       clearDraft();
       store.set(KEY_DONE, { at: new Date().toISOString(), ref: r.response_id });
       $("fbRef").textContent = r.response_id;
+      const keyed = g.keyed && accessOk();
+      $("fbThanksMore").textContent = keyed ? "As a key holder you can follow the aggregated results of the consultation in the dashboard below."
+        : "The INPACT team will publish the aggregated results in its reports and in this dashboard.";
+      $("fbSeeResults").hidden = !keyed;
       $("fbSurvey").hidden = true;
       $("fbThanks").hidden = false;
       $("fbThanks").scrollIntoView({ behavior: "smooth", block: "start" });
       $("fbThanks").focus({ preventScroll: true });
-      loadResults(mine, true);
+      loadResults(true);
     } catch (err){
       setStatus("err", `<i class="bi bi-exclamation-triangle-fill"></i>${E(err.message || "Network error: the server could not be reached.")}`);
     } finally {
@@ -12353,6 +12588,7 @@ function downloadTrendPng(){
   }
   $("fbAgain").addEventListener("click", () => {
     S.answers = {}; S.step = 0; S.max = 0; S.started = null; S.polQ = ""; S.polLevel = "all";
+    buildSteps();
     $("fbThanks").hidden = true; $("fbSurvey").hidden = false; banner(); render(true);
   });
   $("fbSeeResults").addEventListener("click", () => $("fbResults").scrollIntoView({ behavior: "smooth", block: "start" }));
@@ -12363,58 +12599,295 @@ function downloadTrendPng(){
     b.innerHTML = msg; b.hidden = false;
   }
 
-  // ---- Public aggregate results ----
-  function distHtml(d, q){
-    const tot = Object.values(d.counts).reduce((a, b) => a + b, 0) + (d.dk || 0) || 1;
-    const segsH = Object.entries(d.counts).map(([k, n], i) => n ? `<span style="width:${100 * n / tot}%;background:${DIST_COL[i]}" title="${E(q.scale.labels[k])}: ${n}"></span>` : "").join("") +
-      (d.dk ? `<span style="width:${100 * d.dk / tot}%;background:#E2E8EE" title="Don't know: ${d.dk}"></span>` : "");
-    const legend = Object.keys(d.counts).map((k, i) => `<span><i style="background:${DIST_COL[i]}"></i>${E(q.scale.labels[k])} ${Math.round(100 * d.counts[k] / tot)}%</span>`).join("") +
-      (d.dk ? `<span><i style="background:#E2E8EE"></i>Don't know ${Math.round(100 * d.dk / tot)}%</span>` : "");
-    return `<div class="fb-dist">${segsH}</div><div class="fb-dist-legend">${legend}</div>`;
+  /* =================== Results dashboard (key holders only) =================== */
+  const R = { data: null, filter: "all", deep: null, sort: { k: "n", dir: -1 }, allPol: false };
+  const resBody = $("fbResultsBody"), tip = $("fbTip");
+  const fmt = (v, d = 1) => v == null || isNaN(v) ? "–" : (+v).toFixed(d);
+  const pct = (a, b) => b ? Math.round(100 * a / b) : 0;
+  const sum = o => Object.values(o || {}).reduce((a, b) => a + b, 0);
+  const gLabel = c => (S.gmap[c] || {}).plural || c;
+  const findQ = (qid, g) => {
+    const flows = g ? [S.schema.flows[g] || []] : Object.values(S.schema.flows);
+    for (const f of flows) for (const st of f) for (const q of st.questions) if (q.id === qid) return q;
+    return null;
+  };
+  const optLabel = (qid, code) => {
+    for (const f of Object.values(S.schema.flows)) for (const st of f) for (const q of st.questions)
+      if (q.id === qid){ const o = (q.options || []).concat(q.rows || []).find(x => x.code === code); if (o) return o.label; }
+    return code;
+  };
+  // colour for a mean on the 1..5 scale (red - grey - green)
+  function meanColour(m){
+    const stops = DIV.map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+    const x = Math.min(4, Math.max(0, m - 1)), i = Math.min(3, Math.floor(x)), f = x - i;
+    const c = stops[i].map((v, k) => Math.round(v + (stops[i + 1][k] - v) * f));
+    const lum = (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255;
+    return { bg: `rgb(${c.join(",")})`, fg: lum > .62 ? "#1F2D3A" : "#fff" };
   }
-  function barsHtml(items, max){
-    return `<div class="fb-bars">${items.map(it => `<div class="fb-bar"><span>${E(it.label)}</span><span class="tr"><span style="width:${Math.max(3, 100 * it.value / max)}%"></span></span>
-      <span class="v">${it.text}</span></div>`).join("")}</div>`;
+
+  // Merge the per-group counts of one question over several groups
+  function merge(a, b){
+    if (!b) return a;
+    if (!a) return JSON.parse(JSON.stringify(b));
+    a.a = (a.a || 0) + (b.a || 0);
+    if (b.c){ a.c = a.c || {}; for (const k in b.c) a.c[k] = (a.c[k] || 0) + b.c[k]; }
+    if (b.dk) a.dk = (a.dk || 0) + b.dk;
+    if (b.rows){ a.rows = a.rows || {}; for (const r in b.rows) a.rows[r] = merge(a.rows[r], b.rows[r]); }
+    if (b.p){
+      a.p = a.p || {};
+      for (const p in b.p){
+        const x = a.p[p] || (a.p[p] = { n: 0, crit: {} }); x.n += b.p[p].n;
+        for (const c in b.p[p].crit){ const y = x.crit[c] || (x.crit[c] = { s: 0, n: 0 }); y.s += b.p[p].crit[c].s; y.n += b.p[p].crit[c].n; }
+      }
+    }
+    return a;
   }
-  function renderResults(d){
-    const el = $("fbResultsBody");
-    if (d.n){ $("fbHeroN").textContent = d.n.toLocaleString("en-IE"); $("fbHeroStat").hidden = false; }
-    if (!d.available){
-      el.innerHTML = `<p class="fb-empty"><i class="bi bi-hourglass-split"></i>Results appear here once ${d.min_n || 5} responses have been received${d.n ? ` (${d.n} so far)` : ""}, so that no individual can be recognised.</p>`;
+  const shownGroups = () => R.filter === "all" ? S.groups.map(g => g.code) : [R.filter];
+  const agg = (qid, gs) => (gs || shownGroups()).reduce((acc, g) => merge(acc, (R.data.q[qid] || {})[g]), null);
+  const meanOf = a => { if (!a || !a.c) return null; let s = 0, n = 0; for (const k in a.c){ s += +k * a.c[k]; n += a.c[k]; } return n ? s / n : null; };
+
+  // ---- Chart pieces ----
+  function legendHtml(scale, dk){
+    return `<div class="fb-legend">${Object.keys(scale.labels).map((k, i) => `<span><i style="background:${DIV[i]}"></i>${E(scale.labels[k])}</span>`).join("")}${
+      dk ? `<span><i style="background:${DK}"></i>Don't know</span>` : ""}</div>`;
+  }
+  function likRow(label, a, scale, dot){
+    const lab = `<span class="l">${dot ? `<i class="dot" style="--gc:${GCOL[dot]}"></i>` : ""}<span>${label}</span></span>`;
+    if (!a || !(sum(a.c) + (a.dk || 0))) return lab + '<span class="na">No answers yet</span>';
+    const keys = Object.keys(scale.labels), tot = sum(a.c) + (a.dk || 0);
+    const parts = keys.map((k, i) => [scale.labels[k], (a.c || {})[k] || 0, DIV[i], i === 2]).concat(a.dk ? [["Don't know", a.dk, DK, true]] : []);
+    const segsH = parts.filter(p => p[1]).map(([l, n, col, light]) => {
+      const w = 100 * n / tot;
+      return `<span class="${light ? "lt" : ""}" style="width:${w}%;background:${col}" data-tip="<b>${E(l)}</b><br>${n} of ${tot} (${Math.round(w)}%)">${w >= 9 ? Math.round(w) + "%" : ""}</span>`;
+    }).join("");
+    const m = meanOf(a);
+    return `${lab}<div class="fb-stack" role="img" aria-label="${E(label)}: ${parts.map(p => `${p[0]} ${p[1]}`).join(", ")}">${segsH}</div>
+      <span class="m" data-tip="Mean of ${sum(a.c)} answers on the 1&ndash;${keys.length} scale${a.dk ? " (don't know excluded)" : ""}">${fmt(m)}<small>n=${tot}</small></span>`;
+  }
+  function hbars(items, colour){
+    if (!items.length) return '<p class="fb-empty" style="font-size:.8rem"><i class="bi bi-dash-circle"></i>No answers yet.</p>';
+    const max = Math.max(...items.map(i => i.v)) || 1;
+    return `<div class="fb-hbars">${items.map(i => `<span class="l">${E(i.label)}</span><span class="t" style="--gc:${i.colour || colour || "var(--teal)"}">
+      <span style="width:${Math.max(1.5, 100 * i.v / max)}%" data-tip="${i.tip || ""}"></span></span><span class="v">${i.text}</span>`).join("")}</div>`;
+  }
+  function choiceBars(qid, a, top){
+    if (!a || !a.a) return hbars([]);
+    const items = Object.entries(a.c || {}).sort((x, y) => y[1] - x[1]).slice(0, top || 99).map(([code, n]) => ({
+      label: optLabel(qid, code), v: n, text: `${pct(n, a.a)}%`, tip: `<b>${E(optLabel(qid, code))}</b><br>${n} of ${a.a} respondents (${pct(n, a.a)}%)` }));
+    return hbars(items);
+  }
+  const panel = (title, sub, inner, wide) => `<div class="fb-panel${wide ? " wide" : ""}"><h5>${title}</h5>${sub ? `<p class="sub">${sub}</p>` : ""}${inner}</div>`;
+
+  function kpis(gs){
+    const n = gs.reduce((s, g) => s + (R.data.groups[g] || 0), 0);
+    const o = agg("overall_effectiveness", gs), t = agg("target_2030", gs), p = agg("pace", gs), pr = agg("policy_ratings", gs);
+    const om = meanOf(o), likely = t ? ((t.c || {})["4"] || 0) + ((t.c || {})["5"] || 0) : 0, tOp = t ? sum(t.c) : 0;
+    const slow = p ? (p.c || {}).too_slow || 0 : 0;
+    const ratings = pr ? Object.values(pr.p || {}).reduce((s, x) => s + x.n, 0) : 0, npol = pr ? Object.keys(pr.p || {}).length : 0;
+    const med = R.data.median_duration_s;
+    return `<div class="fb-kpis">
+      <div class="fb-kpi"><div class="k">Responses</div><div class="v">${n.toLocaleString("en-IE")}</div><div class="s">${R.filter === "all" ? `from ${S.groups.filter(g => R.data.groups[g.code]).length} groups` : E(gLabel(R.filter))}${med ? ` · median ${Math.max(1, Math.round(med / 60))} min to complete` : ""}</div></div>
+      <div class="fb-kpi"><div class="k">Overall effectiveness</div><div class="v">${fmt(om)}<small> / 5</small></div><div class="s">${om == null ? "No answers yet" : E(findQ("overall_effectiveness").scale.labels[Math.round(om)]) + " on average"}</div>
+        <div class="meter"><span style="width:${om ? 100 * (om - 1) / 4 : 0}%;background:${om ? meanColour(om).bg : "transparent"}"></span></div></div>
+      <div class="fb-kpi"><div class="k">Expect 2030 target met</div><div class="v">${tOp ? pct(likely, tOp) : "–"}<small>%</small></div><div class="s">say likely or very likely (of ${tOp} with a view)</div>
+        <div class="meter"><span style="width:${pct(likely, tOp)}%"></span></div></div>
+      <div class="fb-kpi"><div class="k">Pace too slow</div><div class="v">${p && p.a ? pct(slow, p.a) : "–"}<small>%</small></div><div class="s">of ${p ? p.a : 0} who answered</div>
+        <div class="meter"><span style="width:${p ? pct(slow, p.a) : 0}%"></span></div></div>
+      <div class="fb-kpi"><div class="k">Policy ratings</div><div class="v">${ratings}</div><div class="s">${npol} different policies rated</div></div>
+    </div>`;
+  }
+  function whoPanel(){
+    const tot = R.data.n || 1;
+    const items = S.groups.map(g => ({ label: g.plural, v: R.data.groups[g.code] || 0, colour: GCOL[g.code],
+      text: `${R.data.groups[g.code] || 0}`, tip: `<b>${E(g.plural)}</b><br>${R.data.groups[g.code] || 0} responses (${pct(R.data.groups[g.code] || 0, tot)}%)` }));
+    return panel("Responses by group", "Groups with fewer than " + R.data.min_cell + " responses are counted but not charted.", hbars(items));
+  }
+  function timelinePanel(){
+    const days = Object.keys(R.data.timeline);
+    if (!days.length) return panel("Responses over time", "", '<p class="fb-empty" style="font-size:.8rem">No responses yet.</p>');
+    const d0 = new Date(days[0] + "T00:00:00Z"), d1 = new Date(), span = Math.max(1, Math.round((d1 - d0) / 864e5) + 1);
+    const step = span > 60 ? 7 : 1, nb = Math.ceil(span / step), bins = Array.from({ length: nb }, () => ({}));
+    days.forEach(d => {
+      const i = Math.min(nb - 1, Math.floor(Math.round((new Date(d + "T00:00:00Z") - d0) / 864e5) / step));
+      for (const g in R.data.timeline[d]) bins[i][g] = (bins[i][g] || 0) + R.data.timeline[d][g];
+    });
+    const max = Math.max(1, ...bins.map(b => sum(b)));
+    const lab = i => new Date(d0.getTime() + i * step * 864e5).toLocaleDateString("en-IE", { day: "numeric", month: "short" });
+    const cols = bins.map((b, i) => `<span style="height:${100 * sum(b) / max}%" data-tip="<b>${step === 7 ? "Week of " : ""}${lab(i)}</b><br>${sum(b)} responses${
+      Object.keys(b).length ? "<br>" + Object.entries(b).map(([g, n]) => `${E(gLabel(g))}: ${n}`).join("<br>") : ""}"></span>`).join("");
+    return panel("Responses over time", step === 7 ? "Responses per week" : "Responses per day",
+      `<div class="fb-cols">${cols}</div><div class="fb-cols-x"><span>${lab(0)}</span><span>${lab(nb - 1)}</span></div>`);
+  }
+  function byGroupLikert(qid, title){
+    const q = findQ(qid); if (!q) return "";
+    const gs = shownGroups().filter(g => (R.data.q[qid] || {})[g]);
+    let rows = gs.map(g => likRow(E(gLabel(g)), R.data.q[qid][g], q.scale, g)).join("");
+    if (R.filter === "all" && gs.length > 1) rows = likRow("<b>All groups</b>", agg(qid, gs), q.scale) + rows;
+    return panel(title, E(q.label), legendHtml(q.scale, q.dk) + `<div class="fb-lik">${rows || '<span class="na">No answers yet</span>'}</div>`, true);
+  }
+  function heatPanel(qid, title, sub){
+    const q = findQ(qid); if (!q) return "";
+    const gs = shownGroups().filter(g => (R.data.q[qid] || {})[g]);
+    if (!gs.length) return "";
+    const cols = (R.filter === "all" && gs.length > 1 ? ["all"] : []).concat(gs);
+    const cell = (a, row) => {
+      const r = a && a.rows && a.rows[row]; const m = meanOf(r), n = r ? sum(r.c) : 0;
+      if (m == null) return '<td class="c none" data-tip="No ratings">–</td>';
+      const c = meanColour(m);
+      return `<td class="c" style="background:${c.bg};color:${c.fg}" data-tip="<b>${fmt(m, 2)}</b> mean of ${n} ratings${r.dk ? `<br>${r.dk} don't know` : ""}">${fmt(m)}</td>`;
+    };
+    const aggs = Object.fromEntries(cols.map(g => [g, g === "all" ? agg(qid, gs) : R.data.q[qid][g]]));
+    const rows = q.rows.map(r => `<tr><td>${E(r.label)}</td>${cols.map(g => cell(aggs[g], r.code)).join("")}</tr>`).join("");
+    const lo = q.scale.labels[1], hi = q.scale.labels[q.scale.max];
+    return panel(title, sub || E(q.label), `<div style="overflow:auto"><table class="fb-heat"><thead><tr><th></th>${cols.map(g => `<th>${g === "all" ? "All" : E(gLabel(g))}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="fb-scalekey"><span>1 ${E(lo)}</span><span class="g"></span><span>${q.scale.max} ${E(hi)}</span><span style="margin-left:auto">mean score</span></div>`, true);
+  }
+  const CRIT_ORDER = ["effectiveness", "efficiency", "equity", "implementation", "evidence", "design", "feasibility"];
+  function scorecard(){
+    const a = agg("policy_ratings");
+    if (!a || !a.p || !Object.keys(a.p).length) return panel("Policy scorecard", "", '<p class="fb-empty" style="font-size:.8rem"><i class="bi bi-dash-circle"></i>No policies rated yet.</p>', true);
+    const critLabel = {};
+    Object.values(S.schema.flows).forEach(f => f.forEach(st => st.questions.forEach(q => (q.criteria || []).forEach(c => { critLabel[c.code] = c.label; }))));
+    const crits = CRIT_ORDER.filter(c => Object.values(a.p).some(x => x.crit[c]));
+    let rows = Object.entries(a.p).map(([name, x]) => ({ name, n: x.n, m: Object.fromEntries(crits.map(c => [c, x.crit[c] && x.crit[c].n >= 2 ? x.crit[c].s / x.crit[c].n : null])),
+      cn: Object.fromEntries(crits.map(c => [c, x.crit[c] ? x.crit[c].n : 0])) }));
+    const { k, dir } = R.sort;
+    rows.sort((p, q) => {
+      const a1 = k === "n" ? p.n : k === "name" ? p.name : p.m[k], b1 = k === "n" ? q.n : k === "name" ? q.name : q.m[k];
+      if (a1 == null && b1 == null) return 0; if (a1 == null) return 1; if (b1 == null) return -1;
+      return (a1 < b1 ? -1 : a1 > b1 ? 1 : 0) * dir;
+    });
+    const total = rows.length; if (!R.allPol) rows = rows.slice(0, 12);
+    const th = (key, txt) => `<th><button type="button" data-sort="${key}"${R.sort.k === key ? ` aria-sort="${dir > 0 ? "ascending" : "descending"}"` : ""}>${txt}${R.sort.k === key ? `<i class="bi bi-caret-${dir > 0 ? "up" : "down"}-fill"></i>` : ""}</button></th>`;
+    const body = rows.map(r => {
+      const p = polByName.get(r.name) || {};
+      return `<tr><td>${E(r.name)}<small>${E(p.year || "")}${p.cat || p.level ? " · " + E(p.cat || p.level) : ""}${p.sector ? " · " + E(p.sector) : ""}</small></td><td>${r.n}</td>${crits.map(c => {
+        if (r.m[c] == null) return `<td><span class="muted" data-tip="${r.cn[c] ? "Fewer than 2 ratings" : "Not rated on this criterion"}">–</span></td>`;
+        const col = meanColour(r.m[c]);
+        return `<td><span class="chip" style="background:${col.bg};color:${col.fg}" data-tip="<b>${E(critLabel[c])}</b>: ${fmt(r.m[c], 2)}<br>${r.cn[c]} ratings">${fmt(r.m[c])}</span></td>`;
+      }).join("")}</tr>`;
+    }).join("");
+    return panel("Policy scorecard", "Mean rating from 1 (very poor) to 5 (very good). Click a column to sort. Criteria differ by group, so not every policy has every score.",
+      `<div class="fb-score-wrap"><table class="fb-score"><thead><tr>${th("name", "Policy")}${th("n", "Rated by")}${crits.map(c => th(c, E(critLabel[c] || c))).join("")}</tr></thead><tbody>${body}</tbody></table></div>
+      ${total > 12 ? `<button type="button" class="fb-more" id="fbPolMore">${R.allPol ? "Show the top 12" : `Show all ${total} policies`}</button>` : ""}`, true);
+  }
+  // Questions that only one group answers, drawn by type
+  const SHARED = new Set(["overall_effectiveness", "target_2030", "pace", "barriers", "instruments", "sector_effectiveness", "policy_ratings", "group", "consent"]);
+  function deepDive(){
+    const avail = S.groups.filter(g => Object.keys(R.data.q).some(q => (R.data.q[q] || {})[g.code]));
+    if (!avail.length) return "";
+    const g = R.filter !== "all" ? R.filter : (avail.some(x => x.code === R.deep) ? R.deep : avail[0].code);
+    const picker = R.filter === "all" ? `<div class="fb-filter" style="margin-bottom:.8rem">${avail.map(x =>
+      `<button type="button" data-deep="${x.code}" aria-pressed="${x.code === g}" style="--gc:${GCOL[x.code]}"><i class="dot"></i>${E(x.plural)}</button>`).join("")}</div>` : "";
+    const panels = [];
+    (S.schema.flows[g] || []).forEach(st => st.questions.forEach(q => {
+      if (SHARED.has(q.id) || ["text", "email", "check"].includes(q.type)) return;
+      const a = (R.data.q[q.id] || {})[g]; if (!a) return;
+      const sub = `${E(st.title)} · ${a.a} answered`;
+      if (q.type === "matrix"){
+        const rows = q.rows.map(r => likRow(E(r.label), a.rows[r.code], q.scale)).join("");
+        panels.push(panel(E(q.label), sub, legendHtml(q.scale, q.dk) + `<div class="fb-lik">${rows}</div>`, true));
+      } else if (q.type === "scale"){
+        panels.push(panel(E(q.label), sub, legendHtml(q.scale, q.dk) + `<div class="fb-lik">${likRow(E(gLabel(g)), a, q.scale, g)}</div>`));
+      } else {
+        panels.push(panel(E(q.label), sub + (q.type === "multi" ? " · % of respondents choosing each option" : ""), choiceBars(q.id, a)));
+      }
+    }));
+    if (!panels.length) return "";
+    return `<div class="fb-dsec">In depth: ${E(gLabel(g))}</div>${picker}<div class="fb-dgrid">${panels.join("")}</div>`;
+  }
+
+  function renderDash(){
+    const d = R.data;
+    $("fbHeroN").textContent = d.n.toLocaleString("en-IE"); $("fbHeroStat").hidden = false;
+    const viewer = S.gmap[d.viewer] || {};
+    const top = `<div class="fb-dash-top"><div><div class="fb-sec-h"><i class="bi bi-bar-chart-line"></i>Consultation results</div>
+        <p class="fb-sec-sub">Aggregated, anonymous results · updated ${new Date(d.updated_utc).toLocaleString("en-IE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · questionnaire ${E(d.version)} · viewing as ${E((viewer.label || "").toLowerCase())}</p></div>
+      <div class="fb-dash-btns"><button type="button" id="fbResRefresh"><i class="bi bi-arrow-clockwise"></i>Refresh</button><button type="button" id="fbResLock"><i class="bi bi-lock"></i>Lock</button></div></div>`;
+    const filter = `<div class="fb-filter" role="group" aria-label="Show results for">
+      <button type="button" data-filter="all" aria-pressed="${R.filter === "all"}">All groups <small>${d.n}</small></button>${S.groups.map(g => {
+        const n = d.groups[g.code] || 0, has = Object.values(d.q).some(x => x[g.code]);
+        return `<button type="button" data-filter="${g.code}" aria-pressed="${R.filter === g.code}" style="--gc:${GCOL[g.code]}"${has ? "" : ` disabled title="Shown from ${d.min_cell} responses"`}><i class="dot"></i>${E(g.plural)} <small>${n}</small></button>`;
+      }).join("")}</div>`;
+    if (!d.n){
+      resBody.innerHTML = top + '<p class="fb-empty"><i class="bi bi-hourglass-split"></i>No responses yet. Results appear here as soon as people take part.</p>';
       return;
     }
-    const qO = qById("overall_effectiveness"), qT = qById("target_2030"), qS = qById("sector_effectiveness");
-    const panels = [];
-    panels.push(`<div class="fb-res"><h5>Overall effectiveness of policy <small>mean ${d.overall_effectiveness.mean ?? "–"} / 5</small></h5>${distHtml(d.overall_effectiveness, qO)}</div>`);
-    panels.push(`<div class="fb-res"><h5>Will Ireland meet the 2030 target? <small>mean ${d.target_2030.mean ?? "–"} / 5</small></h5>${distHtml(d.target_2030, qT)}</div>`);
-    const sec = qS.rows.filter(r => d.sectors[r.code]).map(r => ({ label: r.label, value: d.sectors[r.code].mean,
-      text: `${d.sectors[r.code].mean.toFixed(1)} <small>(n=${d.sectors[r.code].n})</small>` })).sort((a, b) => b.value - a.value);
-    if (sec.length) panels.push(`<div class="fb-res"><h5>Effectiveness by sector <small>mean, 1&ndash;5</small></h5>${barsHtml(sec, 5)}</div>`);
-    const top = (list, qid) => list.map(([c, n]) => ({ label: S.lab[qid][c] || c, value: n, text: String(n) }));
-    if (d.barriers.length) panels.push(`<div class="fb-res"><h5>Main barriers <small>times chosen</small></h5>${barsHtml(top(d.barriers, "barriers"), d.barriers[0][1])}</div>`);
-    if (d.instruments.length) panels.push(`<div class="fb-res"><h5>Measures to strengthen <small>times chosen</small></h5>${barsHtml(top(d.instruments, "instruments"), d.instruments[0][1])}</div>`);
-    if (d.policies.length) panels.push(`<div class="fb-res"><h5>Rated policies: effectiveness <small>mean, 1&ndash;5</small></h5>${
-      barsHtml(d.policies.map(p => ({ label: (polByName.get(p.policy) || {}).short || p.policy, value: p.mean, text: `${p.mean.toFixed(1)} <small>(n=${p.n})</small>` })), 5)}</div>`);
-    el.innerHTML = `<div class="fb-res-grid">${panels.join("")}</div><p class="fb-hint" style="margin:.9rem 0 0">Based on ${d.n.toLocaleString("en-IE")} responses. Respondents choose to take part, so the results describe them, not the whole population.</p>`;
+    if (!Object.keys(d.q).length){
+      resBody.innerHTML = top + `<div class="fb-dgrid">${whoPanel()}${timelinePanel()}</div><p class="fb-empty"><i class="bi bi-shield-lock"></i>Answers are charted once a group has at least ${d.min_cell} responses, so that no individual can be recognised.</p>`;
+      return;
+    }
+    const gs = shownGroups();
+    const hasQ = qid => gs.some(g => (R.data.q[qid] || {})[g]);
+    let html = top + filter + kpis(gs);
+    html += `<div class="fb-dsec">Who took part</div><div class="fb-dgrid">${whoPanel()}${timelinePanel()}</div>`;
+    html += `<div class="fb-dsec">Headline judgements</div><div class="fb-dgrid">${byGroupLikert("overall_effectiveness", "Overall effectiveness of climate policy")}${byGroupLikert("target_2030", "Will Ireland meet the 2030 target?")}</div>`;
+    if (hasQ("sector_effectiveness") || hasQ("ambition_gap")) html += `<div class="fb-dsec">Sectors</div><div class="fb-dgrid">${heatPanel("sector_effectiveness", "Effectiveness of policy by sector", "Mean rating, 1 (very ineffective) to 5 (very effective). The public is not asked this question.")}${
+      hasQ("ambition_gap") ? heatPanel("ambition_gap", "Ambition compared with the 2030 target (experts)", "Mean rating, 1 (far too weak) to 5 (far too strong); 3 = about right.") : ""}</div>`;
+    const bar = agg("barriers"), ins = agg("instruments");
+    if (bar || ins) html += `<div class="fb-dsec">Barriers and priorities</div><div class="fb-dgrid">${
+      bar ? panel("Main barriers to more effective policy", `% of ${bar.a} respondents choosing each (up to three)`, choiceBars("barriers", bar, 8)) : ""}${
+      ins ? panel("Measures to strengthen most", `% of ${ins.a} respondents choosing each (up to three)`, choiceBars("instruments", ins, 8)) : ""}</div>`;
+    html += `<div class="fb-dsec">Policies</div><div class="fb-dgrid">${scorecard()}</div>`;
+    html += deepDive();
+    html += `<p class="fb-note"><i class="bi bi-info-circle me-1"></i>Respondents choose to take part, so the results describe them, not the population. Groups with fewer than ${d.min_cell} responses are counted but not charted, and a policy score needs at least two ratings. Free-text answers are not shown here; the research team analyses them from the export.</p>`;
+    resBody.innerHTML = html;
   }
-  function renderCompare(mine, d){
-    const el = $("fbCompare"), out = [];
-    const q = qById("overall_effectiveness");
-    if (typeof mine.overall_effectiveness === "number")
-      out.push(`<div>Your rating of overall effectiveness<b>${mine.overall_effectiveness} · ${E(q.scale.labels[mine.overall_effectiveness])}</b>${
-        d.available && d.overall_effectiveness.mean != null ? `Average of all respondents: <b style="display:inline;font-size:1rem">${d.overall_effectiveness.mean}</b>` : ""}</div>`);
-    if (typeof mine.target_2030 === "number")
-      out.push(`<div>Your view on the 2030 target<b>${E(qById("target_2030").scale.labels[mine.target_2030])}</b>${
-        d.available && d.target_2030.mean != null ? `Average of all respondents: <b style="display:inline;font-size:1rem">${d.target_2030.mean}</b>` : ""}</div>`);
-    el.innerHTML = out.join("");
+  function renderLock(msg, err){
+    $("fbHeroStat").hidden = true;
+    resBody.innerHTML = `<div class="fb-lock"><span class="ico"><i class="bi bi-bar-chart-line"></i></span>
+      <div><h4>Consultation results</h4><p>Charts and statistics of the responses so far, by group, sector and policy. They are open to stakeholders, researchers, experts and policy makers: enter the access key of your group to see them.</p></div>
+      <form id="fbLockForm" autocomplete="off"><div class="fb-keyrow"><input type="text" class="form-control" id="fbLockKey" maxlength="16" spellcheck="false" autocapitalize="characters" placeholder="Access key" aria-label="Access key">
+        <button type="submit" class="btn btn-submit text-white"><i class="bi bi-unlock"></i>Show results</button></div>
+        <div class="fb-keymsg${err ? " err" : ""}" id="fbLockMsg" role="status">${msg ? E(msg) : ""}</div></form></div>`;
   }
-  async function loadResults(mine, fresh){
+  resBody.addEventListener("submit", async e => {
+    if (e.target.id !== "fbLockForm") return;
+    e.preventDefault();
+    const key = $("fbLockKey").value.trim(), msg = $("fbLockMsg");
+    if (!key){ msg.className = "fb-keymsg err"; msg.textContent = "Please enter your access key."; return; }
+    msg.className = "fb-keymsg"; msg.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Checking&hellip;';
     try {
-      const d = await fetch("/api/feedback/summary/" + (fresh ? "?t=" + Date.now() : "")).then(r => r.json());
-      renderResults(d);
-      if (mine) renderCompare(mine, d);
+      await postAccess({ key });
+      if (S.step === 0 && $("fbKeyBox")) refreshKeyBox(false);
+      loadResults(true);
+    } catch (err){ msg.className = "fb-keymsg err"; msg.textContent = err.message; }
+  });
+  resBody.addEventListener("click", e => {
+    const t = e.target;
+    const f = t.closest("[data-filter]"); if (f && !f.disabled){ R.filter = f.dataset.filter; renderDash(); return; }
+    const dd = t.closest("[data-deep]"); if (dd){ R.deep = dd.dataset.deep; renderDash(); return; }
+    const so = t.closest("[data-sort]");
+    if (so){ const k = so.dataset.sort; R.sort = { k, dir: R.sort.k === k ? -R.sort.dir : (k === "name" ? 1 : -1) }; renderDash(); return; }
+    if (t.closest("#fbPolMore")){ R.allPol = !R.allPol; renderDash(); return; }
+    if (t.closest("#fbResRefresh")){ loadResults(true); return; }
+    if (t.closest("#fbResLock")){ setAccess(null); R.data = null; renderLock(); if (S.step === 0 && $("fbKeyBox")) refreshKeyBox(false); }
+  });
+  // Tooltips for every mark with data-tip
+  resBody.addEventListener("mousemove", e => {
+    const m = e.target.closest("[data-tip]");
+    if (!m || !m.dataset.tip){ tip.classList.remove("on"); return; }
+    tip.innerHTML = m.dataset.tip; tip.classList.add("on");
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.min(innerWidth - w - 8, e.clientX + 14) + "px";
+    tip.style.top = (e.clientY - h - 12 < 4 ? e.clientY + 16 : e.clientY - h - 12) + "px";
+  });
+  resBody.addEventListener("mouseleave", () => tip.classList.remove("on"));
+
+  async function loadResults(fresh){
+    if (!S.schema) return;
+    if (!accessOk()){ renderLock(); return; }
+    if (!R.data) resBody.innerHTML = '<p class="fb-empty"><span class="spinner-border spinner-border-sm"></span>Loading the results&hellip;</p>';
+    try {
+      const resp = await fetch("/api/feedback/summary/" + (fresh ? "?t=" + Date.now() : ""), { headers: { "X-Feedback-Access": S.access.token }, cache: "no-store" });
+      if (resp.status === 403){ setAccess(null); renderLock("Your access has expired. Please enter your key again.", true); return; }
+      const d = await resp.json();
+      if (!d.ok) throw new Error(d.detail);
+      R.data = d;
+      if (R.filter !== "all" && !Object.values(d.q).some(x => x[R.filter])) R.filter = "all";
+      renderDash();
     } catch (e){
-      $("fbResultsBody").innerHTML = '<p class="fb-empty"><i class="bi bi-wifi-off"></i>The results could not be loaded.</p>';
+      resBody.innerHTML = '<p class="fb-empty"><i class="bi bi-wifi-off"></i>The results could not be loaded. Please try again later.</p>';
     }
   }
 
@@ -12441,28 +12914,29 @@ function downloadTrendPng(){
   // ---- Start ----
   fetch("/api/feedback/schema/").then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(schema => {
     S.schema = schema;
-    S.steps = schema.steps.concat([{ id: "review", title: "Review", icon: "bi-check2-square",
-      intro: "Check your answers. Use Edit to change anything before you submit.", questions: [] }]);
-    allQuestions().forEach(q => {
-      S.lab[q.id] = {};
-      (q.options || []).concat(q.rows || []).forEach(o => { S.lab[q.id][o.code] = o.label; });
-    });
+    S.groups = schema.groups;
+    S.gmap = Object.fromEntries(schema.groups.map(g => [g.code, g]));
     const d = store.get(KEY_DRAFT), done = store.get(KEY_DONE);
     if (d && d.v === schema.version && d.answers && Object.keys(d.answers).length){
-      Object.assign(S, { answers: d.answers, step: Math.min(d.step || 0, S.steps.length - 1), max: Math.min(d.max || 0, S.steps.length - 1), started: d.started });
+      Object.assign(S, { answers: d.answers, step: d.step || 0, max: d.max || 0, started: d.started });
+      if (!S.gmap[S.answers.group]) delete S.answers.group;
       banner(`<i class="bi bi-clock-history"></i><span>Welcome back. Your unfinished answers from ${new Date(d.saved).toLocaleDateString("en-IE", { day: "numeric", month: "long" })} have been restored.</span><button type="button" id="fbRestart">Start again</button>`);
     } else if (done && done.at){
       banner(`<i class="bi bi-check2-circle"></i><span>You already responded on ${new Date(done.at).toLocaleDateString("en-IE", { day: "numeric", month: "long", year: "numeric" })}. You are welcome to answer again if you speak from a different perspective (for example as an expert and as a citizen).</span>`);
     }
+    buildSteps();
+    const g = groupOf();
+    if (g && g.keyed && !accessOk(g.code) && S.step > 0){ S.step = 0; }   // key needed again (new browser session)
     render(false);
+    loadResults(false);
   }).catch(() => {
     body.innerHTML = '<p class="fb-empty"><i class="bi bi-exclamation-triangle"></i>The survey could not be loaded. Please reload the page.</p>';
+    resBody.innerHTML = "";
   });
   $("fbBanner").addEventListener("click", e => {
     if (e.target.id !== "fbRestart") return;
-    clearDraft(); S.answers = {}; S.step = 0; S.max = 0; S.started = null; banner(); render(true);
+    clearDraft(); S.answers = {}; S.step = 0; S.max = 0; S.started = null; buildSteps(); banner(); render(true);
   });
-  loadResults(null, false);
 })();
 
 /* ---------------------- 11. Footer disclaimer toggle ---------------------- */

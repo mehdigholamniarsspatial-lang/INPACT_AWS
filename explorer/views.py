@@ -19,6 +19,7 @@ import zipfile
 import logging
 from pathlib import Path
 
+from django.core import signing
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -495,12 +496,18 @@ def map_export(request, fmt):
 # ---------------------------------------------------------------------------
 # Feedback endpoints
 # ---------------------------------------------------------------------------
-# The stakeholder survey: questionnaire in feedback_survey.py, storage and exports in
-# feedback_store.py. Simple guards against automated or accidental submissions: a size
-# limit, a hidden "website" field people never fill, a minimum completion time and a
-# per-address rate limit (per gunicorn worker, in memory).
+# The consultation: questionnaires in feedback_survey.py, storage and exports in
+# feedback_store.py. Members of the public answer without a key; the four other groups
+# exchange their group's access key for a signed token (valid ACCESS_HOURS), which opens
+# their questionnaire and the results dashboard. Simple guards against automated or
+# accidental submissions: a size limit, a hidden "website" field people never fill, a
+# minimum completion time, a per-address rate limit and a limit on wrong keys (per
+# gunicorn worker, in memory).
 _FB_RATE = {}                      # client address -> recent submission times
 _FB_RATE_MAX, _FB_RATE_WINDOW = 5, 3600
+_FB_KEYFAIL = {}                   # client address -> recent wrong-key times
+_FB_KEYFAIL_MAX, _FB_KEYFAIL_WINDOW = 8, 900
+ACCESS_SALT, ACCESS_HOURS = "inpact.feedback.access", 12
 
 
 def _client_addr(request):
@@ -508,21 +515,83 @@ def _client_addr(request):
     return (fwd.split(",")[0].strip() if fwd else request.META.get("REMOTE_ADDR", "")) or "?"
 
 
+def _access_group(token):
+    """The keyed group a signed access token was issued to, or None."""
+    if not token:
+        return None
+    try:
+        data = signing.loads(str(token), salt=ACCESS_SALT, max_age=ACCESS_HOURS * 3600)
+    except signing.BadSignature:
+        return None
+    g = data.get("g") if isinstance(data, dict) else None
+    return g if g in feedback_survey.KEYED_GROUPS else None
+
+
+def _json_body(request):
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except (ValueError, UnicodeDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def feedback_schema(request):
-    """The questionnaire (steps, questions, answer codes) for the Feedback tab."""
-    resp = JsonResponse(feedback_survey.public_schema())
+    """The questionnaires (groups, steps, questions, answer codes) for the Feedback tab."""
+    schema = feedback_survey.public_schema()
+    for g in schema["groups"]:                       # a keyed group without a key on the server is closed
+        g["open"] = (not g["keyed"]) or bool(feedback_store.group_key(g["code"]))
+    resp = JsonResponse(schema)
     resp["Cache-Control"] = "no-cache"
     return resp
 
 
+@csrf_exempt
+@require_POST
+def feedback_access(request):
+    """
+    Check a group's access key. Body: {"key": "...", "group": "researcher"} (group optional:
+    without it, the key decides the group, as in the results unlock form).
+    Returns {"ok": true, "group": ..., "label": ..., "token": ...}.
+    """
+    data = _json_body(request)
+    if data is None or len(request.body) > 2048:
+        return JsonResponse({"ok": False, "detail": "Could not read the request."}, status=400)
+    now, addr = time.time(), _client_addr(request)
+    fails = [t for t in _FB_KEYFAIL.get(addr, []) if now - t < _FB_KEYFAIL_WINDOW]
+    if len(fails) >= _FB_KEYFAIL_MAX:
+        return JsonResponse({"ok": False, "detail": "Too many attempts. Please wait 15 minutes and try again."},
+                            status=429)
+    group, key = data.get("group"), data.get("key")
+    if group:
+        ok = feedback_store.check_group_key(group, key)
+    else:
+        group = feedback_store.find_group_for_key(key)
+        ok = group is not None
+    if not ok:
+        _FB_KEYFAIL[addr] = fails + [now]
+        time.sleep(0.6)                                       # slows down guessing
+        label = feedback_survey.group_label(group).lower() if group else ""
+        return JsonResponse({"ok": False, "detail": "This key is not valid" +
+                             (f" for the {label} group." if label else ".")}, status=403)
+    token = signing.dumps({"g": group}, salt=ACCESS_SALT, compress=True)
+    return JsonResponse({"ok": True, "group": group, "label": feedback_survey.group_label(group),
+                         "token": token, "hours": ACCESS_HOURS})
+
+
 def feedback_summary(request):
-    """Aggregate results, shown once enough responses exist (FEEDBACK_MIN_N)."""
+    """Aggregated results for the dashboard: only with a valid access token of a keyed group."""
+    group = _access_group(request.headers.get("X-Feedback-Access"))
+    if not group:
+        return JsonResponse({"ok": False, "detail": "The results are open to stakeholders, researchers, "
+                                                    "experts and policy makers with an access key."}, status=403)
     try:
         data = feedback_store.summary()
     except Exception:
         logger.exception("Feedback summary failed")
-        data = {"n": 0, "available": False}
-    return JsonResponse(data)
+        return JsonResponse({"ok": False, "detail": "The results could not be computed."}, status=500)
+    resp = JsonResponse({"ok": True, "viewer": group, **data})
+    resp["Cache-Control"] = "no-store"
+    return resp
 
 
 @csrf_exempt
@@ -531,14 +600,17 @@ def submit_feedback(request):
     """Validate and store one survey response."""
     if len(request.body) > 64 * 1024:
         return JsonResponse({"ok": False, "detail": "The submission is too large."}, status=413)
-    try:
-        data = json.loads(request.body.decode("utf-8") or "{}")
-    except (ValueError, UnicodeDecodeError):
-        return JsonResponse({"ok": False, "detail": "Could not read the submission."}, status=400)
-    if not isinstance(data, dict):
+    data = _json_body(request)
+    if data is None:
         return JsonResponse({"ok": False, "detail": "Could not read the submission."}, status=400)
     if data.get("website"):                                  # honeypot: answer politely, store nothing
         return JsonResponse({"ok": True, "response_id": "-"})
+    answers = data.get("answers") if isinstance(data.get("answers"), dict) else {}
+    group = answers.get("group")
+    if group in feedback_survey.KEYED_GROUPS and _access_group(data.get("access")) != group:
+        return JsonResponse({"ok": False, "code": "access", "detail": "Your access key has expired or does not "
+                             "match the group you chose. Please enter the key again on the first page; your "
+                             "answers are kept."}, status=403)
     try:
         elapsed = float(data.get("elapsed_s") or 0)
     except (TypeError, ValueError):

@@ -27,20 +27,28 @@ Commit and push from the `InpactAWS` folder, then:
 
     ssh inpact-aws 'cd ~/INPACT_AWS && bash deploy/update.sh'
 
-## Stakeholder survey (Feedback tab)
+## Policy consultation (Feedback tab)
 
-The questionnaire is defined in `explorer/feedback_survey.py` (one place for the form, the
-validation and the export codebook; bump `SURVEY_VERSION` when questions change).
+The questionnaires are defined in `explorer/feedback_survey.py` (one place for the form, the
+validation, the results and the export codebook; bump `SURVEY_VERSION` when questions change).
+Respondents choose one of five groups, each with its own questionnaire. Members of the public
+need no key; stakeholders, researchers, experts and policy makers enter their group's access key
+(`FEEDBACK_KEY_STAKEHOLDER`, `_RESEARCHER`, `_EXPERT`, `_POLICYMAKER` in `/etc/inpact/inpact.env`,
+created by `deploy/ensure_feedback.sh`). The same keys open the results dashboard; a group's answers
+are charted from `FEEDBACK_MIN_CELL` responses (default 3).
+
+* **The group keys:** `ssh inpact-aws 'sudo grep FEEDBACK_KEY_ /etc/inpact/inpact.env'`. To change a key,
+  edit (or delete) its line, run `bash deploy/ensure_feedback.sh` to create a missing one, then
+  `sudo systemctl restart inpact`. Access granted with an old key ends within 12 hours.
 Responses are appended to `/var/lib/inpact/feedback/responses.jsonl`, outside the code folder,
 and copied daily to `/var/lib/inpact/backup/` (30 days). `deploy/ensure_feedback.sh` sets this up.
 
 * **Download:** Feedback tab → *Research team: download the responses* → enter the key →
-  Excel (README, Responses, MultiSelect, SectorRatings, PolicyRatings, PolicyComments, Codebook,
-  Contacts) or CSV tables in a zip.
+  Excel (README, Responses, MultiSelect, MatrixRatings, PolicyRatings, PolicyComments, Codebook,
+  Contacts; every table has a `group` column) or CSV tables in a zip.
 * **The key:** `ssh inpact-aws 'sudo grep FEEDBACK_ADMIN_KEY /etc/inpact/inpact.env'`. To change it,
   edit that line and run `sudo systemctl restart inpact`.
 * **Copy the raw file to your PC:** `scp inpact-aws:/var/lib/inpact/feedback/responses.jsonl .`
-* Aggregated results appear publicly once `FEEDBACK_MIN_N` responses exist (default 5).
 * The `Contacts` sheet holds personal data (e-mails of interview volunteers): keep it apart from
   the analysis files and delete it when the follow-up is done.
 
