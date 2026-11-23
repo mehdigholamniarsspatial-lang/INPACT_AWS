@@ -1,0 +1,117 @@
+{% extends "policies/base.html" %}
+{% load static policy_extras %}
+{% block title %}Methods | Ireland Climate Policy Timeline{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>Methods and data quality</h1>
+    <p class="lede">This page explains how {{ stats.candidates }} candidate policies were screened and selected. It also shows how each policy is scored every year, which assumptions are made and how the data were checked.</p>
+  </div>
+</div>
+
+<section class="panel">
+  <h2 style="font-size:22px">Selection flow</h2>
+  <p class="small muted prose">Both sources feed one core set. An EEA policy and an OECD category can describe the same instrument. So the {{ flow.eea_core }} selected EEA policies and {{ flow.capmf_core }} eligible OECD categories merge into {{ flow.core_families }} policy families. Follow the flows from left to right to see where each candidate ends up; hover over a flow for details.</p>
+  <div id="sankey" style="height:440px"></div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>How each policy is scored</h2><p>Each policy <i>p</i> in sector <i>s</i> and year <i>t</i> is scored as follows.</p></div>
+  <div class="grid-2">
+    <div class="panel">
+      <p class="formula-display">I<sub>p,s,t</sub> = M<sub>p,s,t</sub> × C<sub>p,s</sub> × B<sub>p</sub></p>
+      <dl class="kv">
+        <dt>I, policy intensity</dt><dd>Relative index on [0, 1].</dd>
+        <dt>M, implementation</dt><dd>The same-year OECD CAPMF stringency score ÷ 10, where a matching indicator exists. Otherwise, an assumed ramp-up: M = clip((t − t₀ − lag + 0.5) / ramp, 0, 1), where t₀ is the start year. Some policies keep an effect after they end. For these, M halves every h years (the half-life) from its last level: 2<sup>−(t − t<sub>end</sub>)/h</sup>.</dd>
+        <dt>C, coverage</dt><dd>The scope of the instrument or programme: the activities, technologies or recipients it reaches. It is a researcher-assigned ordinal score (a rank on a fixed scale, not a measurement): 1 (whole sector), 0.5 (major subsector), 0.25 (defined segment), 0.1 (narrow pilot).</dd>
+        <dt>B, bindingness</dt><dd>How compulsory the policy is, as an ordinal score: 1 (mandatory rule or statute), 0.75 (price or obligation), 0.5 (incentive), 0.25 (information or voluntary). It is a researcher-assigned classification of legal compulsion, not a measure of enforcement, compliance or effectiveness.</dd>
+      </dl>
+    </div>
+    <div class="panel">
+      <h3>Aggregation rules</h3>
+      <ul class="small" style="padding-left:18px">
+        <li>A residual bundle (one summary row per sector for smaller measures) takes the mean of its members' intensities. If any member is missing, the bundle value is missing too.</li>
+        <li>Framework (L1) rows give context only. Never add them to instruments or programmes.</li>
+        <li>A portfolio and its delivery schemes describe the same policy. Use one or the other, not both.</li>
+        <li>There is no national total index, because rows overlap by design.</li>
+      </ul>
+      <h3 style="margin-top:14px">Sensitivity index</h3>
+      <p class="small">As a check, an equal-weight index takes the simple average (M + C + B) / 3. A "gated" version of it is set to zero before a policy starts. The main index multiplies its parts, following composite-indicator practice (OECD/JRC, 2008). Its weights are a stated convention, not an empirical estimate.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Every candidate and its decision</h2><p>Five eligibility tests: (A) mitigation purpose, (B) applies in Ireland, (C) an identifiable instrument or framework, (D) an identified start date, (E) active within 2000–2023.</p></div>
+  <div class="panel">
+    <div class="filters">
+      <div class="control"><label for="c-q">Search</label><input type="search" id="c-q" placeholder="Candidate name or ID"></div>
+      <div class="control"><span class="label">Source</span><div class="seg" id="c-origin"><button data-value="" aria-pressed="true">Both</button><button data-value="EEA_deduplicated_PaM" aria-pressed="false">EEA</button><button data-value="CAPMF_positive_LEV3" aria-pressed="false">OECD</button></div></div>
+      <div class="control"><span class="label">Outcome</span><div class="seg" id="c-outcome"><button data-value="" aria-pressed="true">All</button><button data-value="core" aria-pressed="false">Core</button><button data-value="residual" aria-pressed="false">Residual</button><button data-value="excluded" aria-pressed="false">Excluded</button></div></div>
+    </div>
+    <p class="result-count" id="c-count"></p>
+    <div class="table-wrap" style="max-height:520px;overflow:auto"><table class="data" id="cands"><thead><tr><th>Candidate</th><th>Sector</th><th title="Eligibility tests A to E">A B C D E</th><th style="text-align:right">Reported kt</th><th style="text-align:right">Cumulative share</th><th>Outcome</th><th>Reason or basis</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<section class="section split">
+  <div class="panel">
+    <h3>The 90% selection rule by sector</h3>
+    <p class="small muted">Within each sector, eligible EEA measures are ranked by their reported saving. The first available estimate is used: ex-post 2024 (reported estimate of effects after implementation), then ex-ante 2025, then ex-ante 2030 (projected in advance).</p>
+    <p class="small muted">Measures are selected in rank order until they cover 90% of the sector's positive reported total. Each bar shows the share reached in one sector. Shares refer to reported totals, which may overlap, not to actual emission cuts.</p>
+    <div id="materiality" style="height:330px"></div>
+  </div>
+  <div class="panel">
+    <h3>Assumed timing profiles</h3>
+    <p class="small muted">When no OECD score matches, implementation rises in a straight line to full strength, counted from mid-year. If a policy ends but its effects last, implementation then halves every half-life. Speeds vary by type of mechanism. They are assumptions, not estimates.</p>
+    <p class="small muted">Move the slider to see how a policy phases in and fades after it ends.</p>
+    <div class="control"><label for="t-class">Mechanism class</label><select id="t-class"></select></div>
+    <div class="control" style="margin-top:8px"><label for="t-end">Policy ends after <output id="t-end-out">8</output> years <span class="muted">(0 = never)</span></label><input type="range" id="t-end" min="0" max="20" value="8" style="accent-color:var(--cursor)"></div>
+    <div id="ramp" style="height:230px"></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Internal consistency checks</h2><p>All {{ stats.checks_passed }} of {{ stats.checks_total }} internal consistency checks pass. They confirm that the dataset follows its own rules. They do not replace independent expert review.</p></div>
+  <div class="panel flush"><div class="table-wrap"><table class="data"><thead><tr><th>Check</th><th>Result</th><th>What it verifies</th></tr></thead>
+    <tbody>{% for c in checks %}<tr><td style="white-space:nowrap"><b>{{ c.title }}</b></td><td class="{% if c.result == 'PASS' %}pass{% else %}fail{% endif %}">{% if c.result == 'PASS' %}Pass{% else %}{{ c.result }}{% endif %}</td><td>{{ c.detail }}</td></tr>{% endfor %}</tbody></table></div></div>
+</section>
+
+<section class="section grid-2">
+  <div>
+    <div class="section-head"><h2>Key methodological decisions</h2></div>
+    <div class="panel">
+      {% for topic, text in decisions %}<details class="more" style="border-bottom:1px solid var(--line-2);padding:8px 0"><summary>{{ topic }}</summary><p class="small">{{ text }}</p></details>{% endfor %}
+    </div>
+  </div>
+  <div>
+    <div class="section-head"><h2>Known overlaps</h2></div>
+    <div class="panel flush"><div class="table-wrap"><table class="data"><thead><tr><th>Parent or context</th><th>Related</th><th>Relationship</th></tr></thead>
+      <tbody>{% for o in overlaps %}<tr><td>{{ o.parent_id }}</td><td>{{ o.related_id }}</td><td>{{ o.relationship|humanise }}</td></tr>{% endfor %}</tbody></table></div>
+      <p class="note" style="padding:0 14px 12px">Related rows must not be summed. Use either the parent or its components. No numerical overlap discount is applied.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Data dictionary</h2><p>Definitions of all {{ dictionary|length }} variables in the downloadable dataset. Variables 1–36 are the main analysis variables. Variables 37–67 record sources, assumptions and how rows may be combined.</p></div>
+  <div class="panel">
+    <div class="control" style="margin-bottom:10px"><label for="dict-q">Filter columns</label><input type="search" id="dict-q" placeholder="e.g. intensity, capmf, start"></div>
+    <div class="table-wrap" style="max-height:520px;overflow:auto"><table class="data" id="dict"><thead><tr><th>#</th><th>Column</th><th>Unit</th><th>Definition</th></tr></thead>
+      <tbody>{% for f in dictionary %}<tr><td>{{ f.position }}</td><td><code>{{ f.column }}</code></td><td style="white-space:nowrap">{{ f.unit }}</td><td>{{ f.definition }}</td></tr>{% endfor %}</tbody></table></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><h2>Sources</h2><p>Official documents used to verify dates, scope and methodology. Web sources were accessed on 15 November 2026. Sources open in a new tab.</p></div>
+  <div class="panel flush"><div class="table-wrap"><table class="data"><thead><tr><th>Publisher</th><th>Title</th><th>Year</th></tr></thead>
+    <tbody>{% for r in references %}<tr><td>{{ r.publisher }}</td><td>{% if r.url %}<a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title }}</a>{% else %}{{ r.title }}{% endif %}</td><td style="white-space:nowrap">{{ r.publication_date }}</td></tr>{% endfor %}</tbody></table></div></div>
+</section>
+
+{{ flow|json_script:"flow-data" }}
+{{ materiality_json|json_script:"materiality-data" }}
+{{ timing|json_script:"timing-data" }}
+{% endblock %}
+{% block scripts %}
+<script src="{% static 'policies/vendor/plotly.min.js' %}"></script>
+<script src="{% static 'policies/js/method.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,18 @@
+# systemd unit: runs the INPACT dashboard with gunicorn on 127.0.0.1:8000 (nginx sits in front)
+[Unit]
+Description=INPACT dashboard (Django + gunicorn)
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/INPACT_AWS
+EnvironmentFile=/etc/inpact/inpact.env
+ExecStart=/home/ubuntu/INPACT_AWS/.venv/bin/gunicorn inpact_platform.wsgi:application \
+    --bind 127.0.0.1:8000 --workers 2 --threads 2 --timeout 120 \
+    --access-logfile - --error-logfile -
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

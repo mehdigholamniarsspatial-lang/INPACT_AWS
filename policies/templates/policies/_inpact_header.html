@@ -1,0 +1,30 @@
+{% load static %}{# INPACT header, the same as on the main dashboard. Shown when these pages are opened on their own; hidden inside the dashboard's Policy Timeline tab. #}
+<header class="inpact-head">
+  <div class="inpact-head-inner">
+    <a class="inpact-brand" href="https://www.universityofgalway.ie/ryaninstitute/researchcentresandclusters/c-caps/projects/inpact/"
+       target="_blank" rel="noopener" title="INPACT project page, University of Galway (opens in a new tab)">
+      <img src="{% static 'img/inpact-mark.png' %}"
+           alt="INPACT: Investigating National Policy Impacts on Atmospheric Climate Targets">
+    </a>
+    <a class="inpact-home" href="/" title="Go to the main INPACT dashboard">
+      <svg class="inpact-home-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3 10.5 12 3l9 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="inpact-home-text">
+        <span class="inpact-home-kicker">Back to</span>
+        <span class="inpact-home-label">Main dashboard</span>
+      </span>
+    </a>
+    <div class="inpact-head-text">
+      <p class="inpact-title"><span class="accent">Ireland</span> Greenhouse Gas Policy Impact Explorer</p>
+      <p class="inpact-subtitle">Explore greenhouse gas emissions, atmospheric pollutants, climate policies and policy effectiveness across Ireland.</p>
+    </div>
+    <div class="inpact-funder">
+      <span class="funded-by">Funded by</span>
+      <a href="https://www.epa.ie/" target="_blank" rel="noopener" title="Environmental Protection Agency (opens in a new tab)">
+        <img src="{% static 'img/epa-logo.png' %}" alt="Funded by the Environmental Protection Agency (EPA)">
+      </a>
+    </div>
+  </div>
+</header>

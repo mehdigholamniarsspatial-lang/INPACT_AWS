@@ -1,0 +1,89 @@
+/* INPACT header and footer for the Policy Timeline pages when they are opened on
+   their own (e.g. with "New tab"). Mirrors the main dashboard (explorer/page/index.html).
+   Inside the dashboard's Policy Timeline tab the host page already shows both, so
+   they are hidden there (html.embedded). */
+html.embedded .inpact-head, html.embedded .inpact-foot { display: none; }
+
+.inpact-head, .inpact-foot { font-family: "Source Sans 3", -apple-system, "Segoe UI", Roboto, sans-serif; }
+
+/* Header ------------------------------------------------------------------------ */
+.inpact-head {
+  --ih-h: 132px;
+  background: #fff; color: #1C2B3A; height: var(--ih-h); padding: 0 1.6rem;
+  display: flex; align-items: center; position: relative; z-index: 20;
+  box-shadow: 0 4px 14px rgba(22, 50, 79, .10);
+}
+.inpact-head-inner { display: flex; align-items: center; gap: 1.5rem; max-width: 1320px; margin: 0 auto; width: 100%; }
+.inpact-brand { flex: 0 0 auto; display: flex; align-items: center; text-decoration: none; }
+.inpact-brand img { height: calc(var(--ih-h) - 38px); width: auto; display: block; }
+/* Big "Back to main dashboard" button beside the INPACT logo */
+.inpact-home {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: .75rem;
+  padding: .75rem 1.25rem .75rem 1rem; border-radius: 14px; text-decoration: none;
+  background: linear-gradient(135deg, #00843D, #0E8C8A); color: #fff;
+  box-shadow: 0 6px 16px rgba(0, 132, 61, .28);
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+.inpact-home:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 10px 22px rgba(0, 132, 61, .34); filter: brightness(1.05); }
+.inpact-home:focus-visible { outline: 3px solid #E8A33D; outline-offset: 3px; }
+.inpact-home-icon { width: 40px; height: 40px; flex: 0 0 40px; }
+.inpact-home-text { display: flex; flex-direction: column; line-height: 1.1; }
+.inpact-home-kicker { font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; opacity: .88; }
+.inpact-home-label { font-size: 1.15rem; font-weight: 800; white-space: nowrap; }
+.inpact-head-text { flex: 1 1 auto; min-width: 0; padding-left: 1.4rem; border-left: 1px solid #E2E8EE; }
+.inpact-head .inpact-title { font-weight: 800; font-size: 1.4rem; line-height: 1.14; margin: 0; color: #16324F; font-family: inherit; }
+.inpact-head .inpact-title .accent { color: #0E8C8A; }
+.inpact-head .inpact-subtitle { font-size: .86rem; line-height: 1.3; margin: .32rem 0 0; color: #5C6B7A; max-width: 660px; }
+.inpact-funder {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: .3rem;
+  padding-left: 1.4rem; border-left: 1px solid #E2E8EE;
+}
+.inpact-funder .funded-by { font-size: .64rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #5C6B7A; }
+.inpact-funder a { display: block; }
+.inpact-funder img { height: calc(var(--ih-h) - 66px); width: auto; display: block; }
+@media (max-width: 991px) {
+  .inpact-head { --ih-h: 116px; }
+  .inpact-head .inpact-title { font-size: 1.18rem; }
+  .inpact-head .inpact-subtitle { font-size: .8rem; }
+}
+/* The "Main dashboard" button takes header space, so the title text gives way earlier than on the main page. */
+@media (max-width: 1199px) {
+  .inpact-home { padding: .6rem 1rem .6rem .8rem; }
+  .inpact-home-icon { width: 34px; height: 34px; flex-basis: 34px; }
+  .inpact-home-label { font-size: 1rem; }
+  .inpact-head .inpact-subtitle { display: none; }
+}
+@media (max-width: 991px) {
+  .inpact-head-text { display: none; }
+  .inpact-head-inner { gap: 1rem; }
+  .inpact-home { margin-right: auto; }
+}
+@media (max-width: 575px) {
+  .inpact-head { --ih-h: 92px; padding: 0 .8rem; }
+  .inpact-funder { padding-left: .8rem; }
+  .inpact-funder .funded-by { display: none; }
+  .inpact-home { flex-direction: column; gap: .15rem; padding: .45rem .7rem; border-radius: 12px; }
+  .inpact-home-icon { width: 30px; height: 30px; flex-basis: 30px; }
+  .inpact-home-kicker { display: none; }
+  .inpact-home-label { font-size: .72rem; }
+}
+
+/* Footer: Acknowledgements and Disclaimer ----------------------------------------- */
+.inpact-foot { background: #16324F; color: #DCE6EE; padding: 1.4rem 1.6rem; font-size: .8rem; line-height: 1.5; }
+.inpact-foot-inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2rem; max-width: 1200px; }
+.inpact-foot p { margin: 0 0 .55rem; }
+.inpact-foot p:last-child { margin-bottom: 0; }
+.inpact-foot .notice-title { margin: 0 0 .35rem; font-weight: 700; font-size: .82rem; letter-spacing: .02em; color: #fff; }
+.inpact-foot .disclaimer-body { position: relative; overflow: hidden; max-height: 2.4rem; transition: max-height .25s ease; }
+.inpact-foot .disclaimer-body::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1.2rem;
+  background: linear-gradient(180deg, rgba(22, 50, 79, 0), #16324F); pointer-events: none;
+}
+.inpact-foot .disclaimer-body.is-expanded { max-height: none; }
+.inpact-foot .disclaimer-body.is-expanded::after { display: none; }
+.inpact-foot .notice-toggle {
+  margin-top: .45rem; padding: 0; border: 0; background: none; cursor: pointer; font-family: inherit;
+  color: #9FE8C2; font-size: .78rem; font-weight: 600; text-decoration: underline;
+}
+.inpact-foot .notice-toggle:hover { color: #fff; }
+@media (max-width: 767px) { .inpact-foot-inner { grid-template-columns: 1fr; gap: .75rem; } }
