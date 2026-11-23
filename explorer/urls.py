@@ -22,6 +22,8 @@ urlpatterns = [
     path("api/overlays/", views.overlay_catalog, name="overlay_catalog"),
     path("api/overlays/<str:layer_id>/", views.overlay_layer, name="overlay_layer"),
     path("api/feedback/", views.submit_feedback, name="submit_feedback"),
+    path("api/feedback/schema/", views.feedback_schema, name="feedback_schema"),
+    path("api/feedback/summary/", views.feedback_summary, name="feedback_summary"),
     path("api/feedback/download/", views.download_feedback, name="download_feedback"),
     # Trend Analysis (piecewise regression) API — ported from the Streamlit app
     path("api/trend/catalog/", trend_views.trend_catalog, name="trend_catalog"),

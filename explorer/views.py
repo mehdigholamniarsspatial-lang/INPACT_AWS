@@ -11,8 +11,10 @@ CSV at ``data/ghg_inventory.csv`` and spliced into two placeholders in the page
 — the chart, indicator switcher and KPIs all recompute.
 """
 import csv
+import hmac
 import io
 import json
+import time
 import zipfile
 import logging
 from pathlib import Path
@@ -21,7 +23,7 @@ from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from . import feedback_store
+from . import feedback_store, feedback_survey
 from . import edgar, inverse, rasters
 from . import timeseries
 from . import overlays
@@ -493,48 +495,99 @@ def map_export(request, fmt):
 # ---------------------------------------------------------------------------
 # Feedback endpoints
 # ---------------------------------------------------------------------------
+# The stakeholder survey: questionnaire in feedback_survey.py, storage and exports in
+# feedback_store.py. Simple guards against automated or accidental submissions: a size
+# limit, a hidden "website" field people never fill, a minimum completion time and a
+# per-address rate limit (per gunicorn worker, in memory).
+_FB_RATE = {}                      # client address -> recent submission times
+_FB_RATE_MAX, _FB_RATE_WINDOW = 5, 3600
+
+
+def _client_addr(request):
+    fwd = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    return (fwd.split(",")[0].strip() if fwd else request.META.get("REMOTE_ADDR", "")) or "?"
+
+
+def feedback_schema(request):
+    """The questionnaire (steps, questions, answer codes) for the Feedback tab."""
+    resp = JsonResponse(feedback_survey.public_schema())
+    resp["Cache-Control"] = "no-cache"
+    return resp
+
+
+def feedback_summary(request):
+    """Aggregate results, shown once enough responses exist (FEEDBACK_MIN_N)."""
+    try:
+        data = feedback_store.summary()
+    except Exception:
+        logger.exception("Feedback summary failed")
+        data = {"n": 0, "available": False}
+    return JsonResponse(data)
+
+
 @csrf_exempt
 @require_POST
 def submit_feedback(request):
-    """
-    Accept a feedback submission (JSON or form-encoded) and persist it to the
-    Excel workbook — committing to GitHub when configured, otherwise to local
-    disk. Returns a small JSON status the front-end uses to confirm.
-    """
+    """Validate and store one survey response."""
+    if len(request.body) > 64 * 1024:
+        return JsonResponse({"ok": False, "detail": "The submission is too large."}, status=413)
     try:
-        if request.content_type and "application/json" in request.content_type:
-            data = json.loads(request.body.decode("utf-8") or "{}")
-        else:
-            data = request.POST.dict()
+        data = json.loads(request.body.decode("utf-8") or "{}")
     except (ValueError, UnicodeDecodeError):
-        return JsonResponse(
-            {"ok": False, "detail": "Could not parse the submission."}, status=400
-        )
+        return JsonResponse({"ok": False, "detail": "Could not read the submission."}, status=400)
+    if not isinstance(data, dict):
+        return JsonResponse({"ok": False, "detail": "Could not read the submission."}, status=400)
+    if data.get("website"):                                  # honeypot: answer politely, store nothing
+        return JsonResponse({"ok": True, "response_id": "-"})
+    try:
+        elapsed = float(data.get("elapsed_s") or 0)
+    except (TypeError, ValueError):
+        elapsed = 0
+    if elapsed < 20:
+        return JsonResponse({"ok": False, "detail": "That was very quick. Please take a moment to "
+                                                    "check your answers and submit again."}, status=400)
+    now, addr = time.time(), _client_addr(request)
+    recent = [t for t in _FB_RATE.get(addr, []) if now - t < _FB_RATE_WINDOW]
+    if len(recent) >= _FB_RATE_MAX:
+        return JsonResponse({"ok": False, "detail": "Too many submissions from this connection. "
+                                                    "Please try again later."}, status=429)
+    meta = {"device": "mobile" if str(data.get("device")) == "mobile" else "desktop"}
+    try:
+        result = feedback_store.save_response(data, meta)
+    except feedback_store.InvalidResponse as exc:
+        return JsonResponse({"ok": False, "detail": str(exc)}, status=400)
+    except OSError:
+        logger.exception("Could not store a feedback response")
+        return JsonResponse({"ok": False, "detail": "Your answers could not be saved on the server. "
+                                                    "Please try again later."}, status=500)
+    _FB_RATE[addr] = recent + [now]
+    return JsonResponse(result)
 
-    result = feedback_store.save_feedback(data)
-    return JsonResponse(result, status=200 if result.get("ok") else 500)
 
-
+@csrf_exempt
 def download_feedback(request):
     """
-    Stream the current feedback workbook as an .xlsx download.
-
-    Source of truth is GitHub when a token is configured, otherwise the local
-    file. Useful as an admin convenience; the canonical copy also lives in the
-    GitHub repo and can be downloaded directly from there.
+    Research export for the project team: POST the key (FEEDBACK_ADMIN_KEY) and a
+    format ("xlsx" or "csv"). Downloads are disabled while no key is configured.
     """
-    content = feedback_store.get_workbook_bytes()
-    if content is None:
-        return HttpResponse(
-            "No feedback has been recorded yet.",
-            status=404,
-            content_type="text/plain",
-        )
-    resp = HttpResponse(
-        content,
-        content_type=(
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        ),
-    )
-    resp["Content-Disposition"] = 'attachment; filename="inpact_feedback.xlsx"'
+    if request.method != "POST":
+        return HttpResponse("Use the research-team download form in the Feedback tab.",
+                            status=405, content_type="text/plain")
+    key = feedback_store.admin_key()
+    given = (request.POST.get("key") or "").strip()
+    if not key:
+        return HttpResponse("Downloads are not enabled on this server (FEEDBACK_ADMIN_KEY is not set).",
+                            status=403, content_type="text/plain")
+    if not hmac.compare_digest(given.encode(), key.encode()):
+        time.sleep(1)                                        # slows down guessing
+        return HttpResponse("The research-team key is not correct.", status=403, content_type="text/plain")
+    stamp = time.strftime("%Y%m%d")
+    if request.POST.get("format") == "csv":
+        resp = HttpResponse(feedback_store.export_csv_zip(), content_type="application/zip")
+        resp["Content-Disposition"] = f'attachment; filename="inpact_survey_{stamp}_csv.zip"'
+    else:
+        resp = HttpResponse(feedback_store.export_xlsx(),
+                            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        resp["Content-Disposition"] = f'attachment; filename="inpact_survey_{stamp}.xlsx"'
+    resp["Cache-Control"] = "no-store"
     return resp

@@ -971,71 +971,259 @@ html.hdr-slim .tab-nav{
   display:flex;align-items:center;justify-content:center;
 }
 
-/* ============ FEEDBACK TAB ============ */
-.fb-wrap{max-width:980px;margin:0 auto;padding:1.6rem 1.4rem 2.5rem}
-.fb-intro{
-  background:linear-gradient(115deg,var(--navy) 0%,#1D4264 60%,#1B5E48 100%);
-  color:#fff;border-radius:var(--radius);
-  padding:1.8rem 2rem;margin-bottom:1.3rem;box-shadow:var(--shadow-md);
+/* ============ FEEDBACK TAB: stakeholder survey ============
+   A step-by-step questionnaire (steps and questions come from /api/feedback/schema/), a review
+   page, a thank-you page with the respondent's answer next to the average, public aggregate
+   results and a key-protected research download. */
+.fb-wrap{max-width:1020px;margin:0 auto;padding:1.6rem 1.4rem 2.5rem}
+.fb-hero{
+  display:flex;gap:1.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  background:linear-gradient(115deg,var(--navy) 0%,#1D4264 58%,#1B5E48 100%);
+  color:#fff;border-radius:var(--radius);padding:1.8rem 2rem;margin-bottom:1.2rem;box-shadow:var(--shadow-md);
 }
-.fb-intro .eyebrow{font-size:.74rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7FE0A8;margin-bottom:.45rem}
-.fb-intro h2{font-size:1.55rem;font-weight:800;margin:0 0 .55rem}
-.fb-intro p{font-size:.95rem;line-height:1.6;opacity:.92;margin:0;max-width:760px}
-.fb-card{
-  background:#fff;border:1px solid var(--grey-border);
-  border-radius:var(--radius);box-shadow:var(--shadow-sm);
-  padding:1.6rem 1.7rem;margin-bottom:1.2rem;
+.fb-hero-txt{flex:1 1 520px;min-width:0}
+.fb-hero .eyebrow{font-size:.74rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7FE0A8;margin-bottom:.45rem;display:flex;align-items:center;gap:.4rem}
+.fb-hero h2{font-size:1.6rem;font-weight:800;margin:0 0 .55rem;line-height:1.25}
+.fb-hero p{font-size:.95rem;line-height:1.6;opacity:.92;margin:0 0 .9rem;max-width:720px}
+.fb-hero-facts{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.45rem}
+.fb-hero-facts li{display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);
+  border-radius:999px;padding:.28rem .75rem;font-size:.78rem;font-weight:600}
+.fb-hero-stat{flex:0 0 auto;text-align:center;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:.9rem 1.3rem}
+.fb-hero-stat b{display:block;font-size:2rem;line-height:1;font-weight:800;color:#7FE0A8}
+.fb-hero-stat span{font-size:.74rem;opacity:.85}
+
+.fb-card{background:#fff;border:1px solid var(--grey-border);border-radius:var(--radius);box-shadow:var(--shadow-sm);
+  padding:1.6rem 1.7rem;margin-bottom:1.2rem}
+@media (max-width:575px){.fb-card{padding:1.2rem 1rem}.fb-hero{padding:1.3rem 1.2rem}}
+
+/* Step indicator and progress */
+.fb-steps{display:flex;gap:.3rem;overflow-x:auto;scrollbar-width:thin;margin-bottom:.55rem}
+.fb-step{flex:1 0 auto;display:flex;align-items:center;gap:.45rem;border:0;background:none;padding:.35rem .45rem;border-radius:8px;
+  font:inherit;font-size:.78rem;font-weight:700;color:var(--text-muted);cursor:pointer;white-space:nowrap}
+.fb-step:disabled{cursor:default;opacity:.55}
+.fb-step .n{width:24px;height:24px;border-radius:50%;flex:0 0 24px;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--grey-panel);border:1.5px solid var(--grey-border);font-size:.72rem}
+.fb-step.done .n{background:var(--emerald-light);border-color:var(--emerald);color:var(--emerald-dark)}
+.fb-step.cur{color:var(--navy)}
+.fb-step.cur .n{background:var(--navy);border-color:var(--navy);color:#fff}
+.fb-step:not(:disabled):hover{background:var(--grey-panel)}
+.fb-step:focus-visible{outline:2px solid var(--teal);outline-offset:1px}
+@media (max-width:767px){.fb-step .t{display:none}.fb-step.cur .t{display:inline}}
+.fb-progress{height:6px;border-radius:999px;background:var(--grey-border);overflow:hidden;margin-bottom:1rem}
+.fb-progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--emerald));transition:width .35s ease}
+
+.fb-banner{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap;border-radius:10px;padding:.65rem .9rem;margin-bottom:1rem;
+  font-size:.84rem;background:#EEF6FB;border:1px solid #CFE3F1;color:var(--navy)}
+.fb-banner i{font-size:1.05rem;color:var(--teal)}
+.fb-banner span{flex:1;min-width:200px}
+.fb-banner button{border:0;background:none;padding:0;font:inherit;font-weight:700;color:var(--teal);cursor:pointer}
+.fb-banner button:hover{text-decoration:underline}
+
+/* A step */
+.fb-step-h{display:flex;align-items:center;gap:.7rem;margin-bottom:.35rem}
+.fb-step-h .ico{width:40px;height:40px;border-radius:10px;flex:0 0 40px;display:flex;align-items:center;justify-content:center;
+  background:var(--emerald-light);color:var(--emerald-dark);font-size:1.15rem}
+.fb-step-h h3{margin:0;font-size:1.2rem;font-weight:800;color:var(--navy)}
+.fb-step-h .k{font-size:.72rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px}
+.fb-step-intro{font-size:.9rem;line-height:1.6;color:var(--text-muted);margin:.2rem 0 1.3rem;max-width:760px}
+.fb-loading{padding:2rem 0;text-align:center;color:var(--text-muted)}
+
+.fb-q{margin:0 0 1.5rem;padding:0;border:0;min-width:0}
+.fb-q > legend,.fb-q .fb-label{display:block;float:none;width:100%;font-weight:800;color:var(--navy);font-size:.93rem;line-height:1.45;margin-bottom:.6rem;padding:0}
+.fb-q .req{color:var(--red);margin-left:.2rem}
+.fb-q .opt{font-weight:600;color:var(--text-muted);font-size:.78rem;margin-left:.35rem}
+.fb-hint{font-size:.78rem;color:var(--text-muted);margin:-.35rem 0 .6rem;line-height:1.45}
+.fb-err{display:none;font-size:.8rem;font-weight:700;color:var(--red);margin-top:.45rem}
+.fb-q.invalid .fb-err{display:flex;align-items:center;gap:.35rem}
+.fb-q.invalid > legend{color:var(--red)}
+
+/* Choice chips (single / multi) */
+.fb-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.fb-chip{position:relative}
+.fb-chip input{position:absolute;opacity:0;pointer-events:none}
+.fb-chip label{display:inline-flex;align-items:center;gap:.45rem;border:1.5px solid var(--grey-border);background:var(--grey-panel);
+  border-radius:10px;padding:.5rem .9rem;font-size:.87rem;font-weight:600;color:var(--text-main);cursor:pointer;transition:all .15s;line-height:1.3}
+.fb-chip label::before{content:"";width:14px;height:14px;flex:0 0 14px;border:1.5px solid #AAB6C2;background:#fff;border-radius:50%}
+.fb-chip input[type=checkbox] + label::before{border-radius:4px}
+.fb-chip input:checked + label{border-color:var(--emerald);background:var(--emerald-light);color:var(--emerald-dark);box-shadow:0 0 0 1px var(--emerald)}
+.fb-chip input:checked + label::before{background:var(--emerald);border-color:var(--emerald);box-shadow:inset 0 0 0 2.5px #fff}
+.fb-chip input:focus-visible + label{box-shadow:0 0 0 .2rem rgba(0,132,61,.25)}
+.fb-chip input:disabled + label{opacity:.45;cursor:not-allowed}
+.fb-chip label:hover{border-color:#A9C9B6}
+.fb-counter{font-size:.75rem;color:var(--text-muted);margin-top:.45rem}
+
+/* 1-5 scales */
+.fb-scale{display:flex;gap:.4rem;flex-wrap:wrap;align-items:stretch}
+.fb-segs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.35rem;flex:1 1 440px}
+.fb-seg{position:relative;min-width:0}
+.fb-seg input{position:absolute;opacity:0;pointer-events:none}
+.fb-seg label{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;height:100%;min-height:52px;
+  border:1.5px solid var(--grey-border);background:var(--grey-panel);border-radius:10px;padding:.4rem .3rem;cursor:pointer;
+  text-align:center;transition:all .15s}
+.fb-seg label b{font-size:1rem;color:var(--navy)}
+.fb-seg label span{font-size:.7rem;font-weight:600;color:var(--text-muted);line-height:1.2}
+.fb-seg input:checked + label{border-color:var(--emerald);background:var(--emerald-light);box-shadow:0 0 0 1px var(--emerald)}
+.fb-seg input:checked + label b,.fb-seg input:checked + label span{color:var(--emerald-dark)}
+.fb-seg input:focus-visible + label{box-shadow:0 0 0 .2rem rgba(0,132,61,.25)}
+.fb-seg label:hover{border-color:#A9C9B6}
+.fb-seg.dk{flex:0 0 auto}
+.fb-seg.dk label{min-width:92px;border-style:dashed}
+.fb-seg.dk label b{font-size:.78rem;font-weight:700}
+.fb-scale-ends{display:none}
+@media (max-width:575px){
+  .fb-segs{flex-basis:100%}
+  .fb-seg label span{display:none}
+  .fb-scale-ends{display:flex;justify-content:space-between;width:100%;font-size:.7rem;color:var(--text-muted)}
+  .fb-seg.dk{flex:1 1 100%}
 }
-.fb-field{margin-bottom:1.3rem}
-.fb-field > label.fb-label,.fb-label{
-  display:block;font-weight:800;color:var(--navy);
-  font-size:.92rem;margin-bottom:.55rem;
+
+/* Sector matrix */
+.fb-matrix{border:1px solid var(--grey-border);border-radius:12px;overflow:hidden}
+.fb-mhead,.fb-mrow{display:grid;grid-template-columns:minmax(170px,1.7fr) repeat(5,minmax(0,1fr)) minmax(70px,.9fr);align-items:center}
+.fb-mhead{background:var(--grey-panel);border-bottom:1px solid var(--grey-border);font-size:.7rem;font-weight:700;color:var(--text-muted);text-align:center}
+.fb-mhead span{padding:.5rem .2rem;line-height:1.2}
+.fb-mrow{border-bottom:1px solid var(--grey-border)}
+.fb-mrow:last-child{border-bottom:0}
+.fb-mrow:hover{background:#FBFDFC}
+.fb-mrow .lbl{padding:.65rem .9rem;font-size:.86rem;font-weight:700;color:var(--text-main)}
+.fb-mcell{display:flex;justify-content:center;padding:.4rem .2rem}
+.fb-mcell input{position:absolute;opacity:0;pointer-events:none}
+.fb-mcell label{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  border:1.5px solid var(--grey-border);background:#fff;font-size:.8rem;font-weight:800;color:var(--text-muted);transition:all .15s}
+.fb-mcell.dk label{width:auto;border-radius:999px;padding:0 .6rem;font-size:.7rem;border-style:dashed}
+.fb-mcell input:checked + label{background:var(--emerald);border-color:var(--emerald);color:#fff}
+.fb-mcell input:focus-visible + label{box-shadow:0 0 0 .2rem rgba(0,132,61,.25)}
+.fb-mcell label:hover{border-color:var(--emerald)}
+@media (max-width:767px){
+  .fb-mhead{display:none}
+  .fb-mrow{grid-template-columns:repeat(6,minmax(0,1fr));padding-bottom:.4rem}
+  .fb-mrow .lbl{grid-column:1/-1;padding:.6rem .8rem .2rem}
 }
-.fb-label .req{color:var(--red);margin-left:.2rem}
-.fb-hint{font-size:.78rem;color:var(--text-muted);margin-top:.35rem;line-height:1.4}
-.fb-choices{display:flex;flex-wrap:wrap;gap:.6rem}
-.fb-choice{
-  position:relative;
-}
-.fb-choice input{position:absolute;opacity:0;pointer-events:none}
-.fb-choice label{
-  display:inline-flex;align-items:center;gap:.45rem;
-  border:1.5px solid var(--grey-border);background:var(--grey-panel);
-  border-radius:10px;padding:.55rem 1rem;font-size:.9rem;font-weight:600;
-  color:var(--text-main);cursor:pointer;transition:all .15s;
-}
-.fb-choice input:checked + label{
-  border-color:var(--emerald);background:var(--emerald-light);
-  color:var(--emerald-dark);box-shadow:0 0 0 1px var(--emerald);
-}
-.fb-choice input:focus-visible + label{box-shadow:0 0 0 .2rem rgba(0,132,61,.25)}
-.fb-rating-row{display:flex;align-items:center;gap:1rem}
-.fb-rating-row input[type=range]{flex:1}
-.fb-rating-big{
-  font-size:1.4rem;font-weight:800;color:var(--emerald);
-  min-width:48px;text-align:center;
-  background:var(--emerald-light);border-radius:10px;padding:.25rem 0;
-}
-.fb-scale{display:flex;justify-content:space-between;font-size:.72rem;color:var(--text-muted);margin-top:.3rem}
-.fb-submit-row{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.4rem}
-.fb-status{font-size:.88rem;font-weight:600;display:none}
-.fb-status.ok{display:inline-flex;align-items:center;gap:.4rem;color:var(--emerald-dark)}
-.fb-status.err{display:inline-flex;align-items:center;gap:.4rem;color:var(--red)}
-.fb-status.sending{display:inline-flex;align-items:center;gap:.4rem;color:var(--text-muted)}
-.fb-admin{
-  background:var(--grey-panel);border:1px solid var(--grey-border);
-  border-radius:12px;padding:1.1rem 1.3rem;
-  display:flex;align-items:center;gap:1rem;flex-wrap:wrap;
-}
-.fb-admin .ico{
-  width:42px;height:42px;border-radius:10px;flex:0 0 42px;
-  background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-}
-.fb-admin .txt{flex:1;min-width:200px}
-.fb-admin .txt b{color:var(--navy);font-size:.95rem}
-.fb-admin .txt p{margin:.2rem 0 0;font-size:.8rem;color:var(--text-muted);line-height:1.45}
-.fb-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:.8rem;margin-top:.3rem}
-@media (max-width:575px){.fb-stats-row{grid-template-columns:1fr}}
+
+/* Free text, tick boxes, e-mail */
+.fb-q textarea,.fb-q input[type=email],.fb-q input[type=search]{border-radius:10px;border:1.5px solid var(--grey-border);font-size:.9rem}
+.fb-q textarea:focus,.fb-q input[type=email]:focus,.fb-q input[type=search]:focus{border-color:var(--emerald);box-shadow:0 0 0 .2rem rgba(0,132,61,.15)}
+.fb-count{font-size:.74rem;color:var(--text-muted);text-align:right;margin-top:.25rem}
+.fb-check{display:flex;gap:.75rem;align-items:flex-start;border:1.5px solid var(--grey-border);background:var(--grey-panel);
+  border-radius:12px;padding:.85rem 1rem;cursor:pointer;font-size:.88rem;line-height:1.5;color:var(--text-main);font-weight:600}
+.fb-check input{width:20px;height:20px;flex:0 0 20px;margin-top:.1rem;accent-color:var(--emerald);cursor:pointer}
+.fb-check:has(input:checked){border-color:var(--emerald);background:var(--emerald-light)}
+.fb-q.invalid .fb-check{border-color:var(--red)}
+
+/* Welcome step: what to expect, data protection */
+.fb-info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:.8rem;margin:0 0 1.3rem}
+.fb-info{border:1px solid var(--grey-border);border-radius:12px;padding:.9rem 1rem;background:var(--grey-panel)}
+.fb-info b{display:flex;align-items:center;gap:.45rem;color:var(--navy);font-size:.88rem;margin-bottom:.3rem}
+.fb-info b i{color:var(--teal)}
+.fb-info p{margin:0;font-size:.8rem;line-height:1.5;color:var(--text-muted)}
+.fb-privacy{font-size:.8rem;color:var(--text-muted);line-height:1.6;border-left:3px solid var(--teal);padding:.2rem 0 .2rem .9rem;margin:0 0 1.2rem}
+.fb-privacy ul{margin:.3rem 0 0;padding-left:1.1rem}
+
+/* Policy picker */
+.fb-pol-tools{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem}
+.fb-search{position:relative;flex:1 1 260px}
+.fb-search i{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);color:var(--text-muted)}
+.fb-search input{width:100%;padding:.5rem .8rem .5rem 2.1rem;outline:0}
+.fb-levels{display:flex;gap:.3rem;flex-wrap:wrap}
+.fb-levels button{border:1.5px solid var(--grey-border);background:#fff;border-radius:999px;padding:.3rem .75rem;font:inherit;font-size:.76rem;
+  font-weight:700;color:var(--text-muted);cursor:pointer}
+.fb-levels button[aria-pressed=true]{background:var(--navy);border-color:var(--navy);color:#fff}
+.fb-pol-list{border:1px solid var(--grey-border);border-radius:12px;max-height:300px;overflow:auto}
+.fb-pol{display:grid;grid-template-columns:22px 52px 1fr auto;gap:.65rem;align-items:center;padding:.55rem .85rem;
+  border-bottom:1px solid var(--grey-border);cursor:pointer;font-size:.85rem;margin:0}
+.fb-pol:last-child{border-bottom:0}
+.fb-pol:hover{background:var(--grey-panel)}
+.fb-pol input{width:17px;height:17px;accent-color:var(--emerald);cursor:pointer;margin:0}
+.fb-pol .yr{font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums}
+.fb-pol .nm{font-weight:600;color:var(--text-main);line-height:1.35}
+.fb-pol .nm small{display:block;font-weight:500;color:var(--text-muted);font-size:.74rem}
+.fb-pol .lv{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:.18rem .5rem;border-radius:999px;color:#fff;white-space:nowrap}
+.fb-pol.on{background:var(--emerald-light)}
+.fb-pol.locked{opacity:.5;cursor:not-allowed}
+.fb-pol-empty{padding:1rem;text-align:center;color:var(--text-muted);font-size:.85rem}
+.fb-pol-cards{display:grid;gap:.9rem;margin-top:1rem}
+.fb-pcard{border:1.5px solid var(--grey-border);border-radius:12px;padding:1rem 1.1rem;background:#fff;border-left:5px solid var(--emerald)}
+.fb-pcard-h{display:flex;align-items:flex-start;gap:.6rem;margin-bottom:.6rem}
+.fb-pcard-h .t{flex:1;font-weight:800;color:var(--navy);font-size:.92rem;line-height:1.35}
+.fb-pcard-h .t small{display:block;font-weight:600;color:var(--text-muted);font-size:.74rem;margin-top:.1rem}
+.fb-pcard-h button{border:0;background:none;color:var(--text-muted);font-size:1.05rem;padding:0 .2rem;cursor:pointer}
+.fb-pcard-h button:hover{color:var(--red)}
+.fb-crit{display:grid;grid-template-columns:minmax(150px,1fr) minmax(220px,1.3fr);gap:.7rem;align-items:center;padding:.35rem 0;border-top:1px dashed var(--grey-border)}
+.fb-crit .cl{font-size:.84rem;font-weight:700;color:var(--text-main);line-height:1.3}
+.fb-crit .cl small{display:block;font-weight:500;color:var(--text-muted);font-size:.73rem}
+.fb-crit .fb-segs{flex:none}
+.fb-crit .fb-seg label{min-height:34px;padding:.2rem}
+.fb-crit .fb-seg label b{font-size:.86rem}
+.fb-pcard textarea{margin-top:.6rem;font-size:.84rem}
+.fb-pscale{font-size:.7rem;color:var(--text-muted);margin:0 0 .3rem}
+@media (max-width:575px){.fb-crit{grid-template-columns:1fr}.fb-pol{grid-template-columns:22px 1fr;}.fb-pol .yr,.fb-pol .lv{display:none}}
+
+/* Review */
+.fb-review-sec{border:1px solid var(--grey-border);border-radius:12px;margin-bottom:.8rem;overflow:hidden}
+.fb-review-sec h4{display:flex;align-items:center;gap:.5rem;margin:0;padding:.6rem .9rem;background:var(--grey-panel);font-size:.88rem;font-weight:800;color:var(--navy)}
+.fb-review-sec h4 span{flex:1}
+.fb-review-sec h4 button{border:0;background:none;font:inherit;font-size:.78rem;font-weight:700;color:var(--teal);cursor:pointer}
+.fb-review-sec dl{margin:0;padding:.4rem .9rem .6rem}
+.fb-review-sec dt{font-size:.78rem;font-weight:600;color:var(--text-muted);margin-top:.45rem}
+.fb-review-sec dd{margin:0;font-size:.86rem;color:var(--text-main);font-weight:600;white-space:pre-wrap}
+.fb-review-sec dd.none{color:#9AA6B2;font-weight:500;font-style:italic}
+
+/* Navigation */
+.fb-nav{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;border-top:1px solid var(--grey-border);padding-top:1.1rem;margin-top:.4rem}
+.fb-nav .btn{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem 1.2rem;font-weight:700;border-radius:10px}
+.fb-nav #fbNext{margin-left:auto}
+.fb-btn-ghost{border:1.5px solid var(--grey-border);background:#fff;color:var(--navy)}
+.fb-btn-ghost:hover{background:var(--grey-panel);border-color:#C5CFD8}
+.fb-status{font-size:.86rem;font-weight:600;display:none}
+.fb-status.ok,.fb-status.err,.fb-status.sending{display:inline-flex;align-items:center;gap:.4rem}
+.fb-status.ok{color:var(--emerald-dark)}
+.fb-status.err{color:var(--red)}
+.fb-status.sending{color:var(--text-muted)}
+.fb-hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0}
+
+/* Thank you */
+.fb-thanks{text-align:center;padding:2.2rem 1.7rem}
+.fb-thanks-ico{width:64px;height:64px;border-radius:50%;margin:0 auto .8rem;display:flex;align-items:center;justify-content:center;
+  background:var(--emerald-light);color:var(--emerald);font-size:2rem}
+.fb-thanks h3{font-weight:800;color:var(--navy);font-size:1.35rem;margin:0 0 .4rem}
+.fb-thanks p{color:var(--text-muted);font-size:.92rem;margin:0 auto .8rem;max-width:620px;line-height:1.6}
+.fb-thanks code{background:var(--grey-panel);border:1px solid var(--grey-border);border-radius:6px;padding:.05rem .4rem;color:var(--navy)}
+.fb-compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.8rem;max-width:720px;margin:1rem auto;text-align:left}
+.fb-compare div{border:1px solid var(--grey-border);border-radius:12px;padding:.8rem 1rem;background:var(--grey-panel);font-size:.82rem;color:var(--text-muted)}
+.fb-compare b{display:block;color:var(--navy);font-size:1.15rem}
+.fb-thanks-actions{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin-top:.6rem}
+
+/* Aggregate results */
+.fb-sec-h{display:flex;align-items:center;gap:.5rem;font-weight:800;color:var(--navy);font-size:1rem;margin-bottom:.3rem}
+.fb-sec-sub{font-size:.8rem;color:var(--text-muted);margin:0 0 1rem}
+.fb-empty{display:flex;align-items:center;gap:.6rem;color:var(--text-muted);font-size:.88rem;margin:0;padding:.8rem 1rem;background:var(--grey-panel);border-radius:10px}
+.fb-res-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:1rem}
+.fb-res{border:1px solid var(--grey-border);border-radius:12px;padding:.9rem 1rem}
+.fb-res h5{font-size:.84rem;font-weight:800;color:var(--navy);margin:0 0 .6rem;display:flex;justify-content:space-between;gap:.5rem}
+.fb-res h5 small{font-weight:600;color:var(--text-muted)}
+.fb-dist{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--grey-border)}
+.fb-dist span{display:block;height:100%}
+.fb-dist-legend{display:flex;flex-wrap:wrap;gap:.3rem .7rem;margin-top:.45rem;font-size:.7rem;color:var(--text-muted)}
+.fb-dist-legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:.25rem;vertical-align:-1px}
+.fb-bars{display:grid;gap:.4rem}
+.fb-bar{display:grid;grid-template-columns:minmax(110px,1.1fr) 2fr auto;gap:.5rem;align-items:center;font-size:.78rem;color:var(--text-main)}
+.fb-bar .tr{height:10px;border-radius:999px;background:var(--grey-border);overflow:hidden}
+.fb-bar .tr span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--teal),var(--emerald))}
+.fb-bar .v{font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;font-size:.76rem}
+.fb-bar .v small{font-weight:600;color:var(--text-muted)}
+
+/* Research-team download */
+.fb-admin{background:var(--grey-panel);border:1px solid var(--grey-border);border-radius:12px;padding:.2rem 1.1rem}
+.fb-admin summary{display:flex;align-items:center;gap:.6rem;padding:.8rem 0;cursor:pointer;font-weight:800;color:var(--navy);font-size:.9rem;list-style:none}
+.fb-admin summary::-webkit-details-marker{display:none}
+.fb-admin summary::after{content:"\F282";font-family:"bootstrap-icons";margin-left:auto;color:var(--text-muted);transition:transform .2s}
+.fb-admin[open] summary::after{transform:rotate(180deg)}
+.fb-admin summary .ico{width:34px;height:34px;border-radius:9px;flex:0 0 34px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center}
+.fb-admin p{font-size:.8rem;color:var(--text-muted);line-height:1.5;margin:0 0 .7rem}
+.fb-admin form{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;padding-bottom:1rem}
+.fb-admin input[type=password]{flex:1 1 220px;max-width:320px}
+.fb-admin select{width:auto}
+.fb-admin .fb-status{flex-basis:100%}
 
 /* ============ POLICY TIMELINE TAB (embedded Ireland Climate Policy Timeline app) ============
    Sections are picked from a horizontal sub-menu in the menu bar (.pt-subnav); the selected
@@ -3378,7 +3566,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <div class="flex-grow-1" style="min-width:220px">
                 <div class="fw-bold mb-1" style="color:var(--navy)">Tell us what you think</div>
                 <div class="text-muted" style="font-size:.86rem;line-height:1.5">
-                  Share your view on how effective Ireland&rsquo;s climate policies have been. Responses are anonymous and saved to the project&rsquo;s feedback workbook for research.
+                  Share your view on how effective Ireland&rsquo;s climate policies have been. Take the INPACT stakeholder survey: about six minutes, anonymous, and used for research.
                 </div>
               </div>
               <button class="btn btn-submit text-white px-4" id="goFeedbackBtn">
@@ -5300,100 +5488,71 @@ a.ug-go.alt:hover{color:var(--navy)}
 </div><!-- /tab-guide -->
 
 <!-- ================= TAB: FEEDBACK ================= -->
+<!-- Stakeholder survey on the effectiveness of Ireland's climate policies. The questions are defined in
+     explorer/feedback_survey.py and rendered by section 10 of the script; answers go to /api/feedback/. -->
 <div class="tab-pane" id="tab-feedback" role="tabpanel">
   <div class="fb-wrap">
 
-    <div class="fb-intro">
-      <div class="eyebrow">Public Participation</div>
-      <h2>Share Your Feedback</h2>
-      <p>Your perspective helps contextualise the statistical evidence on policy effectiveness. Tell us how you view Ireland&rsquo;s climate policies. Responses are anonymous and recorded for research purposes. All submissions are saved to the project&rsquo;s feedback workbook.</p>
-    </div>
+    <header class="fb-hero">
+      <div class="fb-hero-txt">
+        <div class="eyebrow"><i class="bi bi-people-fill"></i>Stakeholder consultation</div>
+        <h2>How effective are Ireland&rsquo;s climate policies?</h2>
+        <p>Tell us how you judge the policies shown in this dashboard. Your answers are analysed alongside the statistical evidence in INPACT, a research project funded by the Environmental Protection Agency, and help explain which policies have worked, for whom, and why.</p>
+        <ul class="fb-hero-facts">
+          <li><i class="bi bi-clock"></i>About 6 minutes</li>
+          <li><i class="bi bi-incognito"></i>Anonymous</li>
+          <li><i class="bi bi-floppy"></i>Progress kept on this device</li>
+          <li><i class="bi bi-bar-chart-line"></i>See how others answered</li>
+        </ul>
+      </div>
+      <div class="fb-hero-stat" id="fbHeroStat" hidden><b id="fbHeroN">0</b><span>responses so far</span></div>
+    </header>
 
-    <div class="fb-card">
-      <!-- Q1: Reduced emissions -->
-      <div class="fb-field">
-        <span class="fb-label">Do you think national climate policies have reduced emissions?<span class="req">*</span></span>
-        <div class="fb-choices" role="radiogroup" aria-label="Have policies reduced emissions">
-          <span class="fb-choice"><input type="radio" name="fbReduced" id="fbR_yes" value="Yes" checked><label for="fbR_yes"><i class="bi bi-hand-thumbs-up"></i>Yes</label></span>
-          <span class="fb-choice"><input type="radio" name="fbReduced" id="fbR_no" value="No"><label for="fbR_no"><i class="bi bi-hand-thumbs-down"></i>No</label></span>
-          <span class="fb-choice"><input type="radio" name="fbReduced" id="fbR_unsure" value="Unsure"><label for="fbR_unsure"><i class="bi bi-question-circle"></i>Unsure</label></span>
+    <div id="fbSurvey">
+      <nav class="fb-steps" id="fbSteps" aria-label="Survey sections"></nav>
+      <div class="fb-progress" role="progressbar" aria-label="Survey progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="fbProgress"><div class="fb-progress-bar" id="fbProgressBar"></div></div>
+      <div class="fb-banner" id="fbBanner" hidden></div>
+      <form class="fb-card" id="fbForm" novalidate autocomplete="off">
+        <div id="fbStepBody"><div class="fb-loading"><span class="spinner-border spinner-border-sm me-2"></span>Loading the survey&hellip;</div></div>
+        <label class="fb-hp" aria-hidden="true">Website <input type="text" name="website" id="fbWebsite" tabindex="-1" autocomplete="off"></label>
+        <div class="fb-nav">
+          <button type="button" class="btn fb-btn-ghost" id="fbPrev" hidden><i class="bi bi-arrow-left"></i>Back</button>
+          <span class="fb-status" id="fbStatusMsg" role="status"></span>
+          <button type="button" class="btn btn-submit text-white" id="fbNext" disabled>Next<i class="bi bi-arrow-right"></i></button>
         </div>
-      </div>
+      </form>
+    </div>
 
-      <!-- Q2: Effectiveness rating -->
-      <div class="fb-field">
-        <label class="fb-label" for="fbEffectiveness">How effective do you consider these policies overall? <span class="fb-hint" style="display:inline">(1 = not effective, 10 = highly effective)</span></label>
-        <div class="fb-rating-row">
-          <input type="range" id="fbEffectiveness" min="1" max="10" value="7" step="1">
-          <span class="fb-rating-big" id="fbEffectivenessVal">7</span>
-        </div>
-        <div class="fb-scale"><span>1 &middot; Not effective</span><span>10 &middot; Highly effective</span></div>
+    <section class="fb-card fb-thanks" id="fbThanks" hidden tabindex="-1" aria-labelledby="fbThanksH">
+      <div class="fb-thanks-ico"><i class="bi bi-check2-circle"></i></div>
+      <h3 id="fbThanksH">Thank you for taking part</h3>
+      <p>Your response has been recorded (reference <code id="fbRef">&ndash;</code>). It will be analysed together with the other responses and the emission trends in this dashboard.</p>
+      <div class="fb-compare" id="fbCompare"></div>
+      <div class="fb-thanks-actions">
+        <button type="button" class="btn fb-btn-ghost" id="fbSeeResults"><i class="bi bi-bar-chart-line me-1"></i>See all results</button>
+        <button type="button" class="btn fb-btn-ghost" id="fbAgain"><i class="bi bi-arrow-repeat me-1"></i>Answer again from another perspective</button>
       </div>
+    </section>
 
-      <!-- Q3: Sector -->
-      <div class="fb-field">
-        <label class="fb-label" for="fbSectorSel">Which sector do you think is most affected by climate policy?</label>
-        <select class="form-select" id="fbSectorSel">
-          <option>Transport</option>
-          <option>Energy</option>
-          <option>Agriculture</option>
-          <option>Residential</option>
-          <option>Industry</option>
-          <option>Waste</option>
-          <option>Land Use &amp; Forestry</option>
-          <option>Cross-cutting (all sectors)</option>
+    <section class="fb-card" id="fbResults" aria-labelledby="fbResultsH">
+      <div class="fb-sec-h" id="fbResultsH"><i class="bi bi-bar-chart-line"></i>What respondents say so far</div>
+      <p class="fb-sec-sub">Aggregated, anonymous results, updated as responses arrive. Individual answers are never shown.</p>
+      <div id="fbResultsBody"><p class="fb-empty"><i class="bi bi-hourglass-split"></i>Loading results&hellip;</p></div>
+    </section>
+
+    <details class="fb-admin">
+      <summary><span class="ico"><i class="bi bi-shield-lock"></i></span>Research team: download the responses</summary>
+      <p>For the INPACT research team. The export contains every response in analysis-ready tables (wide and long formats), a codebook with the question wording and answer codes, and, on a separate sheet, the e-mail addresses of people who agreed to a follow-up interview.</p>
+      <form id="fbAdminForm">
+        <input type="password" class="form-control form-control-sm" id="fbAdminKey" placeholder="Research-team key" autocomplete="off" aria-label="Research-team key" required>
+        <select class="form-select form-select-sm" id="fbAdminFmt" aria-label="File format">
+          <option value="xlsx">Excel workbook (.xlsx)</option>
+          <option value="csv">CSV tables (.zip)</option>
         </select>
-      </div>
-
-      <!-- Q4: Role -->
-      <div class="fb-field">
-        <label class="fb-label" for="fbRoleSel">Which best describes you?</label>
-        <select class="form-select" id="fbRoleSel">
-          <option>Member of the public</option>
-          <option>Researcher / Academic</option>
-          <option>Policymaker / Public servant</option>
-          <option>Industry / Business</option>
-          <option>NGO / Civil society</option>
-          <option>Student</option>
-          <option>Prefer not to say</option>
-        </select>
-      </div>
-
-      <!-- Q5: Comments -->
-      <div class="fb-field">
-        <label class="fb-label" for="fbCommentBox">Additional comments <span class="fb-hint" style="display:inline">(optional)</span></label>
-        <textarea class="form-control" id="fbCommentBox" rows="4" maxlength="1000" placeholder="Share your observations, suggestions, or perspectives on Ireland's climate policy&hellip;"></textarea>
-        <div class="fb-hint" id="fbCharCount">0 / 1000 characters</div>
-      </div>
-
-      <div class="fb-submit-row">
-        <button class="btn btn-submit text-white px-4" id="fbSubmitBtn"><i class="bi bi-send me-1"></i>Submit Feedback</button>
-        <span class="fb-status" id="fbStatusMsg"></span>
-      </div>
-    </div>
-
-    <!-- Live aggregate stats -->
-    <div class="fb-card">
-      <div class="fb-label" style="margin-bottom:.8rem"><i class="bi bi-bar-chart-line me-1"></i>Aggregated Sentiment (this session)</div>
-      <div class="fb-stats-row">
-        <div class="p-stat"><div class="val" id="fbStatResponses">0</div><div class="lbl">Responses</div></div>
-        <div class="p-stat"><div class="val" id="fbStatAvg">&ndash;</div><div class="lbl">Avg rating</div></div>
-        <div class="p-stat"><div class="val" id="fbStatPos">&ndash;</div><div class="lbl">Positive sentiment</div></div>
-      </div>
-      <div class="text-muted mt-3" style="font-size:.78rem;line-height:1.5">
-        Aggregated public sentiment is used alongside statistical models to contextualise perceived policy effectiveness. The counters above reflect submissions made in this browser session; the durable record lives in the project&rsquo;s feedback workbook.
-      </div>
-    </div>
-
-    <!-- Admin download -->
-    <div class="fb-admin">
-      <div class="ico"><i class="bi bi-file-earmark-spreadsheet"></i></div>
-      <div class="txt">
-        <b>Download all feedback (Excel)</b>
-        <p>Retrieve the complete feedback workbook (<span class="mono">.xlsx</span>). The canonical copy is also committed to the project GitHub repository at <span class="mono">data/feedback.xlsx</span>.</p>
-      </div>
-      <a class="btn btn-submit text-white px-3" href="/api/feedback/download/"><i class="bi bi-download me-1"></i>Download .xlsx</a>
-    </div>
+        <button type="submit" class="btn btn-submit btn-sm text-white px-3"><i class="bi bi-download me-1"></i>Download</button>
+        <span class="fb-status" id="fbAdminMsg" role="status"></span>
+      </form>
+    </details>
 
   </div>
 </div><!-- /tab-feedback -->
@@ -11805,81 +11964,506 @@ function downloadTrendPng(){
   a.click();
 }
 
-/* ---------------------- 10. Feedback form (Excel + GitHub) ---------------------- */
-const fbSession = { n: 0, sum: 0, pos: 0 };
-function renderFbStats(){
-  document.getElementById("fbStatResponses").textContent = fbSession.n;
-  document.getElementById("fbStatAvg").textContent =
-    fbSession.n ? (fbSession.sum / fbSession.n).toFixed(1) : "\u2013";
-  document.getElementById("fbStatPos").textContent =
-    fbSession.n ? Math.round(100 * fbSession.pos / fbSession.n) + "%" : "\u2013";
-}
-const fbEff = document.getElementById("fbEffectiveness");
-fbEff.addEventListener("input", e =>
-  document.getElementById("fbEffectivenessVal").textContent = e.target.value);
-const fbComment = document.getElementById("fbCommentBox");
-fbComment.addEventListener("input", e =>
-  document.getElementById("fbCharCount").textContent =
-    `${e.target.value.length} / 1000 characters`);
-
-function setFbStatus(kind, html){
-  const el = document.getElementById("fbStatusMsg");
-  el.className = "fb-status " + kind;
-  el.innerHTML = html;
-}
-
-document.getElementById("fbSubmitBtn").addEventListener("click", async () => {
-  const btn = document.getElementById("fbSubmitBtn");
-  const payload = {
-    policy_reduced_emissions:
-      document.querySelector("input[name=fbReduced]:checked").value,
-    effectiveness_rating: document.getElementById("fbEffectiveness").value,
-    most_affected_sector: document.getElementById("fbSectorSel").value,
-    respondent_role: document.getElementById("fbRoleSel").value,
-    comments: document.getElementById("fbCommentBox").value.trim(),
+/* ---------------------- 10. Stakeholder survey (Feedback tab) ----------------------
+ * The questionnaire is defined once on the server (explorer/feedback_survey.py) and fetched from
+ * /api/feedback/schema/. This section renders it as steps, keeps a draft in localStorage, checks
+ * required answers, shows a review page, submits to /api/feedback/, and draws the public aggregate
+ * results from /api/feedback/summary/. The policy step lists the dashboard's own POLICIES. */
+(function stakeholderSurvey(){
+  const $ = id => document.getElementById(id);
+  const form = $("fbForm"); if (!form) return;
+  const E = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const KEY_DRAFT = "inpact.survey.draft", KEY_DONE = "inpact.survey.submitted", KEY_CLIENT = "inpact.survey.client";
+  const store = {
+    get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch (e){ return null; } },
+    set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch (e){ /* private mode */ } },
+    del(k){ try { localStorage.removeItem(k); } catch (e){ /* ignore */ } },
   };
-
-  btn.disabled = true;
-  setFbStatus("sending",
-    '<span class="spinner-border spinner-border-sm"></span>Submitting&hellip;');
-
-  try {
-    const resp = await fetch("/api/feedback/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const result = await resp.json().catch(() => ({}));
-    if (resp.ok && result.ok){
-      // Update session counters
-      fbSession.n += 1;
-      fbSession.sum += +payload.effectiveness_rating;
-      if (payload.policy_reduced_emissions === "Yes") fbSession.pos += 1;
-      renderFbStats();
-      document.getElementById("fbCommentBox").value = "";
-      document.getElementById("fbCharCount").textContent = "0 / 1000 characters";
-      const where = result.storage === "github"
-        ? "saved to GitHub workbook"
-        : "recorded";
-      setFbStatus("ok",
-        `<i class="bi bi-check-circle-fill"></i>Thank you \u2014 your response was ${where}.`);
-      setTimeout(() => {
-        const el = document.getElementById("fbStatusMsg");
-        el.className = "fb-status"; el.innerHTML = "";
-      }, 5000);
-    } else {
-      setFbStatus("err",
-        `<i class="bi bi-exclamation-triangle-fill"></i>${
-          (result && result.detail) || "Submission failed. Please try again."}`);
-    }
-  } catch (err){
-    setFbStatus("err",
-      '<i class="bi bi-exclamation-triangle-fill"></i>Network error \u2014 could not reach the server.');
-  } finally {
-    btn.disabled = false;
+  const S = { schema: null, steps: [], step: 0, max: 0, answers: {}, started: null, lab: {}, polQ: "", polLevel: "all" };
+  let client = store.get(KEY_CLIENT);
+  if (!client){
+    client = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2);
+    store.set(KEY_CLIENT, client);
   }
-});
-renderFbStats();
+  const body = $("fbStepBody"), prevBtn = $("fbPrev"), nextBtn = $("fbNext");
+  const POLS = (typeof POLICIES !== "undefined" ? POLICIES : []).filter(p => p && p.name);
+  const polByName = new Map(POLS.map(p => [p.name, p]));
+  const LEVELS = [["all", "All"], ["International", "International"], ["EU", "EU"], ["National", "National"], ["Target", "Targets"]];
+  const DIST_COL = ["#C84B3C", "#E58A5C", "#C9CED4", "#5BB381", "#00843D"];
+
+  function setStatus(kind, html, el){
+    el = el || $("fbStatusMsg");
+    el.className = "fb-status" + (kind ? " " + kind : "");
+    el.innerHTML = html || "";
+  }
+  const questionsOf = step => step.questions || [];
+  const allQuestions = () => S.steps.flatMap(questionsOf);
+  const qById = id => allQuestions().find(q => q.id === id);
+
+  // ---- Draft (answers stay on this device until submitted) ----
+  function saveDraft(){
+    store.set(KEY_DRAFT, { v: S.schema.version, step: S.step, max: S.max, answers: S.answers, started: S.started, saved: Date.now() });
+  }
+  function clearDraft(){ store.del(KEY_DRAFT); }
+
+  // ---- Rendering helpers ----
+  const reqMark = q => q.required ? '<span class="req" aria-hidden="true">*</span>' : '<span class="opt">optional</span>';
+  const errBox = () => '<div class="fb-err" role="alert"><i class="bi bi-exclamation-circle-fill"></i><span></span></div>';
+
+  function segs(name, q, value, opts){
+    opts = opts || {};
+    const s = q.scale, out = [];
+    for (let k = s.min; k <= s.max; k++){
+      const id = `${name}-${k}`;
+      out.push(`<span class="fb-seg"><input type="radio" name="${E(name)}" id="${E(id)}" value="${k}"${value === k ? " checked" : ""}${opts.data || ""}>
+        <label for="${E(id)}" title="${E(s.labels[k])}"><b>${k}</b>${opts.compact ? "" : `<span>${E(s.labels[k])}</span>`}</label></span>`);
+    }
+    return `<div class="fb-segs">${out.join("")}</div>`;
+  }
+  function scaleQ(q){
+    const v = S.answers[q.id], name = `q-${q.id}`;
+    const dk = q.dk ? `<span class="fb-seg dk"><input type="radio" name="${name}" id="${name}-dk" value="dk"${v === "dk" ? " checked" : ""}>
+      <label for="${name}-dk"><b>Don&rsquo;t know</b></label></span>` : "";
+    const ends = `<div class="fb-scale-ends"><span>1 = ${E(q.scale.labels[q.scale.min])}</span><span>${q.scale.max} = ${E(q.scale.labels[q.scale.max])}</span></div>`;
+    return `<div class="fb-scale" data-q="${q.id}">${segs(name, q, v)}${dk}${ends}</div>`;
+  }
+  function choiceQ(q, multi){
+    const v = S.answers[q.id], sel = multi ? new Set(v || []) : null, full = multi && sel.size >= q.max;
+    const chips = q.options.map(o => {
+      const id = `q-${q.id}-${o.code}`, on = multi ? sel.has(o.code) : v === o.code;
+      return `<span class="fb-chip"><input type="${multi ? "checkbox" : "radio"}" name="q-${q.id}" id="${E(id)}" value="${E(o.code)}"${on ? " checked" : ""}${
+        full && !on ? " disabled" : ""}><label for="${E(id)}">${E(o.label)}</label></span>`;
+    }).join("");
+    return `<div class="fb-chips" data-q="${q.id}" role="${multi ? "group" : "radiogroup"}">${chips}</div>${
+      multi ? `<div class="fb-counter" data-counter="${q.id}">${sel.size} of ${q.max} chosen</div>` : ""}`;
+  }
+  function matrixQ(q){
+    const v = S.answers[q.id] || {}, s = q.scale;
+    const head = `<div class="fb-mhead" aria-hidden="true"><span></span>${
+      Array.from({ length: s.max - s.min + 1 }, (_, i) => `<span>${s.min + i}<br>${E(s.labels[s.min + i])}</span>`).join("")}${q.dk ? "<span>Don&rsquo;t know</span>" : ""}</div>`;
+    const rows = q.rows.map(r => {
+      const name = `q-${q.id}--${r.code}`, cells = [];
+      for (let k = s.min; k <= s.max; k++){
+        cells.push(`<span class="fb-mcell"><input type="radio" name="${name}" id="${name}-${k}" value="${k}" data-row="${r.code}"${v[r.code] === k ? " checked" : ""}>
+          <label for="${name}-${k}" title="${E(s.labels[k])}">${k}</label></span>`);
+      }
+      if (q.dk) cells.push(`<span class="fb-mcell dk"><input type="radio" name="${name}" id="${name}-dk" value="dk" data-row="${r.code}"${v[r.code] === "dk" ? " checked" : ""}>
+          <label for="${name}-dk">Don&rsquo;t know</label></span>`);
+      return `<div class="fb-mrow" role="radiogroup" aria-label="${E(r.label)}"><span class="lbl">${E(r.label)}</span>${cells.join("")}</div>`;
+    }).join("");
+    return `<div class="fb-matrix" data-q="${q.id}">${head}${rows}</div>
+      <p class="fb-hint" style="margin:.5rem 0 0">Click a selected answer again to clear it.</p>`;
+  }
+  function textQ(q){
+    const v = S.answers[q.id] || "";
+    return `<textarea class="form-control" id="q-${q.id}" data-q="${q.id}" rows="4" maxlength="${q.max_len}">${E(v)}</textarea>
+      <div class="fb-count" data-count="${q.id}">${v.length} / ${q.max_len}</div>`;
+  }
+  function checkQ(q){
+    return `<label class="fb-check"><input type="checkbox" id="q-${q.id}" data-q="${q.id}"${S.answers[q.id] ? " checked" : ""}><span>${E(q.label)}</span></label>`;
+  }
+  function emailQ(q){
+    return `<input type="email" class="form-control" id="q-${q.id}" data-q="${q.id}" value="${E(S.answers[q.id] || "")}" placeholder="name@example.ie" maxlength="254" autocomplete="email">`;
+  }
+
+  // ---- Policy picker ----
+  function levelBadge(p){
+    return `<span class="lv" style="background:${E(p.color || "#5C6B7A")}">${E(p.cat || p.level)}</span>`;
+  }
+  function polItems(){ return S.answers.policy_ratings || (S.answers.policy_ratings = []); }
+  function polListHtml(q){
+    const items = polItems(), chosen = new Set(items.map(i => i.policy)), full = items.length >= q.max;
+    const needle = S.polQ.trim().toLowerCase();
+    const list = POLS.filter(p => (S.polLevel === "all" || (p.cat || p.level) === S.polLevel) &&
+      (!needle || `${p.name} ${p.sector} ${p.year} ${p.type || ""}`.toLowerCase().includes(needle)));
+    if (!list.length) return '<div class="fb-pol-empty">No policy matches. Try another word or level.</div>';
+    return list.map(p => {
+      const on = chosen.has(p.name), locked = full && !on;
+      return `<label class="fb-pol${on ? " on" : ""}${locked ? " locked" : ""}"><input type="checkbox" data-pol="${E(p.name)}"${on ? " checked" : ""}${locked ? " disabled" : ""}>
+        <span class="yr">${E(p.year)}</span><span class="nm">${E(p.name)}<small>${E(p.sector || "")}${p.type ? " · " + E(p.type) : ""}</small></span>${levelBadge(p)}</label>`;
+    }).join("");
+  }
+  function polCardsHtml(q){
+    const s = q.scale;
+    return polItems().map((it, idx) => {
+      const p = polByName.get(it.policy) || { name: it.policy };
+      const crit = q.criteria.map(c => `<div class="fb-crit"><div class="cl">${E(c.label)}<small>${E(c.hint)}</small></div>${
+        segs(`q-pol-${idx}-${c.code}`, q, (it.ratings || {})[c.code], { compact: true, data: ` data-pidx="${idx}" data-crit="${c.code}"` })}</div>`).join("");
+      return `<div class="fb-pcard" style="border-left-color:${E(p.color || "var(--emerald)")}">
+        <div class="fb-pcard-h"><div class="t">${E(p.name)}<small>${E(p.year || "")} · ${E(p.cat || p.level || "")}${p.sector ? " · " + E(p.sector) : ""}</small></div>
+          <button type="button" data-unpick="${E(it.policy)}" title="Remove this policy" aria-label="Remove ${E(p.name)}"><i class="bi bi-x-circle"></i></button></div>
+        <p class="fb-pscale">Rate from 1 (${E(s.labels[s.min])}) to ${s.max} (${E(s.labels[s.max])}). Leave a criterion blank if you cannot judge it.</p>
+        ${crit}
+        <textarea class="form-control" rows="2" maxlength="${q.comment_max_len}" data-pcomment="${idx}" placeholder="Optional comment on this policy">${E(it.comment || "")}</textarea>
+      </div>`;
+    }).join("");
+  }
+  function policiesQ(q){
+    return `<div class="fb-pol-tools">
+        <div class="fb-search"><i class="bi bi-search"></i><input type="search" class="form-control" id="fbPolSearch" placeholder="Search by name, sector or year" value="${E(S.polQ)}" aria-label="Search policies"></div>
+        <div class="fb-levels" role="group" aria-label="Filter by level">${LEVELS.map(([v, t]) =>
+          `<button type="button" data-level="${v}" aria-pressed="${S.polLevel === v}">${t}</button>`).join("")}</div>
+      </div>
+      <div class="fb-pol-list" id="fbPolList">${polListHtml(q)}</div>
+      <div class="fb-counter" id="fbPolCount">${polItems().length} of ${q.max} chosen</div>
+      <div class="fb-pol-cards" id="fbPolCards">${polCardsHtml(q)}</div>`;
+  }
+  function refreshPolicies(q, list, cards){
+    if (list) $("fbPolList").innerHTML = polListHtml(q);
+    if (cards) $("fbPolCards").innerHTML = polCardsHtml(q);
+    $("fbPolCount").textContent = `${polItems().length} of ${q.max} chosen`;
+  }
+
+  // ---- Welcome step extras ----
+  const WELCOME = `<div class="fb-info-grid">
+      <div class="fb-info"><b><i class="bi bi-list-check"></i>What we ask</b><p>Your background, your overall view, how well policy has worked in each sector, and a closer look at the policies you know best.</p></div>
+      <div class="fb-info"><b><i class="bi bi-person-check"></i>Who should answer</b><p>Everyone: members of the public, people working in the sectors concerned, researchers and policy experts.</p></div>
+      <div class="fb-info"><b><i class="bi bi-graph-up-arrow"></i>How it is used</b><p>Answers are compared with the emission trends and structural breaks in this dashboard, and reported only as aggregated results.</p></div>
+    </div>
+    <div class="fb-privacy"><b>Your data</b>
+      <ul>
+        <li>The survey is anonymous: we do not record your name, IP address or location. Please do not include personal details in the text boxes.</li>
+        <li>Nothing is sent until you press <b>Submit</b> on the last page. Until then your answers are kept only in this browser, so you can stop and come back later.</li>
+        <li>Answers are stored on the project&rsquo;s server and used only for research. Aggregated results may appear in this dashboard, reports and scientific publications.</li>
+        <li>An e-mail address is asked for only if you volunteer for a follow-up interview. It is kept separately from your answers and deleted after the study.</li>
+        <li>Taking part is voluntary. You can skip any optional question and leave at any time.</li>
+      </ul></div>`;
+
+  // ---- A step ----
+  function renderQuestion(q){
+    let inner = "";
+    switch (q.type){
+      case "single": inner = choiceQ(q, false); break;
+      case "multi": inner = choiceQ(q, true); break;
+      case "scale": inner = scaleQ(q); break;
+      case "matrix": inner = matrixQ(q); break;
+      case "text": inner = textQ(q); break;
+      case "email": inner = emailQ(q); break;
+      case "policies": inner = policiesQ(q); break;
+      case "check": return `<div class="fb-q" data-qbox="${q.id}">${checkQ(q)}${errBox()}</div>`;
+    }
+    const hidden = q.depends_on && !S.answers[q.depends_on] ? " hidden" : "";
+    const tag = ["single", "multi", "scale", "matrix"].includes(q.type) ? "fieldset" : "div";
+    const legend = tag === "fieldset" ? `<legend>${E(q.label)}${reqMark(q)}</legend>`
+      : `<label class="fb-label" for="q-${q.id}">${E(q.label)}${reqMark(q)}</label>`;
+    return `<${tag} class="fb-q" data-qbox="${q.id}"${hidden}>${legend}${q.hint ? `<p class="fb-hint">${E(q.hint)}</p>` : ""}${inner}${errBox()}</${tag}>`;
+  }
+  function renderReview(){
+    const secs = S.steps.slice(1, -1).map((st, i) => {
+      const rows = questionsOf(st).map(q => {
+        if (q.depends_on && !S.answers[q.depends_on]) return "";
+        const v = S.answers[q.id];
+        let txt = "", none = v == null || v === "" || (Array.isArray(v) && !v.length);
+        if (!none){
+          if (q.type === "single") txt = S.lab[q.id][v] || v;
+          else if (q.type === "multi") txt = v.map(c => S.lab[q.id][c] || c).join(" · ");
+          else if (q.type === "scale") txt = v === "dk" ? "Don't know" : `${v} · ${q.scale.labels[v]}`;
+          else if (q.type === "matrix") txt = q.rows.filter(r => v[r.code] != null).map(r =>
+            `${r.label}: ${v[r.code] === "dk" ? "don't know" : v[r.code]}`).join("\n") || "";
+          else if (q.type === "check") txt = v ? "Yes" : "No";
+          else if (q.type === "policies") txt = v.map(it => `${it.policy}  (${q.criteria.map(c =>
+            `${c.label} ${(it.ratings || {})[c.code] || "–"}`).join(", ")})`).join("\n");
+          else txt = v;
+          none = !txt;
+        }
+        return `<dt>${E(q.label)}</dt><dd class="${none ? "none" : ""}">${none ? "Not answered" : E(txt)}</dd>`;
+      }).join("");
+      return `<div class="fb-review-sec"><h4><i class="bi ${E(st.icon)}"></i><span>${E(st.title)}</span>
+        <button type="button" data-goto="${i + 1}"><i class="bi bi-pencil me-1"></i>Edit</button></h4><dl>${rows}</dl></div>`;
+    }).join("");
+    return secs + `<p class="fb-hint" style="margin:.8rem 0 0">Press <b>Submit</b> to send your answers. You cannot change them afterwards.</p>`;
+  }
+  function render(focus){
+    const st = S.steps[S.step], last = S.step === S.steps.length - 1;
+    const head = `<div class="fb-step-h"><span class="ico"><i class="bi ${E(st.icon)}"></i></span><div>
+      <div class="k">Step ${S.step + 1} of ${S.steps.length}</div><h3>${E(st.title)}</h3></div></div>
+      ${st.intro ? `<p class="fb-step-intro">${E(st.intro)}</p>` : ""}`;
+    body.innerHTML = head + (st.id === "consent" ? WELCOME : "") +
+      (st.id === "review" ? renderReview() : questionsOf(st).map(renderQuestion).join(""));
+    prevBtn.hidden = S.step === 0;
+    nextBtn.disabled = false;
+    nextBtn.innerHTML = last ? '<i class="bi bi-send"></i>Submit' : S.step === 0 ? 'Start the survey<i class="bi bi-arrow-right"></i>'
+      : 'Next<i class="bi bi-arrow-right"></i>';
+    $("fbSteps").innerHTML = S.steps.map((s, i) => {
+      const cur = i === S.step, done = !cur && i < S.max;            // a step is done once the respondent moved past it
+      return `<button type="button" class="fb-step${cur ? " cur" : done ? " done" : ""}" data-goto="${i}"${i > S.max ? " disabled" : ""}${
+        cur ? ' aria-current="step"' : ""}><span class="n">${done ? '<i class="bi bi-check-lg"></i>' : i + 1}</span><span class="t">${E(s.title)}</span></button>`;
+    }).join("");
+    const pct = Math.round(100 * S.step / (S.steps.length - 1));
+    $("fbProgressBar").style.width = pct + "%";
+    $("fbProgress").setAttribute("aria-valuenow", pct);
+    setStatus("", "");
+    if (focus){
+      const top = $("fbSteps").getBoundingClientRect().top;
+      if (top < 0 || top > innerHeight * .6) $("fbSteps").scrollIntoView({ behavior: "smooth", block: "start" });
+      body.querySelector("h3")?.setAttribute("tabindex", "-1");
+      body.querySelector("h3")?.focus({ preventScroll: true });
+    }
+  }
+
+  // ---- Answers ----
+  function setAnswer(id, v){
+    if (v == null || v === "" || v === false || (Array.isArray(v) && !v.length) || (typeof v === "object" && !Array.isArray(v) && !Object.keys(v).length)) delete S.answers[id];
+    else S.answers[id] = v;
+    const box = body.querySelector(`[data-qbox="${id}"]`); if (box) box.classList.remove("invalid");
+    // questions shown only after another answer (the follow-up e-mail)
+    allQuestions().filter(q => q.depends_on === id).forEach(q => {
+      const b = body.querySelector(`[data-qbox="${q.id}"]`); if (b) b.hidden = !S.answers[id];
+    });
+    saveDraft();
+  }
+  function setPolicies(items){ S.answers.policy_ratings = items; saveDraft(); }
+  // A radio answer. With toggle (a mouse click on the answer that is already chosen) it is cleared,
+  // so optional scales and single sector rows can be left blank again.
+  function applyRadio(t, toggle){
+    const qbox = t.closest("[data-q]"), qid = qbox ? qbox.dataset.q : null;
+    const val = t.value === "dk" ? "dk" : (/^\d+$/.test(t.value) ? +t.value : t.value);
+    if (t.dataset.pidx != null){
+      const it = polItems()[+t.dataset.pidx]; if (!it) return;
+      it.ratings = it.ratings || {};
+      if (toggle && it.ratings[t.dataset.crit] === val){ delete it.ratings[t.dataset.crit]; t.checked = false; } else it.ratings[t.dataset.crit] = val;
+      saveDraft(); return;
+    }
+    if (!qid) return;
+    const q = qById(qid);
+    if (q.type === "matrix"){
+      const m = { ...(S.answers[qid] || {}) }, row = t.dataset.row;
+      if (toggle && m[row] === val){ delete m[row]; t.checked = false; } else m[row] = val;
+      setAnswer(qid, m);
+    } else if (toggle && S.answers[qid] === val && !q.required){ t.checked = false; setAnswer(qid, null); }
+    else setAnswer(qid, val);
+  }
+  body.addEventListener("click", e => {
+    const t = e.target;
+    const go = t.closest("[data-goto]"); if (go){ goTo(+go.dataset.goto); return; }
+    const lv = t.closest("[data-level]");
+    if (lv){ S.polLevel = lv.dataset.level; body.querySelectorAll("[data-level]").forEach(b => b.setAttribute("aria-pressed", b === lv)); refreshPolicies(qById("policy_ratings"), true, false); return; }
+    const un = t.closest("[data-unpick]");
+    if (un){ setPolicies(polItems().filter(i => i.policy !== un.dataset.unpick)); refreshPolicies(qById("policy_ratings"), true, true); return; }
+    // a click on the answer already chosen fires no "change": clear it here
+    if (t.matches("input[type=radio]")){ applyRadio(t, t.dataset.was === "1"); delete t.dataset.was; }
+  });
+  body.addEventListener("pointerdown", e => {                // remember whether the radio was chosen before the click
+    const r = e.target.closest(".fb-seg, .fb-mcell, .fb-chip")?.querySelector("input[type=radio]");
+    if (r) r.dataset.was = r.checked ? "1" : "0";
+  });
+  body.addEventListener("change", e => {
+    const t = e.target;
+    if (t.type === "radio"){ if (t.checked) applyRadio(t, false); return; }      // keyboard (arrow keys); repeats a click harmlessly
+    if (t.dataset.pol != null){
+      const q = qById("policy_ratings"), items = polItems();
+      if (t.checked){ if (items.length < q.max && !items.some(i => i.policy === t.dataset.pol)) items.push({ policy: t.dataset.pol, ratings: {}, comment: "" }); setPolicies(items); }
+      else setPolicies(items.filter(i => i.policy !== t.dataset.pol));
+      refreshPolicies(q, true, true);
+      return;
+    }
+    if (t.type === "checkbox" && t.closest(".fb-chips")){
+      const qid = t.closest("[data-q]").dataset.q, q = qById(qid);
+      const sel = [...body.querySelectorAll(`input[name="q-${qid}"]:checked`)].map(x => x.value);
+      setAnswer(qid, sel);
+      body.querySelectorAll(`input[name="q-${qid}"]`).forEach(x => { x.disabled = !x.checked && sel.length >= q.max; });
+      const c = body.querySelector(`[data-counter="${qid}"]`); if (c) c.textContent = `${sel.length} of ${q.max} chosen`;
+      return;
+    }
+    if (t.type === "checkbox" && t.dataset.q) setAnswer(t.dataset.q, t.checked);
+  });
+  body.addEventListener("input", e => {
+    const t = e.target;
+    if (t.id === "fbPolSearch"){ S.polQ = t.value; refreshPolicies(qById("policy_ratings"), true, false); return; }
+    if (t.dataset.pcomment != null){ const it = polItems()[+t.dataset.pcomment]; if (it){ it.comment = t.value; saveDraft(); } return; }
+    if (t.tagName === "TEXTAREA" && t.dataset.q){
+      setAnswer(t.dataset.q, t.value);
+      const c = body.querySelector(`[data-count="${t.dataset.q}"]`); if (c) c.textContent = `${t.value.length} / ${t.maxLength}`;
+    }
+    if (t.type === "email") setAnswer(t.dataset.q, t.value.trim());
+  });
+
+  // ---- Checks before moving on ----
+  const EMAIL_OK = /^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,24}$/;
+  function problems(stepIdx){                                 // {question id: message} for one step
+    const out = {};
+    questionsOf(S.steps[stepIdx]).forEach(q => {
+      const v = S.answers[q.id];
+      if (q.required && (v == null || v === false || (Array.isArray(v) && !v.length)))
+        out[q.id] = q.type === "check" ? "Please tick this box to continue." : "Please answer this question.";
+      if (q.type === "email" && S.answers[q.depends_on] && !(v && EMAIL_OK.test(v)))
+        out[q.id] = "Enter a valid e-mail address, or untick the box above.";
+    });
+    return out;
+  }
+  function validate(){
+    const p = problems(S.step), bad = [];
+    questionsOf(S.steps[S.step]).forEach(q => {
+      const msg = p[q.id] || "", box = body.querySelector(`[data-qbox="${q.id}"]`);
+      if (!box) return;
+      box.classList.toggle("invalid", !!msg);
+      const sp = box.querySelector(".fb-err span"); if (sp) sp.textContent = msg;
+      if (msg) bad.push(box);
+    });
+    if (bad.length){
+      bad[0].scrollIntoView({ behavior: "smooth", block: "center" });
+      setStatus("err", `<i class="bi bi-exclamation-triangle-fill"></i>${bad.length === 1 ? "One question needs" : bad.length + " questions need"} your attention.`);
+    }
+    return !bad.length;
+  }
+  function goTo(i){
+    if (i < 0 || i >= S.steps.length || i > S.max) return;
+    S.step = i; saveDraft(); render(true);
+  }
+  prevBtn.addEventListener("click", () => goTo(S.step - 1));
+  nextBtn.addEventListener("click", () => {
+    if (S.step === S.steps.length - 1){ submit(); return; }
+    if (!validate()) return;
+    if (!S.started) S.started = new Date().toISOString();
+    S.step += 1; S.max = Math.max(S.max, S.step); saveDraft(); render(true);
+  });
+  $("fbSteps").addEventListener("click", e => { const b = e.target.closest("[data-goto]"); if (b && !b.disabled) goTo(+b.dataset.goto); });
+
+  // ---- Submit ----
+  async function submit(){
+    const badStep = S.steps.findIndex((_, i) => Object.keys(problems(i)).length);   // re-check every step
+    if (badStep >= 0){ S.step = badStep; render(true); validate(); return; }
+    const started = S.started ? new Date(S.started) : new Date();
+    const payload = {
+      answers: S.answers, started_at: started.toISOString(), client_id: client,
+      elapsed_s: Math.round((Date.now() - started.getTime()) / 1000),
+      device: matchMedia("(max-width: 767px)").matches ? "mobile" : "desktop",
+      website: $("fbWebsite").value,
+    };
+    nextBtn.disabled = true; prevBtn.disabled = true;
+    setStatus("sending", '<span class="spinner-border spinner-border-sm"></span>Sending your answers&hellip;');
+    try {
+      const resp = await fetch("/api/feedback/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const r = await resp.json().catch(() => ({}));
+      if (!resp.ok || !r.ok) throw new Error(r.detail || "The answers could not be saved. Please try again.");
+      const mine = { ...S.answers };
+      clearDraft();
+      store.set(KEY_DONE, { at: new Date().toISOString(), ref: r.response_id });
+      $("fbRef").textContent = r.response_id;
+      $("fbSurvey").hidden = true;
+      $("fbThanks").hidden = false;
+      $("fbThanks").scrollIntoView({ behavior: "smooth", block: "start" });
+      $("fbThanks").focus({ preventScroll: true });
+      loadResults(mine, true);
+    } catch (err){
+      setStatus("err", `<i class="bi bi-exclamation-triangle-fill"></i>${E(err.message || "Network error: the server could not be reached.")}`);
+    } finally {
+      nextBtn.disabled = false; prevBtn.disabled = false;
+    }
+  }
+  $("fbAgain").addEventListener("click", () => {
+    S.answers = {}; S.step = 0; S.max = 0; S.started = null; S.polQ = ""; S.polLevel = "all";
+    $("fbThanks").hidden = true; $("fbSurvey").hidden = false; banner(); render(true);
+  });
+  $("fbSeeResults").addEventListener("click", () => $("fbResults").scrollIntoView({ behavior: "smooth", block: "start" }));
+
+  function banner(msg){
+    const b = $("fbBanner");
+    if (!msg){ b.hidden = true; b.innerHTML = ""; return; }
+    b.innerHTML = msg; b.hidden = false;
+  }
+
+  // ---- Public aggregate results ----
+  function distHtml(d, q){
+    const tot = Object.values(d.counts).reduce((a, b) => a + b, 0) + (d.dk || 0) || 1;
+    const segsH = Object.entries(d.counts).map(([k, n], i) => n ? `<span style="width:${100 * n / tot}%;background:${DIST_COL[i]}" title="${E(q.scale.labels[k])}: ${n}"></span>` : "").join("") +
+      (d.dk ? `<span style="width:${100 * d.dk / tot}%;background:#E2E8EE" title="Don't know: ${d.dk}"></span>` : "");
+    const legend = Object.keys(d.counts).map((k, i) => `<span><i style="background:${DIST_COL[i]}"></i>${E(q.scale.labels[k])} ${Math.round(100 * d.counts[k] / tot)}%</span>`).join("") +
+      (d.dk ? `<span><i style="background:#E2E8EE"></i>Don't know ${Math.round(100 * d.dk / tot)}%</span>` : "");
+    return `<div class="fb-dist">${segsH}</div><div class="fb-dist-legend">${legend}</div>`;
+  }
+  function barsHtml(items, max){
+    return `<div class="fb-bars">${items.map(it => `<div class="fb-bar"><span>${E(it.label)}</span><span class="tr"><span style="width:${Math.max(3, 100 * it.value / max)}%"></span></span>
+      <span class="v">${it.text}</span></div>`).join("")}</div>`;
+  }
+  function renderResults(d){
+    const el = $("fbResultsBody");
+    if (d.n){ $("fbHeroN").textContent = d.n.toLocaleString("en-IE"); $("fbHeroStat").hidden = false; }
+    if (!d.available){
+      el.innerHTML = `<p class="fb-empty"><i class="bi bi-hourglass-split"></i>Results appear here once ${d.min_n || 5} responses have been received${d.n ? ` (${d.n} so far)` : ""}, so that no individual can be recognised.</p>`;
+      return;
+    }
+    const qO = qById("overall_effectiveness"), qT = qById("target_2030"), qS = qById("sector_effectiveness");
+    const panels = [];
+    panels.push(`<div class="fb-res"><h5>Overall effectiveness of policy <small>mean ${d.overall_effectiveness.mean ?? "–"} / 5</small></h5>${distHtml(d.overall_effectiveness, qO)}</div>`);
+    panels.push(`<div class="fb-res"><h5>Will Ireland meet the 2030 target? <small>mean ${d.target_2030.mean ?? "–"} / 5</small></h5>${distHtml(d.target_2030, qT)}</div>`);
+    const sec = qS.rows.filter(r => d.sectors[r.code]).map(r => ({ label: r.label, value: d.sectors[r.code].mean,
+      text: `${d.sectors[r.code].mean.toFixed(1)} <small>(n=${d.sectors[r.code].n})</small>` })).sort((a, b) => b.value - a.value);
+    if (sec.length) panels.push(`<div class="fb-res"><h5>Effectiveness by sector <small>mean, 1&ndash;5</small></h5>${barsHtml(sec, 5)}</div>`);
+    const top = (list, qid) => list.map(([c, n]) => ({ label: S.lab[qid][c] || c, value: n, text: String(n) }));
+    if (d.barriers.length) panels.push(`<div class="fb-res"><h5>Main barriers <small>times chosen</small></h5>${barsHtml(top(d.barriers, "barriers"), d.barriers[0][1])}</div>`);
+    if (d.instruments.length) panels.push(`<div class="fb-res"><h5>Measures to strengthen <small>times chosen</small></h5>${barsHtml(top(d.instruments, "instruments"), d.instruments[0][1])}</div>`);
+    if (d.policies.length) panels.push(`<div class="fb-res"><h5>Rated policies: effectiveness <small>mean, 1&ndash;5</small></h5>${
+      barsHtml(d.policies.map(p => ({ label: (polByName.get(p.policy) || {}).short || p.policy, value: p.mean, text: `${p.mean.toFixed(1)} <small>(n=${p.n})</small>` })), 5)}</div>`);
+    el.innerHTML = `<div class="fb-res-grid">${panels.join("")}</div><p class="fb-hint" style="margin:.9rem 0 0">Based on ${d.n.toLocaleString("en-IE")} responses. Respondents choose to take part, so the results describe them, not the whole population.</p>`;
+  }
+  function renderCompare(mine, d){
+    const el = $("fbCompare"), out = [];
+    const q = qById("overall_effectiveness");
+    if (typeof mine.overall_effectiveness === "number")
+      out.push(`<div>Your rating of overall effectiveness<b>${mine.overall_effectiveness} · ${E(q.scale.labels[mine.overall_effectiveness])}</b>${
+        d.available && d.overall_effectiveness.mean != null ? `Average of all respondents: <b style="display:inline;font-size:1rem">${d.overall_effectiveness.mean}</b>` : ""}</div>`);
+    if (typeof mine.target_2030 === "number")
+      out.push(`<div>Your view on the 2030 target<b>${E(qById("target_2030").scale.labels[mine.target_2030])}</b>${
+        d.available && d.target_2030.mean != null ? `Average of all respondents: <b style="display:inline;font-size:1rem">${d.target_2030.mean}</b>` : ""}</div>`);
+    el.innerHTML = out.join("");
+  }
+  async function loadResults(mine, fresh){
+    try {
+      const d = await fetch("/api/feedback/summary/" + (fresh ? "?t=" + Date.now() : "")).then(r => r.json());
+      renderResults(d);
+      if (mine) renderCompare(mine, d);
+    } catch (e){
+      $("fbResultsBody").innerHTML = '<p class="fb-empty"><i class="bi bi-wifi-off"></i>The results could not be loaded.</p>';
+    }
+  }
+
+  // ---- Research-team download ----
+  $("fbAdminForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const msg = $("fbAdminMsg"), fd = new FormData();
+    fd.append("key", $("fbAdminKey").value); fd.append("format", $("fbAdminFmt").value);
+    setStatus("sending", '<span class="spinner-border spinner-border-sm"></span>Preparing the export&hellip;', msg);
+    try {
+      const resp = await fetch("/api/feedback/download/", { method: "POST", body: fd });
+      if (!resp.ok) throw new Error(await resp.text());
+      const blob = await resp.blob();
+      const name = (/filename="([^"]+)"/.exec(resp.headers.get("Content-Disposition") || "") || [])[1] || "inpact_survey";
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+      setStatus("ok", `<i class="bi bi-check-circle-fill"></i>Downloaded ${E(name)}.`, msg);
+    } catch (err){
+      setStatus("err", `<i class="bi bi-exclamation-triangle-fill"></i>${E(err.message || "Download failed.")}`, msg);
+    }
+  });
+
+  // ---- Start ----
+  fetch("/api/feedback/schema/").then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(schema => {
+    S.schema = schema;
+    S.steps = schema.steps.concat([{ id: "review", title: "Review", icon: "bi-check2-square",
+      intro: "Check your answers. Use Edit to change anything before you submit.", questions: [] }]);
+    allQuestions().forEach(q => {
+      S.lab[q.id] = {};
+      (q.options || []).concat(q.rows || []).forEach(o => { S.lab[q.id][o.code] = o.label; });
+    });
+    const d = store.get(KEY_DRAFT), done = store.get(KEY_DONE);
+    if (d && d.v === schema.version && d.answers && Object.keys(d.answers).length){
+      Object.assign(S, { answers: d.answers, step: Math.min(d.step || 0, S.steps.length - 1), max: Math.min(d.max || 0, S.steps.length - 1), started: d.started });
+      banner(`<i class="bi bi-clock-history"></i><span>Welcome back. Your unfinished answers from ${new Date(d.saved).toLocaleDateString("en-IE", { day: "numeric", month: "long" })} have been restored.</span><button type="button" id="fbRestart">Start again</button>`);
+    } else if (done && done.at){
+      banner(`<i class="bi bi-check2-circle"></i><span>You already responded on ${new Date(done.at).toLocaleDateString("en-IE", { day: "numeric", month: "long", year: "numeric" })}. You are welcome to answer again if you speak from a different perspective (for example as an expert and as a citizen).</span>`);
+    }
+    render(false);
+  }).catch(() => {
+    body.innerHTML = '<p class="fb-empty"><i class="bi bi-exclamation-triangle"></i>The survey could not be loaded. Please reload the page.</p>';
+  });
+  $("fbBanner").addEventListener("click", e => {
+    if (e.target.id !== "fbRestart") return;
+    clearDraft(); S.answers = {}; S.step = 0; S.max = 0; S.started = null; banner(); render(true);
+  });
+  loadResults(null, false);
+})();
 
 /* ---------------------- 11. Footer disclaimer toggle ---------------------- */
 (function initDisclaimerToggle(){

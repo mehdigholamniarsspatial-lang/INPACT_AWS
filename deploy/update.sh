@@ -5,5 +5,6 @@ cd /home/ubuntu/INPACT_AWS
 git pull --ff-only
 .venv/bin/pip install -r requirements.txt --quiet
 .venv/bin/python manage.py collectstatic --noinput
+bash deploy/ensure_feedback.sh
 sudo systemctl restart inpact
 echo "Updated to $(git log -1 --format='%h %s')"

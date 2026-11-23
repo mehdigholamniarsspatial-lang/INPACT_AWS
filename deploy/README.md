@@ -27,6 +27,23 @@ Commit and push from the `InpactAWS` folder, then:
 
     ssh inpact-aws 'cd ~/INPACT_AWS && bash deploy/update.sh'
 
+## Stakeholder survey (Feedback tab)
+
+The questionnaire is defined in `explorer/feedback_survey.py` (one place for the form, the
+validation and the export codebook; bump `SURVEY_VERSION` when questions change).
+Responses are appended to `/var/lib/inpact/feedback/responses.jsonl`, outside the code folder,
+and copied daily to `/var/lib/inpact/backup/` (30 days). `deploy/ensure_feedback.sh` sets this up.
+
+* **Download:** Feedback tab → *Research team: download the responses* → enter the key →
+  Excel (README, Responses, MultiSelect, SectorRatings, PolicyRatings, PolicyComments, Codebook,
+  Contacts) or CSV tables in a zip.
+* **The key:** `ssh inpact-aws 'sudo grep FEEDBACK_ADMIN_KEY /etc/inpact/inpact.env'`. To change it,
+  edit that line and run `sudo systemctl restart inpact`.
+* **Copy the raw file to your PC:** `scp inpact-aws:/var/lib/inpact/feedback/responses.jsonl .`
+* Aggregated results appear publicly once `FEEDBACK_MIN_N` responses exist (default 5).
+* The `Contacts` sheet holds personal data (e-mails of interview volunteers): keep it apart from
+  the analysis files and delete it when the follow-up is done.
+
 ## Logs
 
     sudo journalctl -u inpact -f          # Django / gunicorn

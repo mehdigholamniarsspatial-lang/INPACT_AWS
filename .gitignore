@@ -8,3 +8,4 @@ staticfiles/
 *.env
 *.pem
 *.key
+data/feedback/

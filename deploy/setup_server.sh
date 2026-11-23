@@ -30,6 +30,7 @@ if [ ! -f /etc/inpact/inpact.env ]; then
 fi
 
 .venv/bin/python manage.py collectstatic --noinput
+bash deploy/ensure_feedback.sh                     # survey storage, download key, daily backup
 # Deployment check with the real settings (the env file is readable by root only)
 sudo bash -c 'set -a; . /etc/inpact/inpact.env; set +a; .venv/bin/python manage.py check --deploy' || true
 
