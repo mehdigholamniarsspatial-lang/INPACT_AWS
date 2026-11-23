@@ -12111,6 +12111,9 @@ function downloadTrendPng(){
   const LEVELS = [["all", "All"], ["International", "International"], ["EU", "EU"], ["National", "National"], ["Target", "Targets"]];
   // Likert colours: red (1) -> neutral grey (3) -> green (5); "don't know" a pale grey
   const DIV = ["#C84B3C", "#E58A5C", "#C9CED4", "#5BB381", "#00843D"], DK = "#E6EBF0";
+  // Scales whose middle is the good answer (e.g. ambition: too weak / about right / too strong): orange - grey - blue
+  const DIV_MID = ["#B8541A", "#E3A06A", "#C9CED4", "#7EA3D6", "#2F5FA8"];
+  const palFor = scale => scale && /about right/i.test(scale.labels[3] || "") ? DIV_MID : DIV;
   // Fixed colour per respondent group (follows the group, never its rank)
   const GCOL = { public: "#5C6B7A", stakeholder: "#D9822B", researcher: "#2F6FDE", expert: "#0F9D8A", policymaker: "#9C3D8F" };
 
@@ -12616,9 +12619,9 @@ function downloadTrendPng(){
       if (q.id === qid){ const o = (q.options || []).concat(q.rows || []).find(x => x.code === code); if (o) return o.label; }
     return code;
   };
-  // colour for a mean on the 1..5 scale (red - grey - green)
-  function meanColour(m){
-    const stops = DIV.map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
+  // colour for a mean on the 1..5 scale (red - grey - green, or the palette of the given scale)
+  function meanColour(m, scale){
+    const stops = palFor(scale).map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
     const x = Math.min(4, Math.max(0, m - 1)), i = Math.min(3, Math.floor(x)), f = x - i;
     const c = stops[i].map((v, k) => Math.round(v + (stops[i + 1][k] - v) * f));
     const lum = (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255;
@@ -12648,14 +12651,14 @@ function downloadTrendPng(){
 
   // ---- Chart pieces ----
   function legendHtml(scale, dk){
-    return `<div class="fb-legend">${Object.keys(scale.labels).map((k, i) => `<span><i style="background:${DIV[i]}"></i>${E(scale.labels[k])}</span>`).join("")}${
+    return `<div class="fb-legend">${Object.keys(scale.labels).map((k, i) => `<span><i style="background:${palFor(scale)[i]}"></i>${E(scale.labels[k])}</span>`).join("")}${
       dk ? `<span><i style="background:${DK}"></i>Don't know</span>` : ""}</div>`;
   }
   function likRow(label, a, scale, dot){
     const lab = `<span class="l">${dot ? `<i class="dot" style="--gc:${GCOL[dot]}"></i>` : ""}<span>${label}</span></span>`;
     if (!a || !(sum(a.c) + (a.dk || 0))) return lab + '<span class="na">No answers yet</span>';
     const keys = Object.keys(scale.labels), tot = sum(a.c) + (a.dk || 0);
-    const parts = keys.map((k, i) => [scale.labels[k], (a.c || {})[k] || 0, DIV[i], i === 2]).concat(a.dk ? [["Don't know", a.dk, DK, true]] : []);
+    const parts = keys.map((k, i) => [scale.labels[k], (a.c || {})[k] || 0, palFor(scale)[i], i === 2]).concat(a.dk ? [["Don't know", a.dk, DK, true]] : []);
     const segsH = parts.filter(p => p[1]).map(([l, n, col, light]) => {
       const w = 100 * n / tot;
       return `<span class="${light ? "lt" : ""}" style="width:${w}%;background:${col}" data-tip="<b>${E(l)}</b><br>${n} of ${tot} (${Math.round(w)}%)">${w >= 9 ? Math.round(w) + "%" : ""}</span>`;
@@ -12733,14 +12736,14 @@ function downloadTrendPng(){
     const cell = (a, row) => {
       const r = a && a.rows && a.rows[row]; const m = meanOf(r), n = r ? sum(r.c) : 0;
       if (m == null) return '<td class="c none" data-tip="No ratings">–</td>';
-      const c = meanColour(m);
+      const c = meanColour(m, q.scale);
       return `<td class="c" style="background:${c.bg};color:${c.fg}" data-tip="<b>${fmt(m, 2)}</b> mean of ${n} ratings${r.dk ? `<br>${r.dk} don't know` : ""}">${fmt(m)}</td>`;
     };
     const aggs = Object.fromEntries(cols.map(g => [g, g === "all" ? agg(qid, gs) : R.data.q[qid][g]]));
     const rows = q.rows.map(r => `<tr><td>${E(r.label)}</td>${cols.map(g => cell(aggs[g], r.code)).join("")}</tr>`).join("");
     const lo = q.scale.labels[1], hi = q.scale.labels[q.scale.max];
     return panel(title, sub || E(q.label), `<div style="overflow:auto"><table class="fb-heat"><thead><tr><th></th>${cols.map(g => `<th>${g === "all" ? "All" : E(gLabel(g))}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="fb-scalekey"><span>1 ${E(lo)}</span><span class="g"></span><span>${q.scale.max} ${E(hi)}</span><span style="margin-left:auto">mean score</span></div>`, true);
+      <div class="fb-scalekey"><span>1 ${E(lo)}</span><span class="g" style="background:linear-gradient(90deg,${palFor(q.scale).join(",")})"></span><span>${q.scale.max} ${E(hi)}</span><span style="margin-left:auto">mean score</span></div>`, true);
   }
   const CRIT_ORDER = ["effectiveness", "efficiency", "equity", "implementation", "evidence", "design", "feasibility"];
   function scorecard(){
