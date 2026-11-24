@@ -4,6 +4,7 @@
 # Safe to run again: it only adds what is missing.
 set -euo pipefail
 APP=/home/ubuntu/INPACT_AWS
+DOMAIN=inpact-epa.ie                               # and www.$DOMAIN; HTTPS: deploy/enable_https.sh
 cd "$APP"
 
 # 1 GB of RAM is tight for pip-installing scipy/pandas: add a 2 GB swap file once
@@ -14,6 +15,10 @@ fi
 
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-venv python3-pip nginx
+# nginx buffers large responses (the ~1 MB page, images) in these folders; if they are not owned
+# by its worker user (www-data), every large file is cut off and the dashboard loads half-empty
+sudo chown -R www-data:root /var/lib/nginx/body /var/lib/nginx/proxy /var/lib/nginx/fastcgi \
+  /var/lib/nginx/uwsgi /var/lib/nginx/scgi 2>/dev/null || true
 
 # Python environment
 [ -d .venv ] || python3 -m venv .venv
@@ -25,7 +30,9 @@ sudo mkdir -p /etc/inpact
 if [ ! -f /etc/inpact/inpact.env ]; then
   IP=$(curl -s --max-time 5 https://checkip.amazonaws.com || true)
   KEY=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
-  printf 'SECRET_KEY=%s\nDEBUG=0\nALLOWED_HOSTS=%s\n' "$KEY" "$IP" | sudo tee /etc/inpact/inpact.env >/dev/null
+  printf 'SECRET_KEY=%s\nDEBUG=0\nALLOWED_HOSTS=%s\nCSRF_TRUSTED_ORIGINS=%s\n' "$KEY" \
+    "${IP:+$IP,}$DOMAIN,www.$DOMAIN" "https://$DOMAIN,https://www.$DOMAIN" \
+    | sudo tee /etc/inpact/inpact.env >/dev/null
   sudo chmod 640 /etc/inpact/inpact.env && sudo chown root:www-data /etc/inpact/inpact.env
 fi
 
@@ -36,11 +43,21 @@ sudo bash -c 'set -a; . /etc/inpact/inpact.env; set +a; .venv/bin/python manage.
 
 # gunicorn service + nginx site
 sudo cp deploy/inpact.service /etc/systemd/system/inpact.service
-sudo cp deploy/nginx-inpact.conf /etc/nginx/sites-available/inpact
+# Keep HTTPS if enable_https.sh already got a certificate; otherwise the HTTP-only site
+if sudo test -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem"; then
+  sudo cp deploy/nginx-inpact-https.conf /etc/nginx/sites-available/inpact
+else
+  sudo cp deploy/nginx-inpact.conf /etc/nginx/sites-available/inpact
+fi
 sudo ln -sf /etc/nginx/sites-available/inpact /etc/nginx/sites-enabled/inpact
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl daemon-reload
 sudo systemctl enable --now inpact
 sudo systemctl restart inpact nginx
-echo "Done. Open http://$(sudo grep ^ALLOWED_HOSTS /etc/inpact/inpact.env | cut -d= -f2 | cut -d, -f1)/"
+if sudo test -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem"; then
+  echo "Done. Open https://$DOMAIN/"
+else
+  echo "Done. Open http://$(sudo grep ^ALLOWED_HOSTS /etc/inpact/inpact.env | cut -d= -f2 | cut -d, -f1)/"
+  echo "For HTTPS on $DOMAIN (DNS pointing here, port 443 open in Lightsail): bash deploy/enable_https.sh"
+fi

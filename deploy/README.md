@@ -1,25 +1,40 @@
 # Running INPACT on AWS Lightsail
 
-The dashboard runs on an Ubuntu 24.04 Lightsail instance as:
+The dashboard runs on an Ubuntu 24.04 Lightsail instance at **https://inpact-epa.ie** as:
 
-    browser --> nginx (port 80) --> gunicorn (127.0.0.1:8000) --> Django
+    browser --> nginx (443, HTTPS; 80 redirects) --> gunicorn (127.0.0.1:8000) --> Django
 
 | File | Goes to | Purpose |
 |---|---|---|
 | `inpact.service` | `/etc/systemd/system/` | keeps gunicorn running, restarts it on failure and at boot |
-| `nginx-inpact.conf` | `/etc/nginx/sites-available/inpact` | public web server on port 80 |
+| `nginx-inpact.conf` | `/etc/nginx/sites-available/inpact` | HTTP-only site, used until a certificate exists |
+| `nginx-inpact-https.conf` | `/etc/nginx/sites-available/inpact` | HTTPS site; port 80 (domain, www, bare IP) redirects to `https://inpact-epa.ie` |
 | `setup_server.sh` | run once | swap file, packages, virtualenv, settings, services |
-| `update.sh` | run after each push | `git pull`, install requirements, restart |
+| `enable_https.sh` | run once, after DNS | domain in the settings, Let's Encrypt certificate, HTTPS site |
+| `update.sh` | run after each push | `git pull`, install requirements, restart (leaves nginx alone) |
 
 Settings that must not be in Git live in `/etc/inpact/inpact.env` on the server
-(`SECRET_KEY`, `DEBUG=0`, `ALLOWED_HOSTS`, optional `CSRF_TRUSTED_ORIGINS`,
-`GITHUB_TOKEN` for the feedback form). After editing it: `sudo systemctl restart inpact`.
+(`SECRET_KEY`, `DEBUG=0`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`, the feedback keys).
+After editing it: `sudo systemctl restart inpact`. `CSRF_TRUSTED_ORIGINS` must list
+`https://inpact-epa.ie,https://www.inpact-epa.ie`, or Feedback submissions over HTTPS fail with 403.
 
 ## First install
 
     ssh inpact-aws
     git clone https://github.com/mehdigholamniarsspatial-lang/INPACT_AWS.git ~/INPACT_AWS
     cd ~/INPACT_AWS && bash deploy/setup_server.sh
+
+## Domain and HTTPS (inpact-epa.ie)
+
+1. **Lightsail:** attach a static IP to the instance; in *Networking → IPv4 Firewall* allow HTTP (80)
+   and HTTPS (443).
+2. **Blacknight DNS zone** for inpact-epa.ie: A record `@` and A record `www`, both to the static IP.
+   Check from a PC: `Resolve-DnsName inpact-epa.ie`.
+3. **Server:** `cd ~/INPACT_AWS && bash deploy/enable_https.sh` (optionally with
+   `CERTBOT_EMAIL=...` in front for expiry warnings).
+
+The certificate (Let's Encrypt, 90 days) renews itself through `certbot.timer`; test with
+`sudo certbot renew --dry-run`. If the static IP changes, update both A records and `ALLOWED_HOSTS`.
 
 ## Updating
 
@@ -57,6 +72,4 @@ and copied daily to `/var/lib/inpact/backup/` (30 days). `deploy/ensure_feedback
 
     sudo journalctl -u inpact -f          # Django / gunicorn
     sudo tail -f /var/log/nginx/error.log # nginx
-
-If the instance's public IP changes (no static IP attached), update `ALLOWED_HOSTS`
-in `/etc/inpact/inpact.env` and restart the service.
+    sudo tail /var/log/letsencrypt/letsencrypt.log  # certificate renewals
