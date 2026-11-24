@@ -231,7 +231,7 @@ def mapeire_catalog(request):
     if not data:
         return JsonResponse({"ok": False, "detail": "MapEIre layers are not available."}, status=503)
     resp = JsonResponse({"ok": True, **data}, json_dumps_params={"ensure_ascii": False})
-    resp["Cache-Control"] = "public, max-age=3600"
+    resp["Cache-Control"] = "no-cache"          # always revalidated: it names the data version of the layers
     return resp
 
 

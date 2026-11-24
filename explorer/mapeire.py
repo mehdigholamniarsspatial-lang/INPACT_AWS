@@ -142,5 +142,8 @@ def catalog() -> dict:
         year, sector = key.split("|")
         avail.setdefault(year, {})[sector] = {
             code: {"nonzero": p["nonzero"], "total": p["total"]} for code, p in entry["pollutants"].items()}
+    # The data version (the metadata file's modification time): the page adds it to every layer URL,
+    # so a rebuilt dataset is never served from a browser cache of the old one
+    version = str(int(_META_CACHE["mtime"] or 0))
     return {k: meta[k] for k in ("grid", "years", "sectors", "pollutants", "groups", "scales", "source") if k in meta} \
-        | {"layers": avail}
+        | {"layers": avail, "version": version}

@@ -239,7 +239,7 @@ def main(src: Path) -> None:
                    "url": "https://www.epa.ie/publications/research/reports/research-317-mapeire-national-mapping-"
                           "of-greenhouse-gas-and-non-greenhouse-gas-emissions-sources-project.php",
                    "units_note": "Units are given only where the MapEIre report states them (kt per 1 km cell for "
-                                 "CO₂, NOₓ and NH₃); the rasters themselves carry no unit."},
+                                 "CO₂, NOₓ, NH₃ and PM₂.₅); the rasters themselves carry no unit."},
     }
     (OUT_DIR / "mapeire_metadata.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     size = sum(p.stat().st_size for p in OUT_DIR.iterdir())

@@ -3448,11 +3448,11 @@ a.ug-go.alt:hover{color:var(--navy)}
                       <dt>Projection</dt><dd>TM65 Irish Grid (EPSG:29902)</dd>
                       <dt>Coverage</dt><dd>Irish Exclusive Economic Zone</dd>
                       <dt>Years here</dt><dd>2015, 2016 and 2019</dd>
-                      <dt>Contents</dt><dd>32 pollutants in 7 groups, by 15 GNFR source sectors</dd>
+                      <dt>Contents</dt><dd>33 pollutants in 7 groups, by 15 GNFR source sectors</dd>
                     </dl>
                     <ul class="ms-notes">
                       <li>Each cell holds the emission of one pollutant from one sector in that 1&nbsp;km square; hover a cell for its value and share of the national total.</li>
-                      <li>Units are shown only where the MapEIre report states them (kilotonnes per cell for CO&#8322;, NO&#8339; and NH&#8323;).</li>
+                      <li>Units are shown only where the MapEIre report states them (kilotonnes per cell for CO&#8322;, NO&#8339;, NH&#8323; and PM&#8322;.&#8325;).</li>
                       <li>Time series use the three MapEIre years, so they are plotted as three samples, not a yearly trend.</li>
                       <li>Negative LULUCF CO&#8322; values are removals (e.g. forest uptake) and use a diverging colour scale.</li>
                     </ul>
@@ -4781,7 +4781,7 @@ a.ug-go.alt:hover{color:var(--navy)}
         <div class="ug-card">
           <h3 class="ug-card-title"><i class="bi bi-stack"></i>Three datasets, three views of Ireland&rsquo;s emissions</h3>
           <div class="ug-ideas">
-            <div class="ug-idea"><b><i class="bi bi-grid-3x3"></i> MapEIre</b><span>The EPA&rsquo;s national inventory mapped on a 1&nbsp;km grid (Aarhus University). <em>Years: 2015, 2016 and 2019.</em> Layers: <b>Year &rarr; Sector &rarr; Pollutant</b>, with 32 pollutants (greenhouse gases, air pollutants, heavy metals and persistent organic pollutants) for 15 GNFR source sectors.</span></div>
+            <div class="ug-idea"><b><i class="bi bi-grid-3x3"></i> MapEIre</b><span>The EPA&rsquo;s national inventory mapped on a 1&nbsp;km grid (Aarhus University). <em>Years: 2015, 2016 and 2019.</em> Layers: <b>Year &rarr; Sector &rarr; Pollutant</b>, with 33 pollutants (greenhouse gases, air pollutants, heavy metals and persistent organic pollutants) for 15 GNFR source sectors.</span></div>
             <div class="ug-idea"><b><i class="bi bi-layers"></i> EDGAR</b><span>The European Commission JRC&rsquo;s bottom-up inventory (EDGAR 2025 GHG) on a 0.1&deg; grid. <em>Years: 2000&ndash;2024, annual or monthly.</em> Layers: <b>Gas &rarr; Sector &rarr; Year &rarr; Period</b>, with CO&#8322; (fossil), CH&#8324; and N&#8322;O across eight sectors.</span></div>
             <div class="ug-idea"><b><i class="bi bi-broadcast"></i> Inverse model</b><span>Top-down CH&#8324; and N&#8322;O fluxes from the Horizon Europe PARIS project, estimated from atmospheric measurements. <em>Years: 2013&ndash;2024 (NAME runs) or 2016&ndash;2024 (FLEXPART runs).</em> Layers: <b>Inverse model &rarr; Transport model &rarr; Gas &rarr; Year &rarr; Estimate</b>.</span></div>
           </div>
@@ -4827,7 +4827,7 @@ a.ug-go.alt:hover{color:var(--navy)}
             <div class="ug-step-body" id="ugM2">
               <p>In <b>Step 2 &middot; Select the layer</b>, fill the drop-downs from left to right; each one unlocks the next, and the layer appears on the map as soon as the selection is complete. Tap a dataset to see its layers:</p>
               <div class="ug-chips" role="group" aria-label="Layers of each dataset">
-                <button type="button" class="ug-chip" aria-pressed="false" data-explain="<b>Year</b> (2015, 2016 or 2019) &rarr; <b>Sector</b> (15 GNFR source sectors) &rarr; <b>Pollutant</b> (32 substances in seven groups)."><i class="bi bi-grid-3x3"></i>MapEIre layers</button>
+                <button type="button" class="ug-chip" aria-pressed="false" data-explain="<b>Year</b> (2015, 2016 or 2019) &rarr; <b>Sector</b> (15 GNFR source sectors) &rarr; <b>Pollutant</b> (33 substances in seven groups)."><i class="bi bi-grid-3x3"></i>MapEIre layers</button>
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="<b>Gas</b> (CO&#8322; fossil, CH&#8324;, N&#8322;O) &rarr; <b>Sector</b> (Power industry, Industrial combustion, Buildings, Transport, Fuel exploitation, Industrial processes, Agriculture, Waste) &rarr; <b>Year</b> (2000&ndash;2024) &rarr; <b>Period</b> (annual total or a single month)."><i class="bi bi-layers"></i>EDGAR layers</button>
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="<b>Inverse model</b> (ELRIS, InTEM or RHIME) &rarr; <b>Transport model</b> (FLEXPART or NAME) &rarr; <b>Gas</b> (CH&#8324; or N&#8322;O) &rarr; <b>Year</b> &rarr; <b>Estimate</b>: the <em>prior</em> (the starting emission map), the <em>posterior</em> (corrected by atmospheric observations) or their <em>difference</em>."><i class="bi bi-broadcast"></i>Inverse model layers</button>
               </div>
@@ -6590,7 +6590,7 @@ const MAPEIRE = (() => {
   const layerCache = new Map();
   function catalog(){
     if (!catP) {
-      catP = fetch("/api/mapeire/").then(r => r.json()).then(d => {
+      catP = fetch("/api/mapeire/", { cache: "no-cache" }).then(r => r.json()).then(d => {
         if (!d.ok) throw new Error(d.detail || "MapEIre layers are not available.");
         CAT = d; prepare(d.grid); return d;
       });
@@ -6628,7 +6628,8 @@ const MAPEIRE = (() => {
   };
   // { year, sector, pollutant } -> Promise of the layer, values as a Float32Array (NaN = NoData)
   function getLayer(sel){
-    const url = `/api/mapeire/layer/?${new URLSearchParams({ year: sel.year, sector: sel.sector, pollutant: sel.pollutant })}`;
+    // v = the data version from the catalogue: a rebuilt dataset gets new URLs, never a stale cached layer
+    const url = `/api/mapeire/layer/?${new URLSearchParams({ year: sel.year, sector: sel.sector, pollutant: sel.pollutant, v: CAT?.version || "" })}`;
     if (!layerCache.has(url)) {
       const p = fetch(url).then(async r => {
         const j = await r.json().catch(() => ({}));
@@ -13400,19 +13401,19 @@ const DATA = [
     id: "mapeire", cat: "raster", type: "Gridded raster", icon: "bi-grid-3x3",
     title: "MapEIre national gridded emissions",
     provider: "EPA Ireland / Aarhus University",
-    summary: "Ireland's national emission inventory mapped onto a 1 km grid: 32 pollutants for 15 GNFR sectors, for 2015, 2016 and 2019.",
+    summary: "Ireland's national emission inventory mapped onto a 1 km grid: 33 pollutants for 15 GNFR sectors, for 2015, 2016 and 2019.",
     about: [
       "MapEIre was produced for the EPA by Aarhus University. It distributes the national inventory spatially, so each layer shows where one pollutant from one sector is emitted, at 1 km × 1 km over the Irish Exclusive Economic Zone.",
       "It covers greenhouse gases, F-gases, acidifying gases, ozone precursors, particulate matter, heavy metals and persistent organic pollutants. On this platform every 1 km cell keeps its value (decoded from the scaled multiband GeoTIFFs), chosen with the Year → Sector → Pollutant selectors: hover for values, restyle, compare years or sectors, and plot three-sample time series."
     ],
     period: [2015, 2019], years: [2015, 2016, 2019], frequency: "Three inventory years (2015, 2016, 2019)", spatial: "Irish Exclusive Economic Zone (land and sea)", resolution: "1 km × 1 km",
-    crs: "TM65 Irish Grid (EPSG:29902); displayed in Web Mercator", units: "kt per 1 km cell where the report states it (CO₂, NOₓ, NH₃); otherwise not stated",
+    crs: "TM65 Irish Grid (EPSG:29902); displayed in Web Mercator", units: "kt per 1 km cell where the report states it (CO₂, NOₓ, NH₃, PM₂.₅); otherwise not stated",
     gases: ["CO₂", "CH₄", "N₂O", "F-gases", "Air pollutants"],
     format: "Multiband GeoTIFF (int16, per-band scale / offset; 45 year × sector files, one band per pollutant), served as 1 km cell values", licence: "© EPA Ireland. Cite EPA Research Report 317.",
     version: "MapEIre (Nielsen et al., 2019)",
-    meta: [["Pollutant groups", "Greenhouse gases (3), fluorinated gases (4), acidifying gases (3), ozone precursors (2), particulate matter (3: PM₁₀, TSP, BC), heavy metals (9), persistent organic pollutants (8)"], ["Sectors", "15 GNFR source sectors (public power, industry, road transport, shipping, aviation, agriculture, waste, LULUCF …); national totals are not included"], ["Encoding", "int16 per band: value = stored × scale_factor + value_offset (band tags); NoData −32768"], ["Colour scale", "Log scale fixed per sector and pollutant over the three years (diverging for LULUCF CO₂); any palette of the Map style step; zero cells are transparent"], ["File naming", "<Year>_<Sector>_1km.tif, one band per pollutant (band description = pollutant)"]],
+    meta: [["Pollutant groups", "Greenhouse gases (3), fluorinated gases (4), acidifying gases (3), ozone precursors (2), particulate matter (4: PM₂.₅, PM₁₀, TSP, BC), heavy metals (9), persistent organic pollutants (8)"], ["Sectors", "15 GNFR source sectors (public power, industry, road transport, shipping, aviation, agriculture, waste, LULUCF …); national totals are not included"], ["Encoding", "int16 per band: value = stored × scale_factor + value_offset (band tags); NoData −32768"], ["Colour scale", "Log scale fixed per sector and pollutant over the three years (diverging for LULUCF CO₂); any palette of the Map style step; zero cells are transparent"], ["File naming", "<Year>_<Sector>_1km.tif, one band per pollutant (band description = pollutant)"]],
     files: [["data/MapEIre/<Year>_<Sector>.npz", "The stored integers of every pollutant band on one 397 × 533 grid (scripts/build_mapeire_grids.py)"], ["data/MapEIre/mapeire_metadata.json", "Grid, tile corners, per-band scale / offset, totals, colour scales and labels"], ["data/MapEIre/mapeire_grid.npz", "WGS 84 centre of every cell (time series regions)"], ["data/raster_metadata.json", "Display names, groups and units of sectors and pollutants"]],
-    vars: [["Year", "2015, 2016 or 2019"], ["Sector", "GNFR code, e.g. A_PublicPower, F_RoadTransport, K_AgriLivestock"], ["Pollutant", "CO2, CH4, N2O, HFCs, PFCs, SF6, NF3, NOx, SOx, NH3, NMVOC, CO, PM10, TSP, BC, metals, POPs …"], ["Value", "Emission per 1 km cell"]],
+    vars: [["Year", "2015, 2016 or 2019"], ["Sector", "GNFR code, e.g. A_PublicPower, F_RoadTransport, K_AgriLivestock"], ["Pollutant", "CO2, CH4, N2O, HFCs, PFCs, SF6, NF3, NOx, SOx, NH3, NMVOC, CO, PM2_5, PM10, TSP, BC, metals, POPs …"], ["Value", "Emission per 1 km cell"]],
     notes: ["Units are shown only where the MapEIre report states them.", "Hover a cell for its value, its share of the national total and its Irish Grid reference.", "LULUCF CO₂ includes removals (negative values).", "Values are mass of each pollutant, not CO₂-equivalent."],
     usedIn: [["mapping", "Spatial Mapping — MapEIre layers"], ["explorer", "Explorer Dashboard — map (2B)"]],
     citation: "Nielsen, O.-K., et al. (2019). MapEIre: National Mapping of Greenhouse Gas and Non-greenhouse Gas Emissions Sources. EPA Research Report No. 317. Environmental Protection Agency, Ireland.",

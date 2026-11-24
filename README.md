@@ -154,7 +154,7 @@ The main analytical dashboard.
 
 MapEIre national gridded emissions (EPA Ireland / Aarhus University): 1 km × 1 km
 cells in TM65 / Irish Grid (EPSG:29902) for **2015, 2016 and 2019**, 15 GNFR
-source sectors and 32 pollutants. Like EDGAR and the inverse model, every cell
+source sectors and 33 pollutants. Like EDGAR and the inverse model, every cell
 keeps its value: the map shows it on hover, takes any palette and value filter
 (step 3), compares two layers (B − A, same pollutant; another year and / or
 sector), plots three-sample time series (pixel, region, county or whole grid)
@@ -182,7 +182,7 @@ labels). It checks every band's GDAL scale / offset against its tags and the
 decoded maxima against the recorded original maxima.
 
 **Names and units** come from `data/raster_metadata.json`. The MapEIre report
-states units only for CO₂, NOₓ and NH₃ (kt per 1 km cell; the national totals
+states units only for CO₂, NOₓ, NH₃ and PM₂.₅ (kt per 1 km cell; the national totals
 confirm it), so other pollutants show "unit not stated".
 
 **Drawing.** The page colours one pixel per cell and draws the image in 16 × 16
