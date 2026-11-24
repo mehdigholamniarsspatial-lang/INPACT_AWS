@@ -2345,6 +2345,18 @@ html.map-standalone.ms-aq #mapPanel{grid-template-columns:var(--ms-side-w) minma
 html.map-standalone.ms-aq.ms-side-hidden #mapPanel{grid-template-columns:0 minmax(0,1fr) var(--cmp-res-w)}
 html.map-standalone.ms-aq #cmpResults,html.map-standalone.ms-aq #tsResults{display:none!important}
 html.map-standalone.ms-aq .map-side{grid-row:2}
+/* Each mode shows only its own layers on the map. Air Quality hides the emission layers (MapEIre, EDGAR,
+   inverse model, compare B − A, time series marks) with their title card and colour bar; Raster Layer
+   hides the Air Quality overlays and their legends. Nothing is removed: switching back shows them again. */
+html.map-standalone.ms-aq #map .leaflet-overlay-pane,
+html.map-standalone.ms-aq #map .leaflet-cmp-pane,
+html.map-standalone.ms-aq #map .leaflet-ts-pane{visibility:hidden}
+html.map-standalone.ms-aq #map .raster-title,
+html.map-standalone.ms-aq #map .raster-colorbar,
+html.map-standalone.ms-aq #map .leaflet-tooltip.edgar-tip{display:none!important}
+html.map-standalone:not(.ms-aq) #map .leaflet-ov-pane,
+html.map-standalone:not(.ms-aq) #map .leaflet-ovCounty-pane{visibility:hidden}
+html.map-standalone:not(.ms-aq) #map .ov-map-legend{display:none!important}
 .ov-results[hidden]{display:none!important}
 .ov-res-body{display:flex;flex-direction:column;gap:.7rem;padding:.75rem .8rem 1rem}
 .ov-results .ov-sym{border:1px solid var(--grey-border);border-radius:10px;background:#fff;padding:.7rem .8rem .8rem;
@@ -3142,7 +3154,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <h3 class="ov-title" id="ovTitle"><i class="bi bi-wind" aria-hidden="true"></i>Layer Overlay</h3>
             </div>
             <div class="ov-body" id="ovBody">
-              <p class="ms-p">Layers drawn on top of the map and any emission layer. Tick a layer to show it. The active layer&rsquo;s settings open on the right and its details below; use <b>&raquo;</b> to switch.</p>
+              <p class="ms-p">Air quality and health layers, shown on their own: the emission layer of the Raster Layer view is hidden here and comes back when you return to it. Tick a layer to show it. The active layer&rsquo;s settings open on the right and its details below; use <b>&raquo;</b> to switch.</p>
               <div id="ovList"><p class="ov-status"><i class="bi bi-hourglass-split" aria-hidden="true"></i>Loading the layer list…</p></div>
             </div>
           </div>
@@ -6758,7 +6770,9 @@ const MAPEIRE = (() => {
     const tip = L.tooltip({ sticky: true, direction: "top", className: "edgar-tip", offset: [0, -8] });
     let on = false;
     const move = e => {
-      const i = cellAt(e.latlng.lat, e.latlng.lng), content = i >= 0 ? html(i, e.latlng) : "";
+      // (no emission values while the Air Quality view hides the emission layers)
+      const aq = document.documentElement.classList.contains("ms-aq");
+      const i = aq ? -1 : cellAt(e.latlng.lat, e.latlng.lng), content = i >= 0 ? html(i, e.latlng) : "";
       if (!content) { if (on) { map.closeTooltip(tip); on = false; } return; }
       tip.setLatLng(e.latlng).setContent(content);
       if (!on) { tip.addTo(map); on = true; }
@@ -10097,14 +10111,16 @@ if (MAP_STANDALONE) (function mapWindow(){
       const loc = { type: "poly", pts: pts.map(p => [p.lat, p.lng]) };
       setDraw(false); setLoc(loc);
     }
+    // Clicks in the Air Quality view belong to its layers, not to the (hidden) time series area
+    const inAq = () => root.classList.contains("ms-aq");
     map.on("click", e => {
-      if (!st.active) return;
+      if (!st.active || inAq()) return;
       if (st.drawMode && st.shape === "poly") addVertex(e.latlng);
       else if (st.where === "pixel") setLoc({ lat: e.latlng.lat, lng: e.latlng.lng });
     });
-    map.on("dblclick", () => { if (st.active && st.poly) finishPoly(); });
+    map.on("dblclick", () => { if (st.active && st.poly && !inAq()) finishPoly(); });
     map.on("mousedown", e => {
-      if (!st.active || !st.drawMode || st.shape !== "rect") return;
+      if (!st.active || !st.drawMode || st.shape !== "rect" || inAq()) return;
       st.drag = { start: e.latlng, rect: L.rectangle([e.latlng, e.latlng], { ...LINE, dashArray: "6 4", fillColor: "#0E8C8A", fillOpacity: 0.14 }).addTo(map) };
     });
     map.on("mousemove", e => {
