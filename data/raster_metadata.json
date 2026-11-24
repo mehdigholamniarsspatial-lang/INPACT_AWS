@@ -1,6 +1,6 @@
 {
   "_about": [
-    "Display names, groups and units for the MapEIre emission overlays in data/Raster and data/RasterPrerendered.",
+    "Display names, groups and units of the MapEIre sectors and pollutants; read by scripts/build_mapeire_grids.py into data/MapEIre/mapeire_metadata.json.",
     "Files are named <Year>_<Sector>_p<Pollutant>; 'sectors' is keyed by the <Sector> part and 'pollutants' by the part after 'p'.",
     "unit: a key of 'units', or null when the MapEIre report does not state it. Set it once the unit is confirmed and the map shows it everywhere.",
     "name_confirmed: false marks a pollutant whose code expansion is not stated in the report.",

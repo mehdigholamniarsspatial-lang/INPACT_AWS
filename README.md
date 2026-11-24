@@ -87,9 +87,9 @@ INPACT_Combined/
 │   ├── ghg_inventory.csv          # national emissions by gas (Explorer chart + KPIs)
 │   ├── policies.csv               # roadmap policies (Explorer chart markers, roadmap, intelligence panel)
 │   ├── sector_inventory/          # Total/CO2/CH4/N2O by sector (Sector Explorer + Trend Analysis)
-│   ├── raster_metadata.json       # display names, groups and units for the emission layers
-│   ├── Raster/                    # GeoTIFF emission grids  <Year>_<Sector>_p<Pollutant>.tif
-│   ├── RasterPrerendered/         # PNG + JSON overlays pre-rendered from Raster/ (used on Vercel)
+│   ├── raster_metadata.json       # display names, groups and units of the MapEIre sectors and pollutants
+│   ├── MapEIre/                   # MapEIre 1 km grids packed by scripts/build_mapeire_grids.py
+│   ├── EDGAR/, InverseModel/      # EDGAR and PARIS inverse-model grids (build_edgar_grids.py, build_inverse_grids.py)
 │   └── policy_timeline/           # Policy Timeline release files
 │       ├── ireland_core_policy_timeline.csv   # main dataset (policy × sector × year)
 │       ├── policy_catalogue.csv, selection_log.csv, overlap_register.csv, …
@@ -98,8 +98,9 @@ INPACT_Combined/
 ├── inpact_platform/               # Django project: settings, root URLs, WSGI/ASGI
 ├── explorer/                      # INPACT Explorer app
 │   ├── page/index.html            # the single-page dashboard (all tabs, CSS and JS inline)
-│   ├── views.py                   # serves the page, injects CSV data, raster + feedback APIs
-│   ├── rasters.py                 # GeoTIFF → coloured PNG overlays
+│   ├── views.py                   # serves the page, injects CSV data, map + feedback APIs
+│   ├── mapeire.py, edgar.py, inverse.py   # the three emission datasets of Spatial Mapping (numpy only)
+│   ├── timeseries.py, map_export.py       # map time series; GeoTIFF / JPEG downloads
 │   ├── trend_engine.py            # regression / trend statistics
 │   ├── trend_views.py             # Trend Analysis JSON API
 │   ├── feedback_store.py          # feedback → Excel (local disk or GitHub)
@@ -116,7 +117,8 @@ INPACT_Combined/
 │   ├── static/policies/           # CSS, page scripts, vendored Plotly and D3
 │   └── tests.py
 └── scripts/
-    └── prerender_rasters.py       # builds data/RasterPrerendered/ from data/Raster/
+    ├── build_mapeire_grids.py     # MapEIre multiband GeoTIFFs → data/MapEIre/ (needs rasterio, local only)
+    └── build_edgar_grids.py, build_inverse_grids.py, build_overlays.py, build_counties.py
 ```
 
 ---
@@ -148,44 +150,45 @@ The main analytical dashboard.
 * **4 Climate Policy Roadmap, 1992 → 2050:** click a node to inspect it. The
   **Detailed timeline** link opens the Policy Timeline's year-by-year view.
 
-### Raster overlays
+### MapEIre layers
 
-The layers are MapEIre national gridded emissions (EPA Ireland / Aarhus
-University): 1 km × 1 km cells in TM65 Irish Grid (EPSG:29902), covering the
-Irish Exclusive Economic Zone.
+MapEIre national gridded emissions (EPA Ireland / Aarhus University): 1 km × 1 km
+cells in TM65 / Irish Grid (EPSG:29902) for **2015, 2016 and 2019**, 15 GNFR
+source sectors and 32 pollutants. Like EDGAR and the inverse model, every cell
+keeps its value: the map shows it on hover, takes any palette and value filter
+(step 3), compares two layers (B − A, same pollutant; another year and / or
+sector), plots three-sample time series (pixel, region, county or whole grid)
+and downloads a GeoTIFF on the native Irish Grid or a JPEG map.
 
-Put GeoTIFFs in `data/Raster/`, named `<Year>_<Sector>_p<Pollutant>.tif`. For
-example, `2019_B_Industry_pbenzoA.tif` gives Year `2019`, Sector `B_Industry` and
-Parameter `pbenzoA`, and `2015_A_PublicPower_pPM2_5.tif` gives Parameter
-`pPM2_5`. The year is the first token and the parameter starts at the last
-`_p`; everything in between is the sector. The folder is re-scanned on every
-request.
+**Source.** One multiband GeoTIFF per year and sector,
+`<Year>_<Sector>_1km.tif` (see the dataset's `metadata.md`): int16, one band per
+pollutant (band description = pollutant), NoData −32768, and per band
+`value = stored × scale_factor + value_offset` from the band tags. LULUCF CO₂
+uses a negative offset for removals. The CRS is stored as a `LOCAL_CS`; the
+`source_crs` tag (EPSG:29902) is used. Aviation and cruise files have a 50 km
+buffer, the others 20 km, on the same 1 km lattice.
 
-**Names and units** come from `data/raster_metadata.json`: GNFR sector names,
-pollutant names with chemical formatting (SF₆, PM₂.₅), pollutant groups and
-units. The MapEIre report states units only for the national maps of PM2.5,
-CO₂, NOx and NH₃ (kt per 1 km cell), so every other pollutant has `"unit": null`
-and the map shows no unit for it. Set the unit there once it is known.
-Files whose sector or pollutant is not in the JSON still appear, with a label
-derived from the file name and no unit.
-`audit/raster_overlay_lookup_PROPOSED.csv` lists every file with its parsed
-fields and the evidence behind each unit.
-
-Each overlay is reprojected to Web-Mercator (sources may be Irish Grid,
-EPSG:29902). It uses a **rainbow** colour map on a **log** scale between the 2nd
-and 98th percentiles. Zero and nodata cells are transparent, and a matching
-colour-bar legend is drawn. An all-zero raster is reported rather than drawn.
-
-**Live vs. pre-rendered.** Live rendering needs `rasterio` (GDAL), which is
-optional and not installable on Vercel. Without it, `explorer/rasters.py` serves
-the committed PNG + JSON files in `data/RasterPrerendered/`. After adding or
-changing a `.tif`:
+**Build** (local machine with rasterio; the site needs numpy only):
 
 ```bash
-pip install "rasterio>=1.3,<2"          # local machine only, once
-python scripts/prerender_rasters.py
-git add data/RasterPrerendered && git commit -m "Update raster overlays"
+python scripts/build_mapeire_grids.py "C:/.../mapeire/EXTRACTED Zip/rasters_1km"
 ```
+
+It writes `data/MapEIre/<Year>_<Sector>.npz` (the stored integers of every band on
+one 397 × 533 grid, unchanged), `mapeire_grid.npz` (WGS 84 cell centres) and
+`mapeire_metadata.json` (grid, tile corners for the web map, per-band scale /
+offset, totals, colour scales fixed per sector and pollutant over the years,
+labels). It checks every band's GDAL scale / offset against its tags and the
+decoded maxima against the recorded original maxima.
+
+**Names and units** come from `data/raster_metadata.json`. The MapEIre report
+states units only for CO₂, NOₓ and NH₃ (kt per 1 km cell; the national totals
+confirm it), so other pollutants show "unit not stated".
+
+**Drawing.** The page colours one pixel per cell and draws the image in 16 × 16
+cell tiles, each placed with an affine transform from its corners' exact WGS 84
+positions, so the Irish Grid cells sit correctly on the Web-Mercator basemap at
+every zoom.
 
 ---
 
@@ -367,7 +370,7 @@ the current workbook.
 | National emissions (Explorer chart, KPIs) | `data/ghg_inventory.csv` | Reload the page |
 | Sectoral emissions (Sector Explorer, Trend Analysis) | `data/sector_inventory/{Total,CO2,CH4,N2O}.csv` | Reload the page |
 | Roadmap policies (Explorer markers, roadmap, intelligence panel) | `data/policies.csv` | Reload the page |
-| Raster overlays | `data/Raster/*.tif` | Run `scripts/prerender_rasters.py` for Vercel |
+| MapEIre layers | the `rasters_1km/*.tif` source folder | Run `scripts/build_mapeire_grids.py <folder>` and commit `data/MapEIre/` |
 | Policy Timeline dataset | files in `data/policy_timeline/` | Run `python manage.py load_policy_data` |
 | Policy Timeline wording (instrument guide, milestones, literature, …) | `policies/editorial.py`, `policies/glossary.py` | Reload the page |
 
@@ -405,9 +408,11 @@ python manage.py load_policy_data --data-dir /path/to/ireland_core_policy_releas
 | Route | Purpose |
 |---|---|
 | `GET /` | The dashboard (all tabs) |
-| `GET /api/rasters/` | Layer catalogue `{year:{sector:{parameter:file}}}` plus `sectors`, `parameters` (names, groups, units), `groups`, `source` and `empty` |
-| `GET /api/raster/meta/?year=&sector=&parameter=` | Bounds, value range, colour stops, all-zero flag |
-| `GET /api/raster/image/?year=&sector=&parameter=` | The rendered RGBA PNG overlay |
+| `GET /api/mapeire/` | MapEIre grid, tile corners, years, sectors, pollutants (names, groups, units), colour scales, per-layer totals and credits |
+| `GET /api/mapeire/layer/?year=&sector=&pollutant=` | Stored cell integers of one layer with its scale / offset, unit, total and colour scale |
+| `GET /api/edgar/`, `/api/edgar/layer/`, `/api/inverse/`, `/api/inverse/layer/` | The EDGAR and inverse-model layers |
+| `GET /api/map/timeseries/?dataset=mapeire\|edgar\|inverse&…` | Time series of a pixel, region, county or the whole grid |
+| `GET /api/map/export/<geotiff\|jpeg\|zip\|grid>/?dataset=…` | Downloads of the map layer (or B − A) |
 | `GET /api/trend/catalog/` | Gases, sectors and year axis for Trend Analysis |
 | `GET /api/trend/series/?gas=&sector=` | Raw series |
 | `POST /api/trend/fit/` | Fit, statistics and diagnostics |
@@ -474,8 +479,8 @@ feedback and attribution variables above.
 * The Policy Timeline's SQLite file is only read, never written, so it works on
   Vercel's read-only filesystem. Commit `data/policy_timeline/` together with the
   `.sqlite3` file.
-* Raster overlays come from `data/RasterPrerendered/` there, because `rasterio`
-  is not installed.
+* The map layers (`data/MapEIre`, `data/EDGAR`, `data/InverseModel`) need numpy
+  only; `rasterio` is used only by the local build scripts.
 * **Bundle size:** `scipy` and `statsmodels` (Trend Analysis) and `pandas`
   (Policy Timeline export and Methods page) are large, and together they can
   exceed Vercel's serverless size limit. If they do, either host the site on a

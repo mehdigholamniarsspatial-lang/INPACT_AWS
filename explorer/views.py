@@ -25,7 +25,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from . import feedback_store, feedback_survey
-from . import edgar, inverse, rasters
+from . import edgar, inverse, mapeire
 from . import timeseries
 from . import overlays
 from . import map_export as map_export_mod
@@ -225,102 +225,27 @@ def map_page(request):
     return HttpResponse(html)
 
 
-# ---------------------------------------------------------------------------
-# Raster overlay endpoints
-# ---------------------------------------------------------------------------
-def raster_catalog(request):
-    """
-    Return the nested raster catalogue that drives the cascading dropdowns::
-
-        { "2019": { "B_Industry": { "pbenzoA": "2019_B_Industry_pbenzoA.tif" } } }
-
-    plus the display labels (names, groups, units, empty layers) from
-    :func:`rasters.catalog_labels`.
-
-    The folder is re-scanned on every call, so files added to ``data/Raster``
-    appear automatically with no code change or server restart.
-    """
-    catalog = rasters.scan_catalog()
-    return JsonResponse({"catalog": catalog, **rasters.catalog_labels(catalog)})
+def mapeire_catalog(request):
+    """Grid geometry, years, sectors, pollutants, colour scales and credits for the MapEIre layers."""
+    data = mapeire.catalog()
+    if not data:
+        return JsonResponse({"ok": False, "detail": "MapEIre layers are not available."}, status=503)
+    resp = JsonResponse({"ok": True, **data}, json_dumps_params={"ensure_ascii": False})
+    resp["Cache-Control"] = "public, max-age=3600"
+    return resp
 
 
-def _resolve_selection(request):
-    """Shared helper: pull year/sector/parameter from the query string."""
-    year = (request.GET.get("year") or "").strip()
-    sector = (request.GET.get("sector") or "").strip()
-    parameter = (request.GET.get("parameter") or "").strip()
-    if not (year and sector and parameter):
-        return None, JsonResponse(
-            {"ok": False, "detail": "year, sector and parameter are required."},
-            status=400,
-        )
-    path = rasters.resolve_path(year, sector, parameter)
-    if path is None:
-        return None, JsonResponse(
-            {"ok": False, "detail": "Unknown raster selection."}, status=404
-        )
-    return path, None
-
-
-def raster_meta(request):
-    """
-    Return overlay metadata (WGS84 bounds, value range, colour stops, all-zero
-    flag) for a selected raster — everything the page needs to place the image
-    and draw the matching colour-bar legend.
-    """
-    path, error = _resolve_selection(request)
-    if error is not None:
-        return error
+def mapeire_layer(request):
+    """Stored cell integers (with their scale / offset), unit, totals and colour scale of one MapEIre layer."""
+    q = {k: (request.GET.get(k) or "").strip() for k in ("year", "sector", "pollutant")}
     try:
-        r = rasters.render(path)
-    except rasters.RasterRenderingUnavailable:
-        return JsonResponse(
-            {"ok": False, "detail": "Raster overlays are unavailable in this deployment."},
-            status=503,
-        )
+        data = mapeire.layer(**q)
     except Exception:
-        logger.exception("Failed to render raster metadata for %s", path)
-        return JsonResponse(
-            {"ok": False, "detail": "The selected raster could not be rendered."},
-            status=500,
-        )
-    return JsonResponse(
-        {
-            "ok": True,
-            "bounds": r["bounds"],
-            "vmin": r["vmin"],
-            "vmax": r["vmax"],
-            "data_min": r.get("data_min", r["vmin"]),
-            "data_max": r.get("data_max", r["vmax"]),
-            "scale": r.get("scale", "linear"),
-            "all_zero": r["all_zero"],
-            "stops": r["stops"],
-        }
-    )
-
-
-def raster_image(request):
-    """
-    Return the selected raster rendered as an RGBA PNG (rainbow colour map,
-    zero/nodata transparent) for use as a Leaflet image overlay.
-    """
-    path, error = _resolve_selection(request)
-    if error is not None:
-        return error
-    try:
-        r = rasters.render(path)
-    except rasters.RasterRenderingUnavailable:
-        return JsonResponse(
-            {"ok": False, "detail": "Raster overlays are unavailable in this deployment."},
-            status=503,
-        )
-    except Exception:
-        logger.exception("Failed to render raster image for %s", path)
-        return JsonResponse(
-            {"ok": False, "detail": "The selected raster could not be rendered."},
-            status=500,
-        )
-    resp = HttpResponse(r["png"], content_type="image/png")
+        logger.exception("Failed to load MapEIre layer %s", q)
+        return JsonResponse({"ok": False, "detail": "The MapEIre layer could not be loaded."}, status=500)
+    if data is None:
+        return JsonResponse({"ok": False, "detail": "Unknown MapEIre selection."}, status=404)
+    resp = JsonResponse({"ok": True, **data}, json_dumps_params={"ensure_ascii": False, "separators": (",", ":")})
     resp["Cache-Control"] = "public, max-age=3600"
     return resp
 
@@ -482,8 +407,6 @@ def map_export(request, fmt):
                 body, filename = (map_export_mod.geotiff if fmt == "geotiff" else map_export_mod.jpeg)(layer)
     except map_export_mod.SelectionError as exc:
         return JsonResponse({"ok": False, "detail": str(exc)}, status=404)
-    except rasters.RasterRenderingUnavailable:
-        return JsonResponse({"ok": False, "detail": "This MapEIre layer is unavailable in this deployment."}, status=503)
     except Exception:
         logger.exception("Failed to export map layer %s as %s", q, fmt)
         return JsonResponse({"ok": False, "detail": "The map could not be exported."}, status=500)

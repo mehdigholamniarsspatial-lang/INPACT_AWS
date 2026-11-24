@@ -7,9 +7,8 @@ urlpatterns = [
     path("", views.index, name="index"),
     # Spatial Environmental Mapping opened on its own ("Open in new window")
     path("map/", views.map_page, name="map_page"),
-    path("api/rasters/", views.raster_catalog, name="raster_catalog"),
-    path("api/raster/meta/", views.raster_meta, name="raster_meta"),
-    path("api/raster/image/", views.raster_image, name="raster_image"),
+    path("api/mapeire/", views.mapeire_catalog, name="mapeire_catalog"),
+    path("api/mapeire/layer/", views.mapeire_layer, name="mapeire_layer"),
     path("api/edgar/", views.edgar_catalog, name="edgar_catalog"),
     path("api/edgar/layer/", views.edgar_layer, name="edgar_layer"),
     path("api/inverse/", views.inverse_catalog, name="inverse_catalog"),

@@ -5,15 +5,14 @@ For the current selection of any of the three datasets this builds
 
 * a **GeoTIFF**: the cell values (EDGAR, inverse model) as one float32 band in
   WGS 84, written by a small TIFF writer below so no GDAL is needed on Vercel.
-  MapEIre ships only pre-rendered colour overlays in the deployment, so its
-  GeoTIFF is the original ``data/Raster`` file when that is on disk, otherwise
-  the rendered colours (RGBA, Web Mercator) of the overlay the map shows;
+  MapEIre is written on its own 1 km TM65 / Irish Grid (EPSG:29902), the native
+  grid of the source rasters (values decoded with each band's scale and offset).
 * a **JPEG** map: the layer in the same colours as the web map, Ireland's
   coastline (``data/boundaries/ireland_outline.json``, Natural Earth), lat/lon
   ticks, a title, a colour-bar legend, key figures and the data source.
 
 Selections are validated by the dataset modules (``edgar.layer``,
-``inverse.layer``, ``rasters.resolve_path``); user input never builds a path.
+``inverse.layer``, ``mapeire.layer``); user input never builds a path.
 """
 from __future__ import annotations
 
@@ -33,7 +32,7 @@ from xml.sax.saxutils import escape
 import numpy as np
 from PIL import Image, ImageChops, ImageDraw, ImageFont
 
-from . import edgar, inverse, rasters, timeseries
+from . import edgar, inverse, mapeire, timeseries
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 OUTLINE_PATH = BASE_DIR / "data" / "boundaries" / "ireland_outline.json"
@@ -232,6 +231,10 @@ class Layer:
     tif_geo: Optional[Tuple[float, float, float, float]] = None   # west, north, dx, dy (deg)
     tif_bytes: Optional[bytes] = None                   # an original file to pass through
     tif_meta: dict = field(default_factory=dict)
+    # A projected grid (MapEIre: TM65 / Irish Grid, metres) instead of degrees, with the WGS 84
+    # centre of every pixel (rows × cols each) for clipping to a time series region
+    tif_epsg: int = 4326
+    tif_centres: Optional[Tuple[np.ndarray, np.ndarray]] = None
     # Value behind each drawn cell (parallel to ``cells``) and whether it is faded (outside the Ireland
     # attribution area), so a region export can recolour its own cells; ``cell_kind`` "log" | "diverging"
     cell_vals: List[Tuple[float, bool]] = field(default_factory=list)
@@ -398,49 +401,86 @@ def _inverse_layer(q: dict) -> Layer:
     )
 
 
-def _mapeire_layer(q: dict) -> Layer:
-    year, sector, param = q.get("year", ""), q.get("sector", ""), q.get("parameter", "")
-    path = rasters.resolve_path(year, sector, param)
-    if path is None:
-        raise SelectionError("Unknown MapEIre selection.")
-    r = rasters.render(path)
-    p, s = rasters.describe_parameter(param), rasters.describe_sector(sector)
-    src = rasters.load_metadata().get("source", {})
-    (south, west), (north, east) = r["bounds"]
-    img = Image.open(io.BytesIO(r["png"])).convert("RGBA")
-    is_log = r.get("scale") == "log" and r["vmin"] > 0 and r["vmax"] > 0
-    unit = p["unit_long"] or p["unit"] or "Unit not stated in the MapEIre report"
-    vmin, vmax = r["vmin"], r["vmax"]
-    mid = math.sqrt(vmin * vmax) if is_log else (vmin + vmax) / 2
-    legend = Legend(
-        title=f"{p['label']} — {year}", unit=unit, kind="stops", lo=vmin, hi=vmax,
-        stops=[_hex(c) for c in r["stops"]],
-        ticks=[(0, ("≤ " if r["data_min"] < vmin else "") + fmt(vmin)), (0.5, fmt(mid)),
-               (1, ("≥ " if r["data_max"] > vmax else "") + fmt(vmax))],
-        note=("Log scale" if is_log else "Linear scale") + " · cells with zero emission not shown",
-    )
-    facts = [("Sector", f"{s['code']} · {s['name']}" if s["code"] else s["name"]),
-             ("Resolution", src.get("resolution", "")), ("Projection", src.get("projection", ""))]
-    if r["data_max"] > vmax:
-        facts.insert(1, ("Maximum cell", f"{fmt(r['data_max'])} {p['unit'] or ''}".strip()))
+def _mapeire_cell_boxes(cells: np.ndarray) -> np.ndarray:
+    """(k, 4) west, south, east, north of the 1 km cells ``cells`` (flat grid indices), drawn in degrees
+    around their WGS 84 centres (the grid's ~1° rotation against north is below a pixel of the JPEG)."""
+    c = mapeire.centres()
+    lat, lng = c["lat"].ravel()[cells], c["lng"].ravel()[cells]
+    hl, hg = 0.5 / 111.32, 0.5 / (111.32 * np.cos(np.radians(lat)))
+    return np.stack([lng - hg, lat - hl, lng + hg, lat + hl], axis=1)
 
-    layer = Layer(
-        stem=_slug("MapEIre", year, sector, param.removeprefix("p")),
+
+def _mapeire_label(meta: dict, sel: dict) -> str:
+    return f"{meta['sectors'][sel['sector']]['name']}, {sel['year']}"
+
+
+def _mapeire_layer(q: dict) -> Layer:
+    year, sector, code = q.get("year", ""), q.get("sector", ""), q.get("parameter", "")
+    data = mapeire.layer(year, sector, code)
+    if data is None:
+        raise SelectionError("Unknown MapEIre selection.")
+    meta = mapeire.load_metadata()
+    p, s, g, src = meta["pollutants"][code], meta["sectors"][sector], meta["grid"], meta["source"]
+    vals = mapeire.values(year, sector, code)
+    flat = vals.ravel()
+    scale = data["colour"]
+    unit = p["unit_long"] or "unit not stated in the MapEIre report"
+
+    shown = np.flatnonzero(np.isfinite(flat))
+    shown = np.array([i for i in shown if not hidden(float(flat[i]))], dtype=np.int64)
+    boxes = _mapeire_cell_boxes(shown) if shown.size else np.zeros((0, 4))
+    cells, cell_vals = [], []
+    kind = (scale or {}).get("kind", "log")
+    for (w, so, e, n), i in zip(boxes.tolist(), shown.tolist()):
+        v = float(flat[i])
+        if kind == "div":
+            colour = diverging(v / scale["hi"])
+        elif v > 0:
+            lo, hi = scale["lo"], scale["hi"]
+            colour = rainbow((math.log10(min(max(v, lo), hi)) - math.log10(lo)) / (math.log10(hi) - math.log10(lo)))
+        else:
+            colour = ZERO_RGB
+        cells.append((w, so, e, n, colour))
+        cell_vals.append((v, False))
+
+    years = meta["years"]
+    years_txt = ", ".join(str(y) for y in years[:-1]) + f" and {years[-1]}" if len(years) > 1 else str(years[0])
+    if scale and kind == "div":
+        lim = scale["hi"]
+        legend = Legend(
+            title=f"{p['formula']} · {year}", unit=unit, kind="diverging", lo=-lim, hi=lim,
+            ticks=[(0, f"≤ −{fmt(lim)}"), (0.25, f"−{fmt(lim / 2)}"), (0.5, "0"),
+                   (0.75, f"+{fmt(lim / 2)}"), (1, f"≥ +{fmt(lim)}")],
+            note=f"Linear, symmetric · negative values are removals · fixed over {years_txt}"
+                 + _filter_note(signed=True))
+    elif scale:
+        legend = Legend(
+            title=f"{p['formula']} · {year}", unit=unit, kind="log", lo=scale["lo"], hi=scale["hi"],
+            ticks=_log_ticks(scale["lo"], scale["hi"]),
+            note=f"Log scale, fixed over {years_txt} · cells with zero emission "
+                 "not shown" + _filter_note())
+    else:
+        legend = Legend(title=f"{p['formula']} · {year}", unit=unit, kind="stops", stops=[ZERO_RGB, ZERO_RGB],
+                        note="No emission in this layer")
+    total_txt = f"{fmt(data['total'])} {p['unit_code'] + ' ' if p['unit_code'] else ''}{p['formula']}"
+    arr = np.where(np.isfinite(vals), vals, NODATA).astype(np.float32)
+    c = mapeire.centres()
+    return Layer(
+        stem=_slug("MapEIre", year, sector, code),
         title=f"MapEIre · {p['label']}",
-        subtitle=f"{s['name']} — {year}" + (f"   [{p['unit_long'] or p['unit']}]" if p["unit"] else ""),
+        subtitle=f"{s['name']} — {year}   [{unit}]",
         legend=legend,
         source=f"{src.get('dataset', 'MapEIre')} · {src.get('credit', '')} · EPA Research Report 317",
-        facts=facts,
-        overlay=img, overlay_bounds=(west, south, east, north),
+        facts=[("Ireland total", total_txt + ("" if p["unit_code"] else " (unit not stated)")),
+               ("Sector", f"{s['code']} · {s['name']}" if s["code"] else s["name"]),
+               ("Cells with emission", f"{data['nonzero_cells']:,} of {data['cells']:,}"),
+               ("Resolution", src.get("resolution", "")), ("Projection", src.get("projection", ""))],
+        cells=cells, cell_vals=cell_vals, cell_kind="diverging" if kind == "div" else "log",
+        tif_values=arr, tif_geo=(g["west"], g["north"], g["res"], g["res"]), tif_epsg=29902,
+        tif_centres=(c["lat"], c["lng"]),
+        tif_meta={"DATASET": src.get("dataset", "MapEIre"), "POLLUTANT": p["label"], "SECTOR": s["name"],
+                  "YEAR": year, "UNITS": unit, "CRS": "TM65 / Irish Grid (EPSG:29902)", "SOURCE": src.get("url", "")},
     )
-    if path.is_file():
-        layer.tif_bytes = path.read_bytes()        # the original values, when deployed
-    else:
-        layer.tif_meta = {"DATASET": src.get("dataset", "MapEIre"), "POLLUTANT": p["label"],
-                          "SECTOR": s["name"], "YEAR": year,
-                          "NOTE": "Rendered colours of the web map overlay, not emission values "
-                                  "(the source rasters are not part of this deployment)."}
-    return layer
 
 
 # ---------------------------------------------------------------------------
@@ -448,6 +488,8 @@ def _mapeire_layer(q: dict) -> Layer:
 # ---------------------------------------------------------------------------
 _EDGAR_KEYS = ("gas", "sector", "year", "month")
 _INVERSE_KEYS = ("model", "transport", "gas", "year", "estimate")
+_MAPEIRE_KEYS = ("year", "sector", "parameter")
+_COMPARE_NAMES = {"edgar": "EDGAR", "inverse": "PARIS inverse model", "mapeire": "MapEIre"}
 
 
 def _edgar_label(meta: dict, sel: dict) -> str:
@@ -470,17 +512,45 @@ def _compare_layer(q: dict) -> Layer:
     annual or both monthly. The page computes the same numbers for its panel.
     """
     ds, mode = q.get("dataset", ""), q.get("mode", "abs")
-    keys = _EDGAR_KEYS if ds == "edgar" else _INVERSE_KEYS if ds == "inverse" else None
+    keys = {"edgar": _EDGAR_KEYS, "inverse": _INVERSE_KEYS, "mapeire": _MAPEIRE_KEYS}.get(ds)
     if keys is None:
-        raise SelectionError("Comparison is available for EDGAR and the inverse model only.")
+        raise SelectionError("Unknown dataset to compare.")
     if mode not in ("abs", "pct"):
         raise SelectionError("Unknown difference mode.")
     sel_a = {k: q.get(k, "") for k in keys}
     sel_b = {k: q.get(f"b_{k}", "") for k in keys}
-    if sel_a["gas"] != sel_b["gas"]:
-        raise SelectionError("Both layers must be the same gas.")
+    gas_key = "parameter" if ds == "mapeire" else "gas"
+    if sel_a[gas_key] != sel_b[gas_key]:
+        raise SelectionError("Both layers must be the same gas or pollutant.")
+    sel_a["gas"] = sel_a.get("gas", sel_a.get("parameter", ""))     # (file name part below)
+    tif_epsg, tif_centres = 4326, None
 
-    if ds == "edgar":
+    if ds == "mapeire":
+        meta = mapeire.load_metadata()
+        va = mapeire.values(sel_a["year"], sel_a["sector"], sel_a["parameter"])
+        vb = mapeire.values(sel_b["year"], sel_b["sector"], sel_b["parameter"])
+        if va is None or vb is None:
+            raise SelectionError("Unknown MapEIre selection.")
+        g, p = meta["grid"], meta["pollutants"][sel_a["parameter"]]
+        a, b = va.ravel(), vb.ravel()
+        include = np.isfinite(a) & np.isfinite(b)
+        boxes = np.zeros((a.size, 4))
+        boxes[include] = _mapeire_cell_boxes(np.flatnonzero(include))
+        geo = [(w, n, e - w, n - so) for w, so, e, n in boxes.tolist()]       # (west, north, dx, dy)
+        tot_a = mapeire.band_info(sel_a["year"], sel_a["sector"], sel_a["parameter"])["total"]
+        tot_b = mapeire.band_info(sel_b["year"], sel_b["sector"], sel_b["parameter"])["total"]
+        formula = p["formula"]
+        unit = p["unit_long"] or "unit not stated in the MapEIre report"
+        tot_unit = f"{p['unit_code']} {formula}" if p["unit_code"] else formula
+        label_a, label_b = _mapeire_label(meta, sel_a), _mapeire_label(meta, sel_b)
+        src = meta["source"]
+        source = f"{src.get('dataset', 'MapEIre')} · {src.get('credit', '')} · EPA Research Report 317"
+        stem_a, stem_b = f"{sel_a['sector']}-{sel_a['year']}", f"{sel_b['sector']}-{sel_b['year']}"
+        tif_rows, tif_cols, tif_geo = g["rows"], g["cols"], (g["west"], g["north"], g["res"], g["res"])
+        flat_index = np.arange(a.size)
+        c = mapeire.centres()
+        tif_epsg, tif_centres = 29902, (c["lat"], c["lng"])
+    elif ds == "edgar":
         if (sel_a["month"] == "annual") != (sel_b["month"] == "annual"):
             raise SelectionError("Compare annual with annual, or month with month.")
         la, lb = edgar.layer(**sel_a), edgar.layer(**sel_b)
@@ -579,9 +649,11 @@ def _compare_layer(q: dict) -> Layer:
         ticks=[(0, f"≤ −{fmt(lim)}"), (0.25, f"−{fmt(lim / 2)}"), (0.5, "0"), (0.75, f"+{fmt(lim / 2)}"), (1, f"≥ +{fmt(lim)}")],
         note=f"A: {label_a} · B: {label_b} · scale ±98th percentile of |B − A|" + _filter_note(signed=True) + near_note,
     )
-    name = "EDGAR" if ds == "edgar" else "PARIS inverse model"
+    name = _COMPARE_NAMES[ds]
     return Layer(
-        stem=_slug("EDGAR" if ds == "edgar" else "PARIS", sel_a["gas"], "diff", stem_b, "minus", stem_a, mode),
+        stem=_slug({"edgar": "EDGAR", "inverse": "PARIS", "mapeire": "MapEIre"}[ds], sel_a["gas"], "diff",
+                   stem_b, "minus", stem_a, mode),
+        tif_epsg=tif_epsg, tif_centres=tif_centres,
         title=f"{name} · {formula} {what}: B − A",
         subtitle=f"B: {label_b}  −  A: {label_a}   [{value_unit}]",
         legend=legend, source=source, facts=facts, cells=cells, cell_vals=cell_vals, cell_kind="diverging",
@@ -737,11 +809,23 @@ def clip_to_region(layer: Layer, q: dict) -> Layer:
     if layer.tif_values is not None and layer.tif_geo is not None:
         west, north, dx, dy = layer.tif_geo
         rows, cols = layer.tif_values.shape
-        glat, glng = np.meshgrid(north - (np.arange(rows) + 0.5) * dy, west + (np.arange(cols) + 0.5) * dx,
-                                 indexing="ij")
-        glat, glng = glat.ravel(), glng.ravel()
-        keep, fb = _region_mask(glat, glng, inside, centre,
-                                lambda la, ln: (np.abs(glat - la) <= dy / 2) & (np.abs(glng - ln) <= dx / 2))
+        if layer.tif_centres is not None:          # projected grid (MapEIre): its cells' own WGS 84 centres
+            glat, glng = (a.ravel() for a in layer.tif_centres)
+
+            def contains(la, ln):
+                hit = np.zeros(glat.size, bool)
+                i = mapeire.cell_at(la, ln)
+                if i is not None:
+                    hit[i] = True
+                return hit
+        else:
+            glat, glng = np.meshgrid(north - (np.arange(rows) + 0.5) * dy, west + (np.arange(cols) + 0.5) * dx,
+                                     indexing="ij")
+            glat, glng = glat.ravel(), glng.ravel()
+
+            def contains(la, ln):
+                return (np.abs(glat - la) <= dy / 2) & (np.abs(glng - ln) <= dx / 2)
+        keep, fb = _region_mask(glat, glng, inside, centre, contains)
         fallback = fallback or fb
         vals = layer.tif_values.copy().ravel()
         vals[~keep] = NODATA
@@ -845,7 +929,8 @@ def geotiff(layer: Layer) -> Tuple[bytes, str]:
         return layer.tif_bytes, f"{layer.stem}.tif"
     if layer.tif_values is not None:
         west, north, dx, dy = layer.tif_geo  # type: ignore[misc]
-        return _tiff(layer.tif_values, (dx, dy), (west, north), 4326, layer.tif_meta, NODATA), f"{layer.stem}.tif"
+        return (_tiff(layer.tif_values, (dx, dy), (west, north), layer.tif_epsg, layer.tif_meta, NODATA),
+                f"{layer.stem}.tif")
     # MapEIre fallback: the overlay's RGBA pixels, already in Web Mercator
     w, s, e, n = layer.overlay_bounds  # type: ignore[misc]
     (x0, y0), (x1, y1) = _merc(w, s), _merc(e, n)
@@ -1081,7 +1166,17 @@ def grid_steps(q: dict) -> Tuple[List[Tuple[dict, str]], dict]:
             raise SelectionError("Unknown inverse model selection.")
         steps = [({**q, "year": str(y)}, str(y)) for y in run["years"]]
         return steps, {"what": "annual maps", "legend": f"{gas['formula']} · {_ESTIMATES[q['estimate']]}"}
-    raise SelectionError("The time series grid is available for EDGAR and the inverse model.")
+    if ds == "mapeire":
+        meta = mapeire.load_metadata()
+        code, sector = q.get("parameter", ""), q.get("sector", "")
+        p = meta.get("pollutants", {}).get(code)
+        if p is None or sector not in meta.get("sectors", {}):
+            raise SelectionError("Unknown MapEIre selection.")
+        steps = [({**q, "year": str(y)}, str(y)) for y in meta["years"]
+                 if mapeire.band_info(str(y), sector, code) is not None]
+        return steps, {"what": "maps of the MapEIre years",
+                       "legend": f"{p['formula']} · {meta['sectors'][sector]['name']}"}
+    raise SelectionError("Unknown dataset.")
 
 
 def grid_layout_ok(rows: int, cols: int, n: int) -> bool:

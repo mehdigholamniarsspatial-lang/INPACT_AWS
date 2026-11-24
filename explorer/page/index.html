@@ -3178,7 +3178,7 @@ a.ug-go.alt:hover{color:var(--navy)}
                 <div class="ms-ds" role="radiogroup" aria-label="Emission dataset">
                   <button type="button" class="ms-ds-card" role="radio" data-ds="mapeire">
                     <span class="ms-ds-top"><i class="bi bi-grid-3x3" aria-hidden="true"></i><span class="t">MapEIre</span></span>
-                    <span class="s">EPA gridded air-pollutant emissions by sector, 1&nbsp;km grid.</span>
+                    <span class="s">EPA national inventory by sector and pollutant, 1&nbsp;km grid (2015, 2016, 2019).</span>
                     <span class="ms-ds-check" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
                   </button>
                   <button type="button" class="ms-ds-card" role="radio" data-ds="edgar">
@@ -3264,11 +3264,7 @@ a.ug-go.alt:hover{color:var(--navy)}
                     <button type="button" role="radio" aria-checked="false" data-step="monthly">Monthly</button>
                   </div>
                 </div>
-                <div class="ts-warn" id="tsDsWarn" role="alert" hidden>
-                  <i class="bi bi-exclamation-triangle-fill"></i><b>MapEIre can't be added to the time series plot</b> (it has only one or two years, as images).
-                  Select <b>EDGAR</b> or the <b>Inverse model</b> in step 1 to add a layer to the plot.
-                  <span class="ts-warn-acts"><button type="button" data-ds="edgar">Use EDGAR</button><button type="button" data-ds="inverse">Use the Inverse model</button></span>
-                </div>
+                <div class="ts-warn" id="tsDsWarn" role="alert" hidden></div>
                 <div class="ts-warn" id="tsGasWarn" role="alert" hidden></div>
                 <button type="button" class="ts-add" id="tsAdd" disabled><i class="bi bi-plus-lg"></i><span>Add to plot</span></button>
                 <p class="cmp-msg" id="tsMsg" role="status"></p>
@@ -3327,7 +3323,7 @@ a.ug-go.alt:hover{color:var(--navy)}
                     <input type="checkbox" class="ms-cp-rev" id="msRsInv" aria-label="Reverse filter: hide a % of the cells closest to zero"
                            title="Reverse filter: hide a % of the cells closest to zero" hidden>
                   </div>
-                  <p class="ms-pal-off" id="msPalOff" hidden><i class="bi bi-info-circle" aria-hidden="true"></i>MapEIre layers are published as ready-made images, so their colours can&rsquo;t be changed. Opacity still applies.</p>
+                  <p class="ms-pal-off" id="msPalOff" hidden></p>
                 </div>
               </div></div>
             </section>
@@ -3451,12 +3447,14 @@ a.ug-go.alt:hover{color:var(--navy)}
                       <dt>Resolution</dt><dd>1&nbsp;km &times; 1&nbsp;km</dd>
                       <dt>Projection</dt><dd>TM65 Irish Grid (EPSG:29902)</dd>
                       <dt>Coverage</dt><dd>Irish Exclusive Economic Zone</dd>
-                      <dt>Years here</dt><dd>2015 and 2019</dd>
-                      <dt>Contents</dt><dd>33 pollutants in 7 groups, by NFR / CRF sector</dd>
+                      <dt>Years here</dt><dd>2015, 2016 and 2019</dd>
+                      <dt>Contents</dt><dd>32 pollutants in 7 groups, by 15 GNFR source sectors</dd>
                     </dl>
                     <ul class="ms-notes">
-                      <li>Units are shown only where the MapEIre report states them.</li>
-                      <li>Layers are drawn as images, so hovering shows no cell values; use the colour bar instead.</li>
+                      <li>Each cell holds the emission of one pollutant from one sector in that 1&nbsp;km square; hover a cell for its value and share of the national total.</li>
+                      <li>Units are shown only where the MapEIre report states them (kilotonnes per cell for CO&#8322;, NO&#8339; and NH&#8323;).</li>
+                      <li>Time series use the three MapEIre years, so they are plotted as three samples, not a yearly trend.</li>
+                      <li>Negative LULUCF CO&#8322; values are removals (e.g. forest uptake) and use a diverging colour scale.</li>
                     </ul>
                   </div></div>
                   <div class="ms-info-links">
@@ -4783,11 +4781,11 @@ a.ug-go.alt:hover{color:var(--navy)}
         <div class="ug-card">
           <h3 class="ug-card-title"><i class="bi bi-stack"></i>Three datasets, three views of Ireland&rsquo;s emissions</h3>
           <div class="ug-ideas">
-            <div class="ug-idea"><b><i class="bi bi-grid-3x3"></i> MapEIre</b><span>The EPA&rsquo;s national inventory mapped on a 1&nbsp;km grid (Aarhus University). <em>Years: 2015 and 2019.</em> Layers: <b>Year &rarr; Sector &rarr; Pollutant</b>, with 33 pollutants (greenhouse gases, air pollutants, heavy metals and persistent organic pollutants) by NFR/CRF sector.</span></div>
+            <div class="ug-idea"><b><i class="bi bi-grid-3x3"></i> MapEIre</b><span>The EPA&rsquo;s national inventory mapped on a 1&nbsp;km grid (Aarhus University). <em>Years: 2015, 2016 and 2019.</em> Layers: <b>Year &rarr; Sector &rarr; Pollutant</b>, with 32 pollutants (greenhouse gases, air pollutants, heavy metals and persistent organic pollutants) for 15 GNFR source sectors.</span></div>
             <div class="ug-idea"><b><i class="bi bi-layers"></i> EDGAR</b><span>The European Commission JRC&rsquo;s bottom-up inventory (EDGAR 2025 GHG) on a 0.1&deg; grid. <em>Years: 2000&ndash;2024, annual or monthly.</em> Layers: <b>Gas &rarr; Sector &rarr; Year &rarr; Period</b>, with CO&#8322; (fossil), CH&#8324; and N&#8322;O across eight sectors.</span></div>
             <div class="ug-idea"><b><i class="bi bi-broadcast"></i> Inverse model</b><span>Top-down CH&#8324; and N&#8322;O fluxes from the Horizon Europe PARIS project, estimated from atmospheric measurements. <em>Years: 2013&ndash;2024 (NAME runs) or 2016&ndash;2024 (FLEXPART runs).</em> Layers: <b>Inverse model &rarr; Transport model &rarr; Gas &rarr; Year &rarr; Estimate</b>.</span></div>
           </div>
-          <div class="ug-note"><i class="bi bi-info-circle"></i><span>MapEIre offers only two years, published as ready-made images, so it can be viewed, styled and downloaded but <b>not added to a time series</b>. Use <b>EDGAR</b> or the <b>Inverse model</b> for the graph.</span></div>
+          <div class="ug-note"><i class="bi bi-info-circle"></i><span>MapEIre has three years (2015, 2016 and 2019), so its time series shows <b>three samples</b>: the points are the data, and the dashed line between 2016 and 2019 only links them (no values exist in between).</span></div>
         </div>
 
         <div class="ug-steps-head">
@@ -4807,7 +4805,7 @@ a.ug-go.alt:hover{color:var(--navy)}
             <div class="ug-step-body" id="ugM1">
               <p>Open <b>Spatial Mapping</b> from the Main Menu. At the top of the left panel, under <b>Choose an analysis</b>, select <b>Time series</b>; the workspace adds the steps for the area and the plot, and the graph panel opens on the right. Then, in <b>Step 1 &middot; Choose a dataset</b>, select one of the three cards. Tap a dataset to see its time span:</p>
               <div class="ug-chips" role="group" aria-label="Datasets">
-                <button type="button" class="ug-chip" aria-pressed="false" data-explain="1 km grid, 2015 and 2019. Shown as ready-made images: ideal for detailed maps, not available for time series."><i class="bi bi-grid-3x3"></i>MapEIre</button>
+                <button type="button" class="ug-chip" aria-pressed="false" data-explain="1 km grid, 2015, 2016 and 2019. Every cell has its value: hover, restyle, compare and plot three-sample time series."><i class="bi bi-grid-3x3"></i>MapEIre</button>
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="0.1&deg; grid (about 11 &times; 7 km), every year from 2000 to 2024 as annual totals or monthly values. Values are mass of each gas, not CO&#8322;-equivalent."><i class="bi bi-layers"></i>EDGAR</button>
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="About 23 &times; 26 km cells covering Ireland plus a 20 km buffer, 2013&ndash;2024 depending on the transport model. Each cell carries an uncertainty range (15.9th&ndash;84.1st percentiles)."><i class="bi bi-broadcast"></i>Inverse model</button>
               </div>
@@ -4829,7 +4827,7 @@ a.ug-go.alt:hover{color:var(--navy)}
             <div class="ug-step-body" id="ugM2">
               <p>In <b>Step 2 &middot; Select the layer</b>, fill the drop-downs from left to right; each one unlocks the next, and the layer appears on the map as soon as the selection is complete. Tap a dataset to see its layers:</p>
               <div class="ug-chips" role="group" aria-label="Layers of each dataset">
-                <button type="button" class="ug-chip" aria-pressed="false" data-explain="<b>Year</b> (2015 or 2019) &rarr; <b>Sector</b> (NFR/CRF reporting sector) &rarr; <b>Pollutant</b> (33 substances in seven groups)."><i class="bi bi-grid-3x3"></i>MapEIre layers</button>
+                <button type="button" class="ug-chip" aria-pressed="false" data-explain="<b>Year</b> (2015, 2016 or 2019) &rarr; <b>Sector</b> (15 GNFR source sectors) &rarr; <b>Pollutant</b> (32 substances in seven groups)."><i class="bi bi-grid-3x3"></i>MapEIre layers</button>
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="<b>Gas</b> (CO&#8322; fossil, CH&#8324;, N&#8322;O) &rarr; <b>Sector</b> (Power industry, Industrial combustion, Buildings, Transport, Fuel exploitation, Industrial processes, Agriculture, Waste) &rarr; <b>Year</b> (2000&ndash;2024) &rarr; <b>Period</b> (annual total or a single month)."><i class="bi bi-layers"></i>EDGAR layers</button>
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="<b>Inverse model</b> (ELRIS, InTEM or RHIME) &rarr; <b>Transport model</b> (FLEXPART or NAME) &rarr; <b>Gas</b> (CH&#8324; or N&#8322;O) &rarr; <b>Year</b> &rarr; <b>Estimate</b>: the <em>prior</em> (the starting emission map), the <em>posterior</em> (corrected by atmospheric observations) or their <em>difference</em>."><i class="bi bi-broadcast"></i>Inverse model layers</button>
               </div>
@@ -4877,7 +4875,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <ul class="ug-list">
                 <li><b>EDGAR</b>: choose the <b>Time step</b> first: <b>Annual</b> (one value per year, 2000&ndash;2024) or <b>Monthly</b> (one value per month, showing the seasonal cycle).</li>
                 <li><b>Inverse model</b>: the plot shows the selected estimate (prior, posterior or difference) for every year of the run.</li>
-                <li><b>MapEIre</b>: a notice explains that it cannot be plotted and offers to switch to EDGAR or the Inverse model.</li>
+                <li><b>MapEIre</b>: choose a sector and a pollutant; the plot uses its three years (2015, 2016, 2019) as three samples.</li>
               </ul>
               <div class="ug-actions">
                 <button type="button" class="ug-go" data-go="mapping"><i class="bi bi-box-arrow-up-right"></i>Try it in Spatial Mapping</button>
@@ -4902,7 +4900,7 @@ a.ug-go.alt:hover{color:var(--navy)}
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="Slide from 10% to 100% to control how much of the satellite base map shows through the emission layer."><i class="bi bi-transparency"></i>Opacity</button>
               </div>
               <div class="ug-explain" aria-live="polite">Select a setting above.</div>
-              <p>MapEIre layers are ready-made images, so only their opacity can be changed.</p>
+              <p>MapEIre layers take the same palettes and value filter as EDGAR; LULUCF CO&#8322;, which has removals (negative values), uses the diverging palettes.</p>
               <div class="ug-actions">
                 <button type="button" class="ug-go" data-go="mapping"><i class="bi bi-box-arrow-up-right"></i>Try it in Spatial Mapping</button>
                 <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
@@ -5016,7 +5014,7 @@ a.ug-go.alt:hover{color:var(--navy)}
             <div class="ug-idea"><b>Like is compared with like.</b><span>Both layers come from the same dataset and the same gas, so the difference is meaningful. You can change the year, month, sector, inversion system, transport model or estimate (prior or posterior).</span></div>
             <div class="ug-idea"><b>Absolute or relative.</b><span><em>Absolute</em> shows the difference in the layer&rsquo;s own units; <em>% change</em> shows it relative to A. In % change, cells where A is below 1% of its mean are left out to avoid misleading ratios.</span></div>
           </div>
-          <div class="ug-note"><i class="bi bi-info-circle"></i><span>The dashboard is still under active development, and <b>MapEIre</b> is not yet available for comparison. Use <b>EDGAR</b> or the <b>Inverse model</b>.</span></div>
+          <div class="ug-note"><i class="bi bi-info-circle"></i><span>Compare works within one dataset. For <b>MapEIre</b>, layer B keeps layer A&rsquo;s pollutant and can change the year and the sector, e.g. 2019 &minus; 2015 for road-transport NO&#8339;.</span></div>
         </div>
 
         <div class="ug-steps-head">
@@ -5038,7 +5036,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <div class="ug-chips" role="group" aria-label="Datasets for comparison">
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="Compare two years (2000&ndash;2024), two months or two sectors of the same gas; for example, CH&#8324; from Agriculture in 2005 and in 2024."><i class="bi bi-layers"></i>EDGAR</button>
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="Compare two years, two inversion systems (ELRIS, InTEM, RHIME), two transport models (FLEXPART, NAME), or the prior against the posterior, for the same gas. The results also report how many cells differ by more than the models&rsquo; uncertainty."><i class="bi bi-broadcast"></i>Inverse model</button>
-                <button type="button" class="ug-chip" aria-pressed="false" data-explain="Not yet available for comparison while the dashboard is under development. MapEIre layers can still be viewed, styled and downloaded."><i class="bi bi-grid-3x3"></i>MapEIre</button>
+                <button type="button" class="ug-chip" aria-pressed="false" data-explain="Two MapEIre layers of the same pollutant: another year and / or sector, on the same 1 km grid."><i class="bi bi-grid-3x3"></i>MapEIre</button>
               </div>
               <div class="ug-explain" aria-live="polite">Select a dataset above.</div>
               <div class="ug-actions">
@@ -6398,9 +6396,7 @@ function syncMapLegend(){
       bar.appendChild(px);
     }
     px.querySelector("input").checked = pixelValuesOn;
-    // MapEIre layers are images: no pixel values to show
-    const noValues = document.getElementById("mapDataset")?.value === "mapeire" && !bar.classList.contains("cmp-card");
-    if (px.hidden !== noValues) px.hidden = noValues;
+    if (px.hidden) px.hidden = false;      // every dataset (MapEIre too) shows cell values on hover
     applyLegendState(bar);
   });
   // the stand-in only while no colour bar is shown
@@ -6430,268 +6426,6 @@ const FsControl = L.Control.extend({
 });
 map.addControl(new FsControl());
 document.addEventListener("fullscreenchange", () => setTimeout(() => map.invalidateSize(), 250));
-
-/* ------------- 4b. Emission layers (MapEIre gridded emissions: Year/Sector/Pollutant) ------------- */
-(function rasterOverlay(){
-  const yearSel   = document.getElementById("rasterYear");
-  const sectorSel = document.getElementById("rasterSector");
-  const paramSel  = document.getElementById("rasterParam");
-  const clearBtn  = document.getElementById("rasterClear");
-  const statusEl  = document.getElementById("rasterStatus");
-  const opacityEl = document.getElementById("rasterOpacity");
-  const opacityVal = document.getElementById("rasterOpacityVal");
-  if (!yearSel) return;
-
-  let CATALOG = {};            // { year: { sector: { parameter: filename } } }
-  // Display labels from /api/rasters/ (data/raster_metadata.json).
-  let LABELS = { sectors:{}, parameters:{}, groups:[], source:{} };
-  let EMPTY = new Set();       // "year|sector|parameter" keys with no non-zero cells
-  let overlay = null;          // current L.imageOverlay
-  let colorbar = null;         // current legend control
-  let titleCard = null;        // current active-layer title card
-  let opacity = 0.8;
-  let reqToken = 0;            // guards against out-of-order async responses
-
-  const PLACEHOLDER = txt => { const o = document.createElement("option");
-    o.value = ""; o.textContent = txt; o.disabled = true; o.selected = true; return o; };
-
-  const esc = s => String(s ?? "").replace(/[&<>"']/g,
-    c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-
-  // Fallbacks keep unknown files readable if the API returns no label for them.
-  const sectorInfo = s => LABELS.sectors[s] || { name: s.replace(/_/g, " "), code: "", order: 99 };
-  const paramInfo  = p => LABELS.parameters[p] || { name: p.replace(/^p/, ""), label: p.replace(/^p/, ""),
-    group: "Other", unit: null, unit_long: null, unit_status: "unknown", name_confirmed: false };
-  const layerName = (y, s, p) => `${paramInfo(p).label} — ${sectorInfo(s).name}, ${y}`;
-
-  function setStatus(msg, warn){
-    statusEl.textContent = msg || "";
-    statusEl.classList.toggle("warn", !!warn);
-  }
-
-  // Pretty-print the tiny / large values these rasters carry (2.6 × 10⁻⁵).
-  const SUP = { "-":"⁻", "0":"⁰", "1":"¹", "2":"²", "3":"³", "4":"⁴", "5":"⁵", "6":"⁶", "7":"⁷", "8":"⁸", "9":"⁹" };
-  function fmtVal(v){
-    if (v === 0) return "0";
-    const a = Math.abs(v);
-    if (a < 1e-3 || a >= 1e5){
-      const [m, e] = v.toExponential(1).split("e");
-      return `${m} × 10${String(+e).replace(/./g, ch => SUP[ch] || ch)}`;
-    }
-    return String(+v.toPrecision(3));
-  }
-
-  function fill(select, items, placeholder, labelOf){
-    select.innerHTML = "";
-    select.appendChild(PLACEHOLDER(placeholder));
-    items.forEach(it => {
-      const o = document.createElement("option");
-      o.value = it; o.textContent = labelOf ? labelOf(it) : it;
-      select.appendChild(o);
-    });
-    select.disabled = items.length === 0;
-  }
-
-  // Pollutants grouped by pollutant group; layers with no data are listed but disabled.
-  function fillParams(year, sector, params){
-    paramSel.innerHTML = "";
-    paramSel.appendChild(PLACEHOLDER("Select pollutant"));
-    const order = LABELS.groups.length ? LABELS.groups : ["Other"];
-    const groups = {};
-    params.forEach(p => { const g = paramInfo(p).group; (groups[g] = groups[g] || []).push(p); });
-    Object.keys(groups)
-      .sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99))
-      .forEach(g => {
-        const og = document.createElement("optgroup");
-        og.label = g;
-        groups[g].sort((a, b) => paramInfo(a).label.localeCompare(paramInfo(b).label)).forEach(p => {
-          const o = document.createElement("option");
-          const empty = EMPTY.has(`${year}|${sector}|${p}`);
-          o.value = p;
-          o.textContent = paramInfo(p).label + (empty ? " — no data" : "");
-          o.disabled = empty;
-          og.appendChild(o);
-        });
-        paramSel.appendChild(og);
-      });
-    paramSel.disabled = params.length === 0;
-  }
-
-  // ---- cascading population ----
-  function populateYears(){
-    const years = Object.keys(CATALOG).sort();
-    fill(yearSel, years, "Select year");
-    yearSel.disabled = years.length === 0;
-    resetSectors();
-  }
-  function resetSectors(){
-    sectorSel.innerHTML = ""; sectorSel.appendChild(PLACEHOLDER("Select sector"));
-    sectorSel.disabled = true; resetParams();
-  }
-  function resetParams(){
-    paramSel.innerHTML = ""; paramSel.appendChild(PLACEHOLDER("Select pollutant"));
-    paramSel.disabled = true;
-  }
-
-  yearSel.addEventListener("change", () => {
-    const y = yearSel.value;
-    const sectors = y ? Object.keys(CATALOG[y] || {}).sort((a, b) =>
-      (sectorInfo(a).order - sectorInfo(b).order) || sectorInfo(a).name.localeCompare(sectorInfo(b).name)) : [];
-    fill(sectorSel, sectors, "Select sector", s => sectorInfo(s).name);
-    resetParams();
-  });
-
-  sectorSel.addEventListener("change", () => {
-    const y = yearSel.value, s = sectorSel.value;
-    const params = (y && s) ? Object.keys((CATALOG[y] || {})[s] || {}) : [];
-    fillParams(y, s, params);
-  });
-
-  opacityEl.addEventListener("input", () => {
-    opacity = +opacityEl.value / 100;
-    opacityVal.textContent = `${opacityEl.value}%`;
-    if (overlay) overlay.setOpacity(opacity);
-  });
-
-  paramSel.addEventListener("change", () => {
-    const y = yearSel.value, s = sectorSel.value, p = paramSel.value;
-    if (y && s && p) loadRaster(y, s, p);
-  });
-
-  function clearSelection(){
-    reqToken++;
-    removeOverlay();
-    if (yearSel.options.length) yearSel.selectedIndex = 0;
-    resetSectors();
-    setStatus("");
-  }
-  clearBtn.addEventListener("click", () => {
-    if (document.getElementById("mapDataset").value === "mapeire") clearSelection();
-  });
-  // Switching dataset (section 4c) removes this layer.
-  document.addEventListener("maplayers:clear", clearSelection);
-
-  // ---- overlay management ----
-  function removeOverlay(){
-    if (overlay){ map.removeLayer(overlay); overlay = null; }
-    if (colorbar){ map.removeControl(colorbar); colorbar = null; }
-    if (titleCard){ map.removeControl(titleCard); titleCard = null; }
-    clearBtn.disabled = true;
-  }
-
-  // Active-layer title card: pollutant, sector, year and unit.
-  function buildTitleCard(year, sector, parameter){
-    const p = paramInfo(parameter), s = sectorInfo(sector);
-    const ctrl = L.control({ position:"topright" });
-    ctrl.onAdd = () => {
-      const div = L.DomUtil.create("div", "raster-title");
-      div.innerHTML = `
-        <div class="rt-kicker">Gridded emissions · ${esc(year)}</div>
-        <div class="rt-name">${esc(p.label)}</div>
-        <div class="rt-sector">${s.code ? `<span class="code">${esc(s.code)} · </span>` : ""}${esc(s.name)}</div>
-        ${p.unit ? `<span class="unit-badge" title="${esc(p.unit_long || p.unit)}">${esc(p.unit)}</span>` : ""}
-        ${p.name_confirmed === false ? `<div class="rt-flag">Pollutant identity to be confirmed (code “${esc(parameter.replace(/^p/, ""))}”)</div>` : ""}`;
-      L.DomEvent.disableClickPropagation(div);
-      return div;
-    };
-    return ctrl;
-  }
-
-  function buildColorbar(meta, parameter){
-    const p = paramInfo(parameter);
-    const src = LABELS.source || {};
-    const ctrl = L.control({ position:"bottomleft" });
-    ctrl.onAdd = () => {
-      const div = L.DomUtil.create("div", "raster-colorbar");
-      const gradient = `linear-gradient(to top, ${meta.stops.join(",")})`;
-      const isLog = meta.scale === "log" && meta.vmin > 0 && meta.vmax > 0;
-      // On a log scale the gradient's visual midpoint is the geometric mean.
-      const mid = isLog ? Math.sqrt(meta.vmin * meta.vmax)
-                        : (meta.vmin + meta.vmax) / 2;
-      // The colour ramp spans the 2nd–98th percentile; values beyond it clamp.
-      const clipped = meta.data_max > meta.vmax;
-      const note = (isLog ? "Log scale" : "Linear scale") + " · cells with zero emission not shown";
-      const credit = [src.dataset ? `${src.dataset} (${src.credit || ""})` : "", src.resolution]
-        .filter(Boolean).join(" · ");
-      div.innerHTML = `
-        <div class="cb-title">Emission per grid cell</div>
-        ${p.unit ? `<div class="cb-unit">${esc(p.unit_long || p.unit)}</div>` : ""}
-        <div class="cb-row">
-          <div class="cb-gradient" style="background:${gradient}"></div>
-          <div class="cb-ticks">
-            <span>${clipped ? "≥ " : ""}${fmtVal(meta.vmax)}</span>
-            <span>${fmtVal(mid)}</span>
-            <span>${meta.data_min < meta.vmin ? "≤ " : ""}${fmtVal(meta.vmin)}</span>
-          </div>
-        </div>
-        <div class="cb-note">${note}${clipped ? `<br>Maximum cell: ${fmtVal(meta.data_max)}${p.unit ? " " + esc(p.unit) : ""}` : ""}</div>
-        ${credit ? `<div class="cb-source">Source: ${esc(credit)}</div>` : ""}`;
-      return div;
-    };
-    return ctrl;
-  }
-
-  function loadRaster(year, sector, parameter){
-    const token = ++reqToken;
-    const qs = `year=${encodeURIComponent(year)}&sector=${encodeURIComponent(sector)}&parameter=${encodeURIComponent(parameter)}`;
-    const label = layerName(year, sector, parameter);
-    setStatus(`Loading ${label}…`);
-    clearBtn.disabled = false;
-
-    fetch(`/api/raster/meta/?${qs}`)
-      .then(async r => {
-        const contentType = r.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
-          throw new Error(`The emission layer could not be loaded (HTTP ${r.status}).`);
-        }
-        return r.json();
-      })
-      .then(meta => {
-        if (token !== reqToken) return;            // a newer selection won
-        if (!meta.ok){ setStatus(meta.detail || "The emission layer could not be loaded.", true); return; }
-
-        removeOverlay();
-
-        if (meta.all_zero){
-          setStatus(`${label}: no emissions recorded in this layer, so there is nothing to map.`, true);
-          map.fitBounds(meta.bounds, { padding:[20,20], maxZoom:9 });
-          clearBtn.disabled = false;
-          return;
-        }
-
-        const imgUrl = `/api/raster/image/?${qs}`;
-        overlay = L.imageOverlay(imgUrl, meta.bounds, { opacity, interactive:false, alt: label });
-        overlay.addTo(map);
-        titleCard = buildTitleCard(year, sector, parameter);
-        titleCard.addTo(map);
-        colorbar = buildColorbar(meta, parameter);
-        colorbar.addTo(map);
-        map.fitBounds(meta.bounds, { padding:[20,20], maxZoom:9 });
-        clearBtn.disabled = false;
-        const p = paramInfo(parameter);
-        setStatus(`Showing ${label}${p.unit ? " · " + (p.unit_long || p.unit) : ""}`);
-      })
-      .catch(err => {
-        if (token === reqToken) setStatus(err.message || "The emission layer could not be loaded.", true);
-      });
-  }
-
-  // ---- init ----
-  yearSel.disabled = true;
-  fetch("/api/rasters/")
-    .then(r => r.json())
-    .then(data => {
-      CATALOG = data.catalog || {};
-      LABELS = {
-        sectors: data.sectors || {}, parameters: data.parameters || {},
-        groups: data.groups || [], source: data.source || {}
-      };
-      EMPTY = new Set(data.empty || []);
-      if (!Object.keys(CATALOG).length){ setStatus("No emission map layers are available.", true); return; }
-      populateYears();
-    })
-    .catch(() => setStatus("The list of emission map layers could not be loaded.", true));
-})();
 
 /* ------------- Shared helpers for the EDGAR and Inverse Model cell layers ------------- */
 const GRID_UI = (() => {
@@ -6842,6 +6576,423 @@ const GRID_UI = (() => {
     items.forEach(([value, label]) => select.appendChild(new Option(label, value)));
   }
   return { esc, fmtVal, rainbow, diverging, STOPS, fill, palette, range };
+})();
+
+/* ------------- MapEIre 1 km grid: catalogue, decoding, drawing and cell look-up -------------
+ * The layers are 397 × 533 cells of TM65 / Irish Grid (EPSG:29902). /api/mapeire/layer/ sends the
+ * stored integers of a band; value = q × scale + offset, NoData = -32768, |value| < scale / 2 = 0
+ * (the rule of explorer/mapeire.py). The page colours one pixel per cell into an image and draws it
+ * in 16 × 16-cell tiles, each placed with its own affine transform from the tile corners' exact
+ * WGS 84 positions (from the catalogue), so the Irish Grid cells sit correctly on the Web-Mercator
+ * basemap at every zoom; within a tile the error is a few metres. */
+const MAPEIRE = (() => {
+  let catP = null, CAT = null, NODES = null;
+  const layerCache = new Map();
+  function catalog(){
+    if (!catP) {
+      catP = fetch("/api/mapeire/").then(r => r.json()).then(d => {
+        if (!d.ok) throw new Error(d.detail || "MapEIre layers are not available.");
+        CAT = d; prepare(d.grid); return d;
+      });
+      catP.catch(() => { catP = null; });
+    }
+    return catP;
+  }
+  // Tile corners: lat / lng of every node_step-th grid line (and the far edges)
+  function prepare(g){
+    const nr = g.node_rows.length, nc = g.node_cols.length;
+    NODES = { nr, nc, rows: g.node_rows, cols: g.node_cols, lat: g.node_lat, lng: g.node_lng, tiles: [] };
+    for (let i = 0; i < nr - 1; i++) for (let j = 0; j < nc - 1; j++) {
+      const k00 = i * nc + j, k01 = k00 + 1, k10 = k00 + nc;
+      const t = { r0: g.node_rows[i], r1: g.node_rows[i + 1], c0: g.node_cols[j], c1: g.node_cols[j + 1], k00, k01, k10 };
+      // affine (col, row) -> (lng, lat) and back, for the cell look-up (same transform as the drawing)
+      const w = t.c1 - t.c0, h = t.r1 - t.r0;
+      const a = (g.node_lng[k01] - g.node_lng[k00]) / w, b = (g.node_lat[k01] - g.node_lat[k00]) / w;
+      const c = (g.node_lng[k10] - g.node_lng[k00]) / h, d = (g.node_lat[k10] - g.node_lat[k00]) / h;
+      t.inv = { a, b, c, d, det: a * d - b * c, x0: g.node_lng[k00], y0: g.node_lat[k00] };
+      t.box = [Math.min(g.node_lat[k10], g.node_lat[k00 + nc + 1]) - .02, Math.min(g.node_lng[k00], g.node_lng[k10]) - .03,
+               Math.max(g.node_lat[k00], g.node_lat[k01]) + .02, Math.max(g.node_lng[k01], g.node_lng[k00 + nc + 1]) + .03];
+      NODES.tiles.push(t);
+    }
+  }
+  const decode = j => {
+    const n = j.q.length, v = new Float32Array(n), half = j.scale / 2;
+    for (let i = 0; i < n; i++) {
+      const q = j.q[i];
+      if (q === j.nodata) { v[i] = NaN; continue; }
+      const x = q * j.scale + j.offset;
+      v[i] = Math.abs(x) < half ? 0 : x;
+    }
+    j.values = v; delete j.q;
+    return j;
+  };
+  // { year, sector, pollutant } -> Promise of the layer, values as a Float32Array (NaN = NoData)
+  function getLayer(sel){
+    const url = `/api/mapeire/layer/?${new URLSearchParams({ year: sel.year, sector: sel.sector, pollutant: sel.pollutant })}`;
+    if (!layerCache.has(url)) {
+      const p = fetch(url).then(async r => {
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.ok) throw new Error(j.detail || `HTTP ${r.status}`);
+        return decode(j);
+      });
+      p.catch(() => layerCache.delete(url));
+      layerCache.set(url, p);
+      if (layerCache.size > 12) layerCache.delete(layerCache.keys().next().value);
+    }
+    return layerCache.get(url);
+  }
+  // The cell (flat index) under a lat / lng, or -1 (same affine tiles as the drawing)
+  function cellAt(lat, lng){
+    if (!NODES) return -1;
+    for (const t of NODES.tiles) {
+      if (lat < t.box[0] || lat > t.box[2] || lng < t.box[1] || lng > t.box[3]) continue;
+      const m = t.inv, dx = lng - m.x0, dy = lat - m.y0;
+      const x = (m.d * dx - m.c * dy) / m.det, y = (-m.b * dx + m.a * dy) / m.det;
+      if (x >= 0 && y >= 0 && x < t.c1 - t.c0 && y < t.r1 - t.r0)
+        return (t.r0 + Math.floor(y)) * CAT.grid.cols + t.c0 + Math.floor(x);
+    }
+    return -1;
+  }
+  // WGS 84 centre and an approximate box of a cell (bilinear over the tile corners)
+  function centre(idx){
+    const g = CAT.grid, r = Math.floor(idx / g.cols) + .5, c = idx % g.cols + .5;
+    const i = Math.min(Math.floor(r / g.node_step), NODES.nr - 2), j = Math.min(Math.floor(c / g.node_step), NODES.nc - 2);
+    const ty = (r - NODES.rows[i]) / (NODES.rows[i + 1] - NODES.rows[i]), tx = (c - NODES.cols[j]) / (NODES.cols[j + 1] - NODES.cols[j]);
+    const k = i * NODES.nc + j, bl = (arr) =>
+      (arr[k] * (1 - tx) + arr[k + 1] * tx) * (1 - ty) + (arr[k + NODES.nc] * (1 - tx) + arr[k + NODES.nc + 1] * tx) * ty;
+    return [bl(NODES.lat), bl(NODES.lng)];
+  }
+  function cellBounds(idx){
+    const [la, ln] = centre(idx), hl = .5 / 111.32, hg = .5 / (111.32 * Math.cos(la * Math.PI / 180));
+    return [[la - hl, ln - hg], [la + hl, ln + hg]];
+  }
+  const gridRef = idx => {
+    const g = CAT.grid;
+    return { east: g.west + (idx % g.cols + .5) * g.res, north: g.north - (Math.floor(idx / g.cols) + .5) * g.res };
+  };
+
+  // ---- colours: 256-entry look-up tables of the viewer's palette (any CSS colour the palette returns) ----
+  const probe = document.createElement("canvas").getContext("2d");
+  function lut(fn){
+    const out = new Uint8Array(256 * 3);
+    for (let i = 0; i < 256; i++) {
+      probe.fillStyle = "#000"; probe.fillStyle = fn(i / 255);
+      const s = probe.fillStyle;
+      const rgb = s[0] === "#" ? [1, 3, 5].map(p => parseInt(s.slice(p, p + 2), 16)) : (s.match(/\d+(\.\d+)?/g) || [0, 0, 0]).slice(0, 3).map(Number);
+      out.set(rgb, i * 3);
+    }
+    return out;
+  }
+  // An image (one pixel per cell) of `values`; tOf(v, i) gives 0..1 on the palette, or null (not drawn)
+  function paint(values, tOf, fn){
+    const g = CAT.grid, cv = document.createElement("canvas");
+    cv.width = g.cols; cv.height = g.rows;
+    const ctx = cv.getContext("2d"), img = ctx.createImageData(g.cols, g.rows), px = img.data, L = lut(fn);
+    let drawn = 0;
+    for (let i = 0; i < values.length; i++) {
+      const t = tOf(values[i], i);
+      if (t == null || !Number.isFinite(t)) continue;
+      const k = Math.min(255, Math.max(0, Math.round(t * 255))) * 3, o = i * 4;
+      px[o] = L[k]; px[o + 1] = L[k + 1]; px[o + 2] = L[k + 2]; px[o + 3] = 255; drawn++;
+    }
+    ctx.putImageData(img, 0, 0);
+    cv._drawn = drawn;
+    return cv;
+  }
+
+  // ---- the Leaflet layer: draws a painted image tile by tile ----
+  const GridCanvas = L.Layer.extend({
+    initialize(opts){ this._paneName = opts?.pane || "overlayPane"; this._opacity = opts?.opacity ?? .8; this._img = null; },
+    onAdd(map){
+      this._map = map;
+      this._canvas = L.DomUtil.create("canvas", "mapeire-canvas leaflet-zoom-hide");
+      Object.assign(this._canvas.style, { position: "absolute", pointerEvents: "none", opacity: this._opacity });
+      map.getPane(this._paneName).appendChild(this._canvas);
+      map.on("moveend zoomend resize viewreset", this._redraw, this);
+      this._redraw();
+    },
+    onRemove(map){ map.off("moveend zoomend resize viewreset", this._redraw, this); this._canvas.remove(); this._canvas = null; },
+    setImage(img){ this._img = img; this._redraw(); return this; },
+    setOpacity(o){ this._opacity = o; if (this._canvas) this._canvas.style.opacity = o; return this; },
+    getBounds(){ return L.latLngBounds(CAT.grid.bounds); },
+    _redraw(){
+      const map = this._map, cv = this._canvas;
+      if (!map || !cv || !NODES) return;
+      const size = map.getSize(), pad = .25;
+      const tl = map.containerPointToLayerPoint([-size.x * pad, -size.y * pad]).round();
+      const w = Math.round(size.x * (1 + 2 * pad)), h = Math.round(size.y * (1 + 2 * pad));
+      const dpr = window.devicePixelRatio || 1;
+      if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+        cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+        cv.style.width = w + "px"; cv.style.height = h + "px";
+      }
+      L.DomUtil.setPosition(cv, tl);
+      const ctx = cv.getContext("2d");
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+      const img = this._img;
+      if (!img || !img._drawn) return;
+      ctx.imageSmoothingEnabled = false;
+      const P = new Array(NODES.lat.length);
+      for (let k = 0; k < P.length; k++) {
+        const p = map.latLngToLayerPoint([NODES.lat[k], NODES.lng[k]]);
+        P[k] = [(p.x - tl.x) * dpr, (p.y - tl.y) * dpr];
+      }
+      const g = CAT.grid;
+      for (const t of NODES.tiles) {
+        const p00 = P[t.k00], p01 = P[t.k01], p10 = P[t.k10];
+        const tw = t.c1 - t.c0, th = t.r1 - t.r0;
+        const xs = [p00[0], p01[0], p10[0], p01[0] + p10[0] - p00[0]], ys = [p00[1], p01[1], p10[1], p01[1] + p10[1] - p00[1]];
+        if (Math.max(...xs) < 0 || Math.min(...xs) > cv.width || Math.max(...ys) < 0 || Math.min(...ys) > cv.height) continue;
+        // one extra cell right and below (when there is one) hides hairline seams between tiles
+        const ew = t.c1 < g.cols ? 1 : 0, eh = t.r1 < g.rows ? 1 : 0;
+        ctx.setTransform((p01[0] - p00[0]) / tw, (p01[1] - p00[1]) / tw, (p10[0] - p00[0]) / th, (p10[1] - p00[1]) / th, p00[0], p00[1]);
+        ctx.drawImage(img, t.c0, t.r0, tw + ew, th + eh, 0, 0, tw + ew, th + eh);
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    },
+  });
+
+  // A hover tooltip that follows the mouse over a GridCanvas (respects the legend's "Pixel values" box)
+  function hover(map, html){
+    const tip = L.tooltip({ sticky: true, direction: "top", className: "edgar-tip", offset: [0, -8] });
+    let on = false;
+    const move = e => {
+      const i = cellAt(e.latlng.lat, e.latlng.lng), content = i >= 0 ? html(i, e.latlng) : "";
+      if (!content) { if (on) { map.closeTooltip(tip); on = false; } return; }
+      tip.setLatLng(e.latlng).setContent(content);
+      if (!on) { tip.addTo(map); on = true; }
+    };
+    const out = () => { if (on) { map.closeTooltip(tip); on = false; } };
+    map.on("mousemove", move); map.on("mouseout movestart zoomstart", out);
+    return () => { map.off("mousemove", move); map.off("mouseout movestart zoomstart", out); out(); };
+  }
+
+  // "Nitrogen oxides (NOₓ) — Road transport, 2019"; and the min / max of a long array (no spread: 200k cells)
+  const label = (sel, meta = CAT) => `${meta.pollutants[sel.pollutant]?.label || sel.pollutant} — ${meta.sectors[sel.sector]?.name || sel.sector}, ${sel.year}`;
+  const extent = arr => { let lo = Infinity, hi = -Infinity; for (const v of arr) { if (v < lo) lo = v; if (v > hi) hi = v; } return [lo, hi]; };
+  return { catalog, getLayer, cellAt, centre, cellBounds, gridRef, paint, GridCanvas, hover, label, extent,
+           get meta(){ return CAT; } };
+})();
+
+/* ------------- 4b. MapEIre gridded emissions (Year/Sector/Pollutant), 1 km ------------- */
+(function mapeireOverlay(){
+  const datasetSel = document.getElementById("mapDataset");
+  const yearSel    = document.getElementById("rasterYear");
+  const sectorSel  = document.getElementById("rasterSector");
+  const paramSel   = document.getElementById("rasterParam");
+  const clearBtn   = document.getElementById("rasterClear");
+  const statusEl   = document.getElementById("rasterStatus");
+  const opacityEl  = document.getElementById("rasterOpacity");
+  const opacityVal = document.getElementById("rasterOpacityVal");
+  if (!datasetSel || !yearSel) return;
+
+  let META = null;              // /api/mapeire/ (data/MapEIre/mapeire_metadata.json)
+  let current = null;           // { sel, layer } currently drawn
+  let grid = null, unhover = null, colorbar = null, titleCard = null;
+  let opacity = +opacityEl.value / 100;
+  let reqToken = 0;
+  const { esc, fmtVal, fill } = GRID_UI;
+  const P = GRID_UI.palette;
+  const isOn = () => datasetSel.value === "mapeire";
+  const setStatus = (msg, warn) => { statusEl.textContent = msg || ""; statusEl.classList.toggle("warn", !!warn); };
+  const pol = c => META.pollutants[c], sec = s => META.sectors[s];
+  const unitText = p => p.unit_long || "unit not stated in the MapEIre report";
+  const yearsText = () => { const y = META.years.map(String); return y.length > 1 ? `${y.slice(0, -1).join(", ")} and ${y.at(-1)}` : y[0]; };
+  const sel = () => ({ year: yearSel.value, sector: sectorSel.value, pollutant: paramSel.value });
+
+  // Opacity is shared by the three datasets (EDGAR / inverse read the same slider)
+  opacityEl.addEventListener("input", () => {
+    opacity = +opacityEl.value / 100;
+    if (opacityVal) opacityVal.textContent = `${opacityEl.value}%`;
+    grid?.setOpacity(opacity);
+  });
+
+  // ---- dataset switch: drop this layer; load the catalogue on first use ----
+  document.addEventListener("maplayers:clear", () => {
+    clearSelection();
+    if (isOn() && !META) loadCatalog();
+  });
+  clearBtn.addEventListener("click", () => { if (isOn()) clearSelection(); });
+
+  // ---- cascading selectors: Year -> Sector -> Pollutant ----
+  function resetSelectors(){
+    fill(yearSel, META.years.slice().reverse().map(y => [String(y), String(y)]), "Select year");
+    fill(sectorSel, [], "Select sector");
+    fill(paramSel, [], "Select pollutant");
+    yearSel.disabled = false; sectorSel.disabled = paramSel.disabled = true;
+  }
+  function fillSectors(){
+    const keep = sectorSel.value, avail = META.layers[yearSel.value] || {};
+    fill(sectorSel, Object.keys(avail).sort((a, b) => sec(a).order - sec(b).order)
+      .map(s => [s, `${sec(s).name}${sec(s).code ? " · " + sec(s).code : ""}`]), "Select sector");
+    sectorSel.disabled = false;
+    if (avail[keep]) sectorSel.value = keep;
+  }
+  // Pollutants grouped by pollutant group; layers with no emission are listed but disabled
+  function fillPollutants(){
+    const keep = paramSel.value, avail = (META.layers[yearSel.value] || {})[sectorSel.value] || {};
+    paramSel.innerHTML = "";
+    const ph = new Option("Select pollutant", ""); ph.disabled = true; ph.selected = true; paramSel.appendChild(ph);
+    const order = META.groups, groups = {};
+    Object.keys(avail).forEach(c => { const g = pol(c).group; (groups[g] = groups[g] || []).push(c); });
+    Object.keys(groups).sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99)).forEach(g => {
+      const og = document.createElement("optgroup"); og.label = g;
+      groups[g].sort((a, b) => pol(a).label.localeCompare(pol(b).label)).forEach(c => {
+        const empty = !avail[c].nonzero, o = new Option(pol(c).label + (empty ? " — no emission" : ""), c);
+        o.disabled = empty; og.appendChild(o);
+      });
+      paramSel.appendChild(og);
+    });
+    paramSel.disabled = false;
+    if (avail[keep]?.nonzero) paramSel.value = keep;
+  }
+  yearSel.addEventListener("change", () => { fillSectors(); if (sectorSel.value) fillPollutants(); maybeLoad(); });
+  sectorSel.addEventListener("change", () => { fillPollutants(); maybeLoad(); });
+  paramSel.addEventListener("change", maybeLoad);
+  function maybeLoad(){ const s = sel(); if (s.year && s.sector && s.pollutant) loadLayer(s); }
+
+  function clearSelection(){
+    reqToken++;
+    removeLayer();
+    if (META) resetSelectors();
+    if (isOn()) setStatus("");
+  }
+  function removeLayer(){
+    if (grid && map.hasLayer(grid)) map.removeLayer(grid);
+    if (unhover) { unhover(); unhover = null; }
+    if (colorbar){ map.removeControl(colorbar); colorbar = null; }
+    if (titleCard){ map.removeControl(titleCard); titleCard = null; }
+    current = null;
+    if (isOn()) clearBtn.disabled = true;
+  }
+
+  // ---- colours: log scale (or ± symmetric where the layer has removals), fixed over the years ----
+  function tOf(layer){
+    const s = layer.colour, R = GRID_UI.range, info = rangeInfo();
+    if (!s) return () => null;
+    if (s.kind === "div") return v => (R.isBg(v) || R.outside(info, v) || !Number.isFinite(v)) ? null
+      : (R.divT(v, s.lo, s.hi) + 1) / 2;
+    const lo = Math.log10(s.lo), hi = Math.log10(s.hi);
+    return v => (!(v > 0) || R.isBg(v) || R.outside(info, v)) ? null
+      : hi > lo ? (Math.log10(Math.min(Math.max(v, s.lo), s.hi)) - lo) / (hi - lo) : .5;
+  }
+  // The value range slider of step 3 shows this layer (log positions over its non-zero cells, or ± for removals)
+  function rangeInfo(){
+    if (!current || !current.layer.colour) return null;
+    const { sel: s, layer } = current;
+    if (!layer._ext) {
+      let lo = Infinity, hi = -Infinity;
+      for (const v of layer.values) if (v !== 0 && Number.isFinite(v) && (layer.colour.kind === "div" || v > 0)) { if (v < lo) lo = v; if (v > hi) hi = v; }
+      layer._ext = lo <= hi ? [lo, hi] : [layer.colour.lo, layer.colour.hi];
+    }
+    const [mn, mx] = layer._ext;
+    return { key: "mapeire|" + JSON.stringify(s), kind: layer.colour.kind === "div" ? "div" : "log", min: mn, max: mx, lo: mn, hi: mx };
+  }
+  GRID_UI.range.register({ priority: 1, info: rangeInfo });
+  function restyle(){
+    if (!current || !grid) return;
+    const fn = current.layer.colour?.kind === "div" ? t => GRID_UI.diverging(t * 2 - 1) : GRID_UI.rainbow;
+    grid.setImage(MAPEIRE.paint(current.layer.values, tOf(current.layer), fn));
+  }
+  document.addEventListener("mappalette:change", () => {
+    if (!current || !colorbar) return;
+    restyle();
+    map.removeControl(colorbar); colorbar = buildColorbar(current.sel, current.layer); colorbar.addTo(map);
+  });
+
+  // ---- hover: the cell's value, its share of the national total and where it is ----
+  function tip(i, ll){
+    if (!current || map.getContainer().classList.contains("cmp-on")) return "";   // compare shows B − A instead
+    const { sel: s, layer } = current, v = layer.values[i];
+    if (!Number.isFinite(v)) return "";
+    const p = pol(s.pollutant), share = layer.total > 0 && v > 0 ? v / layer.total * 100 : 0, gr = MAPEIRE.gridRef(i);
+    return `<div class="popup-title">${fmtVal(v)} ${esc(p.unit_code ? p.unit_code + " " + p.formula : p.formula)}</div>
+      <div class="k">${esc(sec(s.sector).name)} · ${esc(s.year)}</div>
+      ${v > 0 ? `<div>${share < 0.01 ? "&lt; 0.01" : share.toFixed(2)}% of the national total</div>`
+              : v < 0 ? `<div>Net removal (negative value)</div>` : `<div class="k">No emission in this cell</div>`}
+      <div class="k">Irish Grid E ${Math.round(gr.east).toLocaleString("en-IE")}, N ${Math.round(gr.north).toLocaleString("en-IE")} · ${ll.lat.toFixed(3)}°N, ${Math.abs(ll.lng).toFixed(3)}°W</div>`;
+  }
+
+  // ---- legend + title ----
+  function buildTitleCard(s, layer){
+    const p = pol(s.pollutant), sc = sec(s.sector);
+    const ctrl = L.control({ position: "topright" });
+    ctrl.onAdd = () => {
+      const div = L.DomUtil.create("div", "raster-title");
+      div.innerHTML = `
+        <div class="rt-kicker">MapEIre · ${esc(s.year)}</div>
+        <div class="rt-name">${esc(p.label)}</div>
+        <div class="rt-sector">${sc.code ? `<span class="code">${esc(sc.code)} · </span>` : ""}${esc(sc.name)}</div>
+        <span class="unit-badge" title="${esc(unitText(p))}">${esc(p.unit || "unit not stated")}</span>
+        <div class="rt-total">National total: <b>${fmtVal(layer.total)}</b>${p.unit_code ? ` ${esc(p.unit_code)}` : ""} ${esc(p.formula)}</div>
+        ${p.name_confirmed === false ? `<div class="rt-flag">Pollutant identity to be confirmed (code “${esc(s.pollutant)}”)</div>` : ""}`;
+      L.DomEvent.disableClickPropagation(div);
+      return div;
+    };
+    return ctrl;
+  }
+  function buildColorbar(s, layer){
+    const src = META.source, sc = layer.colour, R = GRID_UI.range, shown = R.note(rangeInfo());
+    const div_ = sc.kind === "div";
+    const stops = div_ ? [-1, -0.5, 0, 0.5, 1].map(GRID_UI.diverging) : P.stops();
+    const ctrl = L.control({ position: "bottomleft" });
+    ctrl.onAdd = () => {
+      const div = L.DomUtil.create("div", "raster-colorbar");
+      div.innerHTML = `
+        <div class="cb-title">Emission per 1 km grid cell</div>
+        <div class="cb-unit">${esc(unitText(pol(s.pollutant)))}</div>
+        <div class="cb-row">
+          <div class="cb-gradient" style="background:linear-gradient(to top, ${stops.join(",")})"></div>
+          <div class="cb-ticks">${div_
+            ? `<span>≥ +${fmtVal(sc.hi)}</span><span>0</span><span>≤ −${fmtVal(sc.hi)}</span>`
+            : `<span>≥ ${fmtVal(sc.hi)}</span><span>${fmtVal(Math.sqrt(sc.lo * sc.hi))}</span><span>≤ ${fmtVal(sc.lo)}</span>`}</div>
+        </div>
+        <div class="cb-note">${div_ ? "Linear, symmetric · negative values are removals" : "Log scale"}, fixed over ${yearsText()} · cells with zero emission not shown${
+          shown ? `<br>${esc(shown)}` : ""}</div>
+        <div class="cb-source">Source: <a href="${esc(src.url)}" target="_blank" rel="noopener">${esc(src.dataset)}</a>,
+          ${esc(src.credit)} · ${esc(src.resolution)} · ${esc(src.projection)}</div>`;
+      L.DomEvent.disableClickPropagation(div);
+      return div;
+    };
+    return ctrl;
+  }
+
+  // ---- loading ----
+  function loadLayer(s){
+    const token = ++reqToken, label = MAPEIRE.label(s, META);
+    setStatus(`Loading ${label}…`);
+    clearBtn.disabled = false;
+    MAPEIRE.getLayer(s).then(layer => {
+      if (token !== reqToken) return;
+      const first = !current;
+      removeLayer();
+      current = { sel: s, layer };
+      clearBtn.disabled = false;
+      if (layer.all_zero || !layer.colour) {
+        setStatus(`${label}: MapEIre records no emission in this layer, so there is nothing to map.`, true);
+        return;
+      }
+      grid = grid || new MAPEIRE.GridCanvas({ opacity });
+      grid.setOpacity(opacity).addTo(map);
+      restyle();
+      unhover = MAPEIRE.hover(map, tip);
+      titleCard = buildTitleCard(s, layer); titleCard.addTo(map);
+      colorbar = buildColorbar(s, layer); colorbar.addTo(map);
+      if (first) map.fitBounds(grid.getBounds(), { padding: [20, 20], maxZoom: 9 });
+      setStatus(`Showing ${label} · ${layer.nonzero_cells.toLocaleString("en-IE")} of ${layer.cells.toLocaleString("en-IE")} cells non-zero · hover a cell for its value`);
+    }).catch(err => { if (token === reqToken) setStatus(err.message || "The MapEIre layer could not be loaded.", true); });
+  }
+  function loadCatalog(){
+    setStatus("Loading MapEIre layers…");
+    yearSel.disabled = true;
+    MAPEIRE.catalog().then(data => {
+      META = data;
+      resetSelectors();
+      if (isOn()) setStatus(`${META.source.dataset}: choose a year, a sector and a pollutant.`);
+    }).catch(err => setStatus(err.message || "The list of MapEIre layers could not be loaded.", true));
+  }
+  yearSel.disabled = sectorSel.disabled = paramSel.disabled = true;
+  if (isOn()) loadCatalog();
 })();
 
 /* ------------- Dataset switch: MapEIre / EDGAR / Inverse Model ------------- */
@@ -8258,7 +8409,7 @@ if (MAP_STANDALONE) (function mapWindow(){
   });
   syncCards();
   // Arriving with a dataset already picked on the dashboard: start on step 2
-  if (q.get("ds") && q.get("ds") !== "mapeire") setOpen(steps[1], false);
+  if (q.get("ds")) setOpen(steps[1], false);
 
   // Step 3: teal fill of the slider track follows the value
   const syncOpacity = () => {
@@ -8271,7 +8422,7 @@ if (MAP_STANDALONE) (function mapWindow(){
 
   // ---- Step 3 "Map style": colour palette, Reverse, opacity and Reset ----
   // Values (EDGAR, inverse posterior / prior) get the sequential palettes; differences (compare
-  // B − A, inverse Difference) the diverging ones. MapEIre is images: only opacity applies.
+  // B − A, inverse Difference, MapEIre removals) the diverging ones.
   styleUI = (() => {
     const P = GRID_UI.palette;
     const box = document.getElementById("msPal");
@@ -8288,8 +8439,10 @@ if (MAP_STANDALONE) (function mapWindow(){
     document.getElementById("msStep3Inner").appendChild(resetBtn);   // after the opacity slider
     const DEFAULT_OPACITY = 80;
 
+    // Differences (compare B − A, inverse Difference) and MapEIre layers with removals (LULUCF CO₂) are diverging
     const family = () => root.classList.contains("ms-compare")
-      || (datasetSel.value === "inverse" && estSel.value === "difference") ? "div" : "seq";
+      || (datasetSel.value === "inverse" && estSel.value === "difference")
+      || (datasetSel.value === "mapeire" && GRID_UI.range.current()?.kind === "div") ? "div" : "seq";
     const ramp = (fam, name, rev) => fam === "div"
       ? [-1, -0.5, 0, 0.5, 1].map(t => P.divColour(name, t, rev))
       : Array.from({ length: 9 }, (_, i) => P.seqColour(name, i / 8, rev));
@@ -8348,13 +8501,13 @@ if (MAP_STANDALONE) (function mapWindow(){
     document.addEventListener("pointerdown", e => { if (isOpen() && !e.target.closest("#msCp")) closeList(false); });
 
     function render(){
-      const fam = family(), cur = P.get(), off = datasetSel.value === "mapeire";
+      const fam = family(), cur = P.get(), off = false;           // every dataset is coloured on the page
       const p = P.PALETTES[fam][cur[fam]];
       barEl.style.background = gradient(fam, cur[fam], cur.reverse);
       nameEl.textContent = p.name + (cur.reverse ? " (reversed)" : "");
       moreEl.textContent = `${Object.keys(P.PALETTES[fam]).length} palettes`;
       btn.disabled = off;
-      btn.title = off ? "MapEIre layers are ready-made images" : "Choose a colour palette";
+      btn.title = "Choose a colour palette";
       if (off) closeList(false);
       const key = fam + off;
       if (key !== shownKey) { shownKey = key; if (isOpen()) closeList(false); }   // values <-> differences
@@ -8415,7 +8568,7 @@ if (MAP_STANDALONE) (function mapWindow(){
     }
     function syncRange(){
       rsInfo = RG.current();
-      const off = !rsInfo || datasetSel.value === "mapeire";
+      const off = !rsInfo;
       rsBox.classList.toggle("is-off", off);
       rsMin.disabled = rsMax.disabled = off;
       const conf = syncInv(off);
@@ -8457,7 +8610,7 @@ if (MAP_STANDALONE) (function mapWindow(){
       el.addEventListener("blur", () => { dragging = false; });
     });
     // Follow the layer on the map: legends are re-added whenever a layer is drawn
-    new MutationObserver(() => syncRange()).observe(mapEl.querySelector(".leaflet-control-container"), { childList: true, subtree: true });
+    new MutationObserver(() => { syncRange(); if (family() + false !== shownKey) render(); }).observe(mapEl.querySelector(".leaflet-control-container"), { childList: true, subtree: true });
     document.addEventListener("mappalette:change", syncRange);
     syncRange();
 
@@ -8469,11 +8622,10 @@ if (MAP_STANDALONE) (function mapWindow(){
     document.addEventListener("mappalette:change", render);
     datasetSel.addEventListener("change", render);
     estSel.addEventListener("change", render);
-    new MutationObserver(() => { if (family() + (datasetSel.value === "mapeire") !== shownKey) render(); })
+    new MutationObserver(() => { if (family() + false !== shownKey) render(); })
       .observe(root, { attributes: true, attributeFilter: ["class"] });
     // Folded step 3 reads e.g. "Viridis (reversed) · 80%"
     const summary = () => {
-      if (datasetSel.value === "mapeire") return `Opacity ${opacityEl.value}%`;
       const fam = family(), cur = P.get();
       return `${P.PALETTES[fam][cur[fam]].name}${cur.reverse ? " (reversed)" : ""} · ${opacityEl.value}%`;
     };
@@ -8531,6 +8683,8 @@ if (MAP_STANDALONE) (function mapWindow(){
     const { esc, fmtVal, fill } = GRID_UI;
     const signed = v => (v > 0 ? "+" : v < 0 ? "−" : "") + fmtVal(Math.abs(v));
     const ESTIMATE_NAMES = { prior: "Prior", posterior: "Posterior" };
+    const DS_NAMES = { edgar: "EDGAR", inverse: "Inverse model", mapeire: "MapEIre" };
+    const DS_FILE = { edgar: "EDGAR", inverse: "PARIS", mapeire: "MapEIre" };
     const st = { active: false, mode: "abs", meta: {}, metaP: {}, cache: new Map(), result: null,
                  token: 0, buildTok: 0, touched: false, layer: null, rects: {}, card: null, bar: null,
                  charts: [], moreOpen: false, timer: null };
@@ -8581,13 +8735,16 @@ if (MAP_STANDALONE) (function mapWindow(){
     const ds = () => datasetSel.value;
     const selA = () => Object.fromEntries(Object.entries(EXPORT_FIELDS[ds()]).map(([k, id]) => [k, document.getElementById(id).value]));
     const complete = sel => Object.values(sel).every(Boolean);
+    // The gas (EDGAR, inverse) or pollutant (MapEIre) of layer B is always layer A's
+    const lockedKey = name => name === "mapeire" ? "parameter" : "gas";
     function selB(){
-      const a = selA(), out = {};
-      Object.keys(EXPORT_FIELDS[ds()]).forEach(k => { out[k] = k === "gas" ? a.gas : (B[k]?.value || ""); });
+      const a = selA(), out = {}, lk = lockedKey(ds());
+      Object.keys(EXPORT_FIELDS[ds()]).forEach(k => { out[k] = k === lk ? a[k] : (B[k]?.value || ""); });
       return out;
     }
     function label(sel){
       const M = st.meta[ds()];
+      if (ds() === "mapeire") return `${M.sectors[sel.sector].name}, ${sel.year}`;
       if (ds() === "edgar") {
         const period = sel.month === "annual" ? sel.year : `${M.months[sel.month - 1]} ${sel.year}`;
         return `${M.sectors[sel.sector].name}, ${period}`;
@@ -8595,7 +8752,8 @@ if (MAP_STANDALONE) (function mapWindow(){
       return `${sel.model} ${sel.transport} ${ESTIMATE_NAMES[sel.estimate] || sel.estimate} ${sel.year}`;
     }
     function catalog(name){
-      if (!st.metaP[name]) st.metaP[name] = fetch(`/api/${name}/`).then(r => r.json()).then(m => (st.meta[name] = m));
+      if (!st.metaP[name]) st.metaP[name] = (name === "mapeire" ? MAPEIRE.catalog() : fetch(`/api/${name}/`).then(r => r.json()))
+        .then(m => (st.meta[name] = m));
       return st.metaP[name];
     }
 
@@ -8618,11 +8776,16 @@ if (MAP_STANDALONE) (function mapWindow(){
     }
     async function buildB(){
       const tok = ++st.buildTok, name = ds();
-      if (name === "mapeire") return;
       const M = await catalog(name);
       if (tok !== st.buildTok || name !== ds()) return;
       fieldsB.innerHTML = ""; B = {}; st.touched = false; st.builtFor = name;
-      if (name === "edgar") {
+      if (name === "mapeire") {
+        B.year = field("year", "Year");
+        fill(B.year, M.years.slice().reverse().map(y => [String(y), String(y)]), "Select year");
+        B.sector = field("sector", "Sector");
+        fill(B.sector, Object.entries(M.sectors).sort((a, b) => a[1].order - b[1].order).map(([k, s]) => [k, s.name]), "Select sector");
+        B.parameter = locked("Pollutant");
+      } else if (name === "edgar") {
         B.gas = locked("Gas");
         B.sector = field("sector", "Sector");
         fill(B.sector, Object.entries(M.sectors).sort((a, b) => a[1].order - b[1].order).map(([k, s]) => [k, s.name]), "Select sector");
@@ -8653,9 +8816,15 @@ if (MAP_STANDALONE) (function mapWindow(){
     // Keep B in step with A: gas, EDGAR period type, and a first copy of A's choices
     function syncFromA(){
       const name = ds(), M = st.meta[name], a = selA();
-      if (!M || !B.gas) return;
-      B.gas.textContent = a.gas ? `${M.gases[a.gas].formula} · ${M.gases[a.gas].name}` : "Choose layer A's gas first";
+      if (!M || !B[lockedKey(name)]) return;
       const prefill = !st.touched && complete(a);
+      if (name === "mapeire") {
+        const p = M.pollutants[a.parameter];
+        B.parameter.textContent = p ? p.label : "Choose layer A's pollutant first";
+        if (prefill) { B.year.value = a.year; B.sector.value = a.sector; }
+        return;
+      }
+      B.gas.textContent = a.gas ? `${M.gases[a.gas].formula} · ${M.gases[a.gas].name}` : "Choose layer A's gas first";
       if (name === "edgar") {
         const annual = !a.month || a.month === "annual", keep = B.month.value;
         fill(B.month, annual ? [["annual", "Annual"]] : M.months.map((m, i) => [String(i + 1), m]));
@@ -8677,6 +8846,7 @@ if (MAP_STANDALONE) (function mapWindow(){
       return `/api/${name}/layer/?${new URLSearchParams(keys.map(k => [k, sel[k]]))}`;
     }
     function getLayer(name, sel){
+      if (name === "mapeire") return MAPEIRE.getLayer({ year: sel.year, sector: sel.sector, pollutant: sel.parameter });
       const url = layerUrl(name, sel);
       if (!st.cache.has(url)) st.cache.set(url, fetch(url).then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))));
       return st.cache.get(url);
@@ -8702,9 +8872,19 @@ if (MAP_STANDALONE) (function mapWindow(){
     }
 
     function compute(name, a, b, la, lb){
-      const M = st.meta[name], mode = st.mode, formula = M.gases[a.gas].formula;
+      const M = st.meta[name], mode = st.mode;
+      const formula = name === "mapeire" ? M.pollutants[a.parameter].formula : M.gases[a.gas].formula;
       let av, bv, inc, geo, totA, totB, totUnit, loA, hiA, loB, hiB;
-      if (name === "edgar") {
+      if (name === "mapeire") {
+        // 1 km cells: both layers on one grid; a cell takes part where both have a value (inside both
+        // clip buffers). Its box is computed only when asked for (tooltip, zoom), not for 200k cells.
+        const p = M.pollutants[a.parameter];
+        av = la.values; bv = lb.values;
+        inc = { length: av.length };
+        for (let i = 0; i < av.length; i++) inc[i] = Number.isFinite(av[i]) && Number.isFinite(bv[i]);
+        geo = new Proxy({}, { get: (_, i) => MAPEIRE.cellBounds(+i) });
+        totA = la.total; totB = lb.total; totUnit = p.unit_code ? `${p.unit_code} ${formula}` : formula;
+      } else if (name === "edgar") {
         const g = M.grid;
         av = la.values; bv = lb.values; inc = av.map(() => true);
         geo = g.cells.map(idx => {
@@ -8729,14 +8909,16 @@ if (MAP_STANDALONE) (function mapWindow(){
       av.forEach((va, i) => {
         if (!inc[i]) return;
         const d = bv[i] - va, p = va > thr ? d / va * 100 : NaN;
-        cells.push({ i, a: va, b: bv[i], d, p, v: mode === "pct" ? p : d, bounds: geo[i],
+        cells.push({ i, a: va, b: bv[i], d, p, v: mode === "pct" ? p : d, get bounds(){ return geo[this.i]; },
                      sig: loA ? (loB[i] > hiA[i] || hiB[i] < loA[i]) : null });
       });
       const used = cells.filter(c => Number.isFinite(c.v));
       const stats = describe(used.map(c => c.v));
       const absSorted = used.map(c => Math.abs(c.v)).sort((x, y) => x - y);
       const lim = quantile(absSorted, 0.98) || absSorted.at(-1) || 1;
-      const scale = Math.max(...cells.map(c => Math.max(Math.abs(c.a), Math.abs(c.b))), 0);
+      let scale = 0;                         // a loop, not Math.max(...): MapEIre has ~136k cells
+      for (const c of cells) scale = Math.max(scale, Math.abs(c.a), Math.abs(c.b));
+      const unit = name === "mapeire" ? (la.unit || "unit not stated") : la.unit;
       const eps = scale * 1e-9;
       const up = cells.filter(c => c.d > eps).length, down = cells.filter(c => c.d < -eps).length;
       const A = cells.map(c => c.a), Bv = cells.map(c => c.b), D = cells.map(c => c.d);
@@ -8744,7 +8926,7 @@ if (MAP_STANDALONE) (function mapWindow(){
       const byV = used.slice().sort((x, y) => y.v - x.v);
       return {
         dataset: name, mode, selA: a, selB: b, labelA: label(a), labelB: label(b), formula,
-        unit: la.unit, valueUnit: mode === "pct" ? "%" : la.unit, cells, used, stats, lim,
+        unit, valueUnit: mode === "pct" ? "%" : unit, cells, used, stats, lim,
         totals: { a: totA, b: totB, unit: totUnit },
         share: { up, down, same: cells.length - up - down, n: cells.length },
         agree: cells.length > 2 ? {
@@ -8778,7 +8960,7 @@ if (MAP_STANDALONE) (function mapWindow(){
       const R = st.result;
       if (!R._ext) {
         const vs = R.used.map(c => c.v);
-        R._ext = vs.length ? [Math.min(...vs), Math.max(...vs)] : [-R.lim, R.lim];
+        R._ext = vs.length ? MAPEIRE.extent(vs) : [-R.lim, R.lim];
       }
       return { key: `cmp|${R.mode}|${R.labelA}|${R.labelB}`, kind: "div", min: R._ext[0], max: R._ext[1], lo: R._ext[0], hi: R._ext[1],
                canInvert: true, confHidden: c => confHidden(R, c), confNote: c => confNote(R, c) };   // compare map only
@@ -8806,11 +8988,19 @@ if (MAP_STANDALONE) (function mapWindow(){
       if (!st.layer) return;
       const op = +opacityEl.value / 100, R = st.result, rg = rangeNow(), RG = GRID_UI.range, info = rangeInfo();
       const hid = confHidden(R, RG.conf(info));                          // reverse filter: cells near zero (or null)
+      if (R.dataset === "mapeire") {                                     // 1 km: one image, not 136k rectangles
+        st.layer.setOpacity(op);
+        st.layer.setImage(MAPEIRE.paint(R._grid, (v, i) => !Number.isFinite(v) || RG.isBg(v) || RG.outside(info, v) || hid?.has(i)
+          ? null : (RG.divT(v, rg.lo, rg.hi) + 1) / 2, t => diverging(t * 2 - 1)));
+        return;
+      }
       R.used.forEach(c => st.rects[c.i]?.setStyle(RG.isBg(c.v) || RG.outside(info, c.v) || hid?.has(c.i) ? { fillOpacity: 0 }   // background / filtered
         : { fillColor: diverging(RG.divT(c.v, rg.lo, rg.hi)), fillOpacity: op }));
     }
     function removeMapLayer(){
       if (st.layer) { map.removeLayer(st.layer); st.layer = null; st.rects = {}; }
+      if (st.unhover) { st.unhover(); st.unhover = null; }
+      if (st.zoomTip) { map.closeTooltip(st.zoomTip); st.zoomTip = null; }
       if (st.card) { map.removeControl(st.card); st.card = null; }
       if (st.bar) { map.removeControl(st.bar); st.bar = null; }
       mapEl.classList.remove("cmp-on");
@@ -8818,19 +9008,29 @@ if (MAP_STANDALONE) (function mapWindow(){
     function draw(){
       removeMapLayer();
       const R = st.result;
-      st.layer = L.featureGroup();
-      R.used.forEach(c => {
-        const r = L.rectangle(c.bounds, { renderer, stroke: false, fillOpacity: 0 });
-        r.bindTooltip(() => tooltip(c), { sticky: true, direction: "top", className: "edgar-tip" });
-        st.rects[c.i] = r; st.layer.addLayer(r);
-      });
-      st.layer.addTo(map); restyle();
+      if (R.dataset === "mapeire") {
+        // The B − A value of every cell on the grid (NaN where the cell is left out), and cell -> result
+        const n = MAPEIRE.meta.grid.rows * MAPEIRE.meta.grid.cols;
+        R._grid = new Float32Array(n).fill(NaN); R._byI = new Map();
+        R.used.forEach(c => { R._grid[c.i] = c.v; R._byI.set(c.i, c); });
+        st.layer = new MAPEIRE.GridCanvas({ pane: "cmpPane", opacity: +opacityEl.value / 100 }).addTo(map);
+        st.unhover = MAPEIRE.hover(map, i => { const c = R._byI.get(i); return c ? tooltip(c) : ""; });
+      } else {
+        st.layer = L.featureGroup();
+        R.used.forEach(c => {
+          const r = L.rectangle(c.bounds, { renderer, stroke: false, fillOpacity: 0 });
+          r.bindTooltip(() => tooltip(c), { sticky: true, direction: "top", className: "edgar-tip" });
+          st.rects[c.i] = r; st.layer.addLayer(r);
+        });
+        st.layer.addTo(map);
+      }
+      restyle();
       mapEl.classList.add("cmp-on");
       const pct = R.mode === "pct";
       st.card = L.control({ position: "topright" });
       st.card.onAdd = () => {
         const div = L.DomUtil.create("div", "raster-title cmp-card");
-        div.innerHTML = `<div class="rt-kicker">${R.dataset === "edgar" ? "EDGAR" : "Inverse model"} · compare</div>
+        div.innerHTML = `<div class="rt-kicker">${DS_NAMES[R.dataset]} · compare</div>
           <div class="rt-name">${esc(R.formula)} ${pct ? "% change" : "difference"} B − A</div>
           <div class="rt-sector"><span class="code">B · </span>${esc(R.labelB)}</div>
           <div class="rt-sector"><span class="code">A · </span>${esc(R.labelA)}</div>
@@ -8909,7 +9109,7 @@ if (MAP_STANDALONE) (function mapWindow(){
           <section class="cmp-sec">
             <h4 class="cmp-sec-h">Full distribution</h4>
             <table class="cmp-table"><tbody>
-              ${row("Cells", `${s.n}`, R.excluded ? `${R.excluded} left out (A below 1% of its mean)` : (R.dataset === "inverse" ? "Inside both models' Ireland areas" : "All Ireland cells"))}
+              ${row("Cells", `${s.n}`, R.excluded ? `${R.excluded} left out (A below 1% of its mean)` : (R.dataset === "mapeire" ? "1 km cells inside both layers' clip areas" : R.dataset === "inverse" ? "Inside both models' Ireland areas" : "All Ireland cells"))}
               ${row("Q1 (25th percentile)", fs(s.q1, vu))}${row("Q3 (75th percentile)", fs(s.q3, vu))}
               ${row("Interquartile range", fv(s.iqr, vu))}
               ${row("5th percentile", fs(s.p5, vu))}${row("95th percentile", fs(s.p95, vu))}
@@ -8949,6 +9149,15 @@ if (MAP_STANDALONE) (function mapWindow(){
         if (st.moreOpen && !st.charts.some(c => c.canvas.id === "cmpScatter")) scatter();
       });
       resBody.querySelectorAll("[data-cell]").forEach(b => b.addEventListener("click", () => {
+        const c = st.result?._byI?.get(+b.dataset.cell);
+        if (c) {                                         // MapEIre: zoom to the 1 km cell and show its values
+          map.fitBounds(c.bounds, { maxZoom: 12 });
+          if (st.zoomTip) map.closeTooltip(st.zoomTip);
+          st.zoomTip = L.tooltip({ direction: "top", className: "edgar-tip" })
+            .setLatLng(L.latLngBounds(c.bounds).getCenter()).setContent(tooltip(c));
+          map.openTooltip(st.zoomTip);
+          return;
+        }
         const r = st.rects[b.dataset.cell];
         if (!r) return;
         map.fitBounds(r.getBounds(), { maxZoom: 9 });
@@ -8996,8 +9205,12 @@ if (MAP_STANDALONE) (function mapWindow(){
       }));
     }
     function scatter(){
-      const R = st.result, pts = R.cells.map(c => ({ x: c.a, y: c.b }));
-      const lo = Math.min(...pts.map(p => Math.min(p.x, p.y))), hi = Math.max(...pts.map(p => Math.max(p.x, p.y)));
+      // At most ~6 000 points (MapEIre has ~136k cells): an even sample of the cells, plus the 50 largest |B − A|
+      const R = st.result, step = Math.max(1, Math.ceil(R.cells.length / 6000));
+      const keep = R.cells.filter((c, k) => k % step === 0);
+      if (step > 1) keep.push(...R.cells.slice().sort((x, y) => Math.abs(y.d) - Math.abs(x.d)).slice(0, 50));
+      const pts = keep.map(c => ({ x: c.a, y: c.b }));
+      const [lo, hi] = MAPEIRE.extent(pts.flatMap(p => [p.x, p.y]));
       st.charts.push(new Chart(document.getElementById("cmpScatter"), {
         type: "scatter",
         data: { datasets: [
@@ -9018,7 +9231,7 @@ if (MAP_STANDALONE) (function mapWindow(){
     function csv(){
       const R = st.result, s = R.stats, q = v => `"${String(v).replace(/"/g, '""')}"`;
       const rows = [["Statistic", "Value", "Unit"],
-        ["Dataset", R.dataset === "edgar" ? "EDGAR" : "PARIS inverse model", ""], ["Layer A", R.labelA, ""], ["Layer B", R.labelB, ""],
+        ["Dataset", { edgar: "EDGAR", inverse: "PARIS inverse model", mapeire: "MapEIre (1 km)" }[R.dataset], ""], ["Layer A", R.labelA, ""], ["Layer B", R.labelB, ""],
         ["Gas", R.formula, ""], ["Difference", R.mode === "pct" ? "(B - A) / A x 100" : "B - A", R.valueUnit],
         ["Total A", R.totals.a, R.totals.unit], ["Total B", R.totals.b, R.totals.unit], ["Total B - A", R.totals.b - R.totals.a, R.totals.unit],
         ["Cells", s.n, ""], ["Cells left out", R.excluded, ""],
@@ -9029,7 +9242,7 @@ if (MAP_STANDALONE) (function mapWindow(){
                        ["Mean absolute difference", R.agree.mad, R.unit], ["Normalised mean bias", R.agree.nmb, "%"]] : []),
         ...(R.sig != null ? [["Cells whose 1-sigma ranges do not overlap", R.sig, ""]] : [])];
       const blob = new Blob(["﻿" + rows.map(r => r.map(q).join(",")).join("\r\n")], { type: "text/csv" });
-      const name = `${R.dataset === "edgar" ? "EDGAR" : "PARIS"}_${R.selA.gas}_compare_${R.mode}_stats.csv`;
+      const name = `${DS_FILE[R.dataset]}_${R.selA.gas || R.selA.parameter}_compare_${R.mode}_stats.csv`;
       const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: name });
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 4000);
@@ -9059,11 +9272,8 @@ if (MAP_STANDALONE) (function mapWindow(){
       refit();
     }
     function syncButton(){
-      const ok = ds() !== "mapeire";
-      btn.disabled = !ok;
-      btn.title = ok ? "Compare two layers of the same dataset: the map shows B − A"
-                     : "Comparison is available for EDGAR and the Inverse model (MapEIre is published as images, not values)";
-      if (!ok && st.active) exit();
+      btn.disabled = false;
+      btn.title = "Compare two layers of the same dataset: the map shows B − A";
     }
     btn.addEventListener("click", () => st.active ? exit() : enter());
     document.addEventListener("mapmode:enter", e => { if (e.detail !== "compare" && st.active) exit(); });
@@ -9072,7 +9282,7 @@ if (MAP_STANDALONE) (function mapWindow(){
     datasetSel.addEventListener("change", () => { syncButton(); restart(); });
     document.addEventListener("maplayers:clear", restart);
     // Layer A changes: keep B in step and recompute
-    ["edgar", "inverse"].forEach(name => Object.values(EXPORT_FIELDS[name]).forEach(id =>
+    ["mapeire", "edgar", "inverse"].forEach(name => Object.values(EXPORT_FIELDS[name]).forEach(id =>
       document.getElementById(id).addEventListener("change", () => { if (st.active && ds() === name) { syncFromA(); schedule(); } })));
     modeBox.querySelectorAll("[data-mode]").forEach(b => b.addEventListener("click", () => {
       st.mode = b.dataset.mode;
@@ -9107,15 +9317,16 @@ if (MAP_STANDALONE) (function mapWindow(){
     const listEl = $("tsList"), countEl = $("tsCount"), clearBtn = $("tsClear"), statsCard = $("tsStatsCard"), statsEl = $("tsStats");
     const defEl = $("tsDef"), stepBox = $("tsStepBox"), stepSeg = $("tsStep");
     const gasWarn = $("tsGasWarn"), addBtn = $("tsAdd"), msgEl = $("tsMsg"), dsWarn = $("tsDsWarn");
-    // MapEIre notice: switch to a dataset that has time series (the dataset cards drive the select)
+    // (the dataset notice is no longer needed: every dataset has a time series)
     dsWarn.querySelectorAll("[data-ds]").forEach(b => b.addEventListener("click", () =>
       document.querySelector(`.ms-ds-card[data-ds="${b.dataset.ds}"]`)?.click()));
     const { esc, fmtVal } = GRID_UI;
     const COLOURS = ["#0E8C8A", "#E8A33D", "#16324F", "#B2182B", "#6A4C93", "#2166AC", "#7A8B2E", "#C2185B"];
     const GASES = { CH4: ["CH₄", "Methane"], N2O: ["N₂O", "Nitrous oxide"], CO2: ["CO₂", "Carbon dioxide"] };
-    const F = g => GASES[g]?.[0] || g;
+    const F = g => GASES[g]?.[0] || MAPEIRE.meta?.pollutants?.[g]?.formula || g;
+    const DS_LABEL = { edgar: "EDGAR", inverse: "Inverse model", mapeire: "MapEIre" };
     const ESTIMATES = { prior: "Prior", posterior: "Posterior", difference: "Difference" };
-    const GAS_SELECT = { edgar: "edgarGas", inverse: "invGas" };
+    const GAS_SELECT = { edgar: "edgarGas", inverse: "invGas", mapeire: "rasterParam" };
     const st = { active: false, where: "whole", shape: "rect", agg: "mean", step: "annual", loc: null, layers: [],
                  chart: null, cache: new Map(), token: 0, drawMode: false, drag: null, poly: null, colour: 0, seq: 0,
                  busy: false, areaWarn: "", saved: { pixel: null, region: null } };
@@ -9145,13 +9356,22 @@ if (MAP_STANDALONE) (function mapWindow(){
         if (!model || !transport || !gas) return { missing: "Choose an inverse model, a transport model and a gas above." };
         return { dataset: "inverse", model, transport, gas, estimate: ESTIMATES[e] ? e : "posterior" };
       }
-      return { missing: "Time series are available for EDGAR and the Inverse model: choose one of them in step 1." };
+      if (ds() === "mapeire") {
+        const sector = val("rasterSector"), gas = val("rasterParam");
+        if (!sector || !gas) return { missing: "Choose a sector and a pollutant above to add a MapEIre layer (the year only sets the map)." };
+        return { dataset: "mapeire", gas, sector };
+      }
+      return { missing: "Choose a dataset in step 1." };
     }
+    const mapeireYears = () => { const y = (MAPEIRE.meta?.years || []).map(String); return y.length > 1 ? `${y.slice(0, -1).join(", ")} and ${y.at(-1)}` : y.join(""); };
     function shortName(def){
       if (def.dataset === "edgar") return `EDGAR ${optText("edgarSector")}${def.step === "monthly" ? " (monthly)" : ""}`;
+      if (def.dataset === "mapeire") return `MapEIre ${optText("rasterSector")}`;
       return `${def.model} ${def.transport} ${ESTIMATES[def.estimate]}`;
     }
     function defHtml(def){
+      if (def.dataset === "mapeire")
+        return `<b>MapEIre · ${esc(F(def.gas))} · ${esc(optText("rasterSector"))}</b><small>Annual values of the three MapEIre years (${esc(mapeireYears())}), plotted as three samples</small>`;
       if (def.dataset === "edgar")
         return `<b>EDGAR · ${esc(F(def.gas))} · ${esc(optText("edgarSector"))}</b><small>${def.step === "monthly" ? "Monthly values" : "Annual totals"}, every year of the dataset</small>`;
       return `<b>Inverse model · ${esc(F(def.gas))} · ${esc(def.model)} ${esc(def.transport)}</b><small>${esc(ESTIMATES[def.estimate])} flux, every year of the run</small>`;
@@ -9317,6 +9537,10 @@ if (MAP_STANDALONE) (function mapWindow(){
           data: d.t.map((x, j) => ({ x, y: tf(d.values[j]), raw: d.values[j], label: d.labels[j] })),
           borderColor: l.colour, backgroundColor: l.colour, borderWidth: exp ? 2.2 : 2, borderDash: sc ? [6, 3] : [],
           pointRadius: d.t.length > 60 ? 0 : (exp ? 2.8 : 2.4), pointHoverRadius: 4, tension: 0, clip: 6,
+          // Only some years (MapEIre 2015, 2016, 2019): large sample markers; a gap of more than a year is
+          // drawn dashed, since no value exists in between
+          ...(d.sparse ? { pointRadius: exp ? 5 : 4.5, pointHoverRadius: 6, pointBorderColor: "#fff", pointBorderWidth: 1.5,
+                           segment: { borderDash: c => c.p1.parsed.x - c.p0.parsed.x > 1.5 ? [3, 4] : (sc ? [6, 3] : undefined) } } : {}),
         });
       });
       let xmin = Math.floor(Math.min(...xs)), xmax = Math.ceil(Math.max(...xs));
@@ -9408,7 +9632,7 @@ if (MAP_STANDALONE) (function mapWindow(){
         return `<li class="${l.on ? "" : "off"}">
           <input type="checkbox" data-on="${l.id}" ${l.on ? "checked" : ""} aria-label="Show ${esc(l.short)} on the graph">
           <span class="ts-sw" style="background:${sc ? `repeating-linear-gradient(90deg,${l.colour} 0 5px,transparent 5px 8px)` : l.colour}"></span>
-          <span class="nm"><b>${esc(l.short)}</b><small>${esc(l.def.dataset === "edgar" ? "EDGAR" : "Inverse model")} · ${esc(aggText(l))} · ${esc(l.unit)}</small>
+          <span class="nm"><b>${esc(l.short)}</b><small>${esc(DS_LABEL[l.def.dataset])} · ${esc(aggText(l))} · ${esc(l.unit)}</small>
             ${l.error ? `<small class="warn"><i class="bi bi-exclamation-triangle"></i> ${esc(l.error)}</small>` : ""}
             ${tags ? `<span class="ts-tags">${tags}</span>` : ""}</span>
           <button type="button" class="ts-rm" data-rm="${l.id}" title="Remove from the plot" aria-label="Remove ${esc(l.short)} from the plot"><i class="bi bi-trash3"></i></button>
@@ -9490,6 +9714,7 @@ if (MAP_STANDALONE) (function mapWindow(){
       const s = [];
       if (vis.some(l => l.def.dataset === "edgar")) s.push("EDGAR_2025_GHG (EC JRC / IEA)");
       if (vis.some(l => l.def.dataset === "inverse")) s.push("PARIS inverse models via ICOS Carbon Portal (doi:10.18160/GR1Q-6SK4)");
+      if (vis.some(l => l.def.dataset === "mapeire")) s.push("MapEIre national gridded emissions (EPA Ireland / Aarhus University, EPA Research Report 317)");
       return `Source: ${s.join("; ")} · Ireland GHG Policy Impact Explorer`;
     }
     // ---- "Include map": the map JPEG (left 60%) + the graph (top right) + a details box (bottom right) ----
@@ -9660,7 +9885,7 @@ if (MAP_STANDALONE) (function mapWindow(){
       return [
         ["Map", mapTxt || "Layer shown on the map"],
         ["Graph", vis.map(l => ({ colour: l.colour, dashed: isScaled(l),
-          text: `${l.short} — ${l.def.dataset === "edgar" ? "EDGAR" : "Inverse model"}` })), true],
+          text: `${l.short} — ${DS_LABEL[l.def.dataset]}` })), true],
         ["Area", locationText()],
         ["Period", periodInfo(vis)],
         ...(gridOn() ? [["Map grid", gridInfo()]]
@@ -9990,7 +10215,7 @@ if (MAP_STANDALONE) (function mapWindow(){
         : L0.type === "county" ? `County ${L0.name}`
         : L0.type === "rect" ? "Rectangle region" : `Polygon of ${L0.pts.length} points`;
       sumArea.classList.toggle("empty", !areaOk);
-      sumAdd.textContent = n ? `${n} layer${n > 1 ? "s" : ""} in the plot` : ds() === "mapeire" ? "Not available for MapEIre" : "Nothing added yet";
+      sumAdd.textContent = n ? `${n} layer${n > 1 ? "s" : ""} in the plot` : "Nothing added yet";
       sumAdd.classList.toggle("empty", !n);
       // Area chosen: fold the step and open "Add to the time series plot"
       if (hadArea === false && areaOk && areaStep.classList.contains("is-open")) { setOpen(areaStep, false); setOpen(addStep, true); }
@@ -10016,7 +10241,7 @@ if (MAP_STANDALONE) (function mapWindow(){
       const dup = !def.missing && st.layers.some(l => l.key === keyOf(def));
       addBtn.disabled = !!def.missing || wrongGas || dup || !locReady() || st.busy;
       const needArea = !def.missing && !wrongGas && !dup && !locReady();
-      const noTs = ds() === "mapeire";
+      const noTs = false;                       // every dataset has a time series (MapEIre: three years)
       dsWarn.hidden = !noTs;
       addBtn.querySelector("span").textContent = st.busy ? "Adding…" : noTs ? "Not available for MapEIre" : dup ? "Already in the plot" : needArea ? "Choose the area first (step 3)" : "Add to plot";
       addBtn.querySelector("i").className = noTs ? "bi bi-slash-circle" : dup ? "bi bi-check2" : needArea ? "bi bi-arrow-up" : "bi bi-plus-lg";
@@ -10059,7 +10284,7 @@ if (MAP_STANDALONE) (function mapWindow(){
     pngBtn.addEventListener("click", exportPng);
     csvBtn.addEventListener("click", csv);
     // The left panel's layer is the next one to add: keep the box in step with it
-    ["edgarGas", "edgarSector", "invModel", "invTransport", "invGas", "invEstimate"].forEach(id => {
+    ["edgarGas", "edgarSector", "invModel", "invTransport", "invGas", "invEstimate", "rasterSector", "rasterParam"].forEach(id => {
       const el = $(id);
       el.addEventListener("change", () => { if (st.active) { setMsg(""); syncAdd(); } });
       new MutationObserver(() => st.active && syncAdd()).observe(el, { childList: true, attributes: true, attributeFilter: ["disabled"] });
@@ -10090,11 +10315,10 @@ if (MAP_STANDALONE) (function mapWindow(){
       marks.remove(); mapEl.classList.remove("ts-picking");
       syncButton(); refit();
     }
-    // The panel opens on every dataset; on MapEIre Add to plot is disabled with a notice
+    // Every dataset has a time series (MapEIre: its three years, as three samples)
     function syncButton(){
       btn.disabled = false;
-      btn.title = ds() !== "mapeire" ? "Plot the time series of a pixel, a region or the whole of Ireland"
-                                     : "Time series are available for EDGAR and the Inverse model (MapEIre has one or two years, as images)";
+      btn.title = "Plot the time series of a pixel, a region or the whole of Ireland";
     }
     btn.addEventListener("click", () => st.active ? exit() : enter());
     document.addEventListener("mapmode:enter", e => { if (e.detail !== "ts" && st.active) exit(); });
@@ -13176,20 +13400,20 @@ const DATA = [
     id: "mapeire", cat: "raster", type: "Gridded raster", icon: "bi-grid-3x3",
     title: "MapEIre national gridded emissions",
     provider: "EPA Ireland / Aarhus University",
-    summary: "Ireland's national emission inventory mapped onto a 1 km grid: 33 pollutants for 18 GNFR sectors, for 2015 and 2019.",
+    summary: "Ireland's national emission inventory mapped onto a 1 km grid: 32 pollutants for 15 GNFR sectors, for 2015, 2016 and 2019.",
     about: [
       "MapEIre was produced for the EPA by Aarhus University. It distributes the national inventory spatially, so each layer shows where one pollutant from one sector is emitted, at 1 km × 1 km over the Irish Exclusive Economic Zone.",
-      "It covers greenhouse gases, F-gases, acidifying gases, ozone precursors, particulate matter, heavy metals and persistent organic pollutants. On this platform the layers are pre-rendered images chosen with the Year → Sector → Pollutant selectors in the Spatial Mapping tab."
+      "It covers greenhouse gases, F-gases, acidifying gases, ozone precursors, particulate matter, heavy metals and persistent organic pollutants. On this platform every 1 km cell keeps its value (decoded from the scaled multiband GeoTIFFs), chosen with the Year → Sector → Pollutant selectors: hover for values, restyle, compare years or sectors, and plot three-sample time series."
     ],
-    period: [2015, 2019], years: [2015, 2019], frequency: "Two inventory years (2015, 2019)", spatial: "Irish Exclusive Economic Zone (land and sea)", resolution: "1 km × 1 km",
-    crs: "TM65 Irish Grid (EPSG:29902); displayed in Web Mercator", units: "kt per 1 km cell where the report states it (PM₂.₅, CO₂, NOₓ, NH₃); otherwise not stated",
+    period: [2015, 2019], years: [2015, 2016, 2019], frequency: "Three inventory years (2015, 2016, 2019)", spatial: "Irish Exclusive Economic Zone (land and sea)", resolution: "1 km × 1 km",
+    crs: "TM65 Irish Grid (EPSG:29902); displayed in Web Mercator", units: "kt per 1 km cell where the report states it (CO₂, NOₓ, NH₃); otherwise not stated",
     gases: ["CO₂", "CH₄", "N₂O", "F-gases", "Air pollutants"],
-    format: "GeoTIFF source; pre-rendered PNG + JSON overlays (698 layers)", licence: "© EPA Ireland. Cite EPA Research Report 317.",
+    format: "Multiband GeoTIFF (int16, per-band scale / offset; 45 year × sector files, one band per pollutant), served as 1 km cell values", licence: "© EPA Ireland. Cite EPA Research Report 317.",
     version: "MapEIre (Nielsen et al., 2019)",
-    meta: [["Pollutant groups", "Greenhouse gases (3), fluorinated gases (4), acidifying gases (3), ozone precursors (2), particulate matter (4), heavy metals (9), persistent organic pollutants (8)"], ["Sectors", "18 GNFR sectors and national totals (public power, industry, road transport, shipping, aviation, agriculture, waste, LULUCF …)"], ["Colour scale", "Rainbow, log scale between the 2nd and 98th percentiles; zero and nodata are transparent"], ["File naming", "<Year>_<Sector>_p<Pollutant>, e.g. 2019_B_Industry_pCO2"]],
-    files: [["data/RasterPrerendered/*.png + *.json", "698 pre-rendered overlays with bounds, value range and colour stops"], ["data/raster_metadata.json", "Display names, groups and units of sectors and pollutants"], ["data/Raster/*.tif", "Optional source GeoTIFFs for live rendering (needs rasterio)"]],
-    vars: [["Year", "2015 or 2019"], ["Sector", "GNFR code, e.g. A_PublicPower, F_RoadTransport, K_AgriLivestock"], ["Pollutant", "CO2, CH4, N2O, HFCs, PFCs, SF6, NF3, NOx, SOx, NH3, NMVOC, CO, PM2_5, PM10, TSP, BC, metals, POPs …"], ["Value", "Emission per 1 km cell"]],
-    notes: ["Units are shown only where the MapEIre report states them.", "Layers are drawn as images, so hovering shows no cell values; read values from the colour bar.", "Values are mass of each pollutant, not CO₂-equivalent."],
+    meta: [["Pollutant groups", "Greenhouse gases (3), fluorinated gases (4), acidifying gases (3), ozone precursors (2), particulate matter (3: PM₁₀, TSP, BC), heavy metals (9), persistent organic pollutants (8)"], ["Sectors", "15 GNFR source sectors (public power, industry, road transport, shipping, aviation, agriculture, waste, LULUCF …); national totals are not included"], ["Encoding", "int16 per band: value = stored × scale_factor + value_offset (band tags); NoData −32768"], ["Colour scale", "Log scale fixed per sector and pollutant over the three years (diverging for LULUCF CO₂); any palette of the Map style step; zero cells are transparent"], ["File naming", "<Year>_<Sector>_1km.tif, one band per pollutant (band description = pollutant)"]],
+    files: [["data/MapEIre/<Year>_<Sector>.npz", "The stored integers of every pollutant band on one 397 × 533 grid (scripts/build_mapeire_grids.py)"], ["data/MapEIre/mapeire_metadata.json", "Grid, tile corners, per-band scale / offset, totals, colour scales and labels"], ["data/MapEIre/mapeire_grid.npz", "WGS 84 centre of every cell (time series regions)"], ["data/raster_metadata.json", "Display names, groups and units of sectors and pollutants"]],
+    vars: [["Year", "2015, 2016 or 2019"], ["Sector", "GNFR code, e.g. A_PublicPower, F_RoadTransport, K_AgriLivestock"], ["Pollutant", "CO2, CH4, N2O, HFCs, PFCs, SF6, NF3, NOx, SOx, NH3, NMVOC, CO, PM10, TSP, BC, metals, POPs …"], ["Value", "Emission per 1 km cell"]],
+    notes: ["Units are shown only where the MapEIre report states them.", "Hover a cell for its value, its share of the national total and its Irish Grid reference.", "LULUCF CO₂ includes removals (negative values).", "Values are mass of each pollutant, not CO₂-equivalent."],
     usedIn: [["mapping", "Spatial Mapping — MapEIre layers"], ["explorer", "Explorer Dashboard — map (2B)"]],
     citation: "Nielsen, O.-K., et al. (2019). MapEIre: National Mapping of Greenhouse Gas and Non-greenhouse Gas Emissions Sources. EPA Research Report No. 317. Environmental Protection Agency, Ireland.",
     links: [["EPA Research Report 317", "https://www.epa.ie/publications/research/reports/research-317-mapeire-national-mapping-of-greenhouse-gas-and-non-greenhouse-gas-emissions-sources-project.php"], ["MapEIre project (Aarhus University)", "https://projects.au.dk/mapeire"]],

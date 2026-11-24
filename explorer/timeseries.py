@@ -1,5 +1,5 @@
 """
-Time series of EDGAR / PARIS inverse-model cells for the map window's Time series panel.
+Time series of MapEIre / EDGAR / PARIS inverse-model cells for the map window's Time series panel.
 
 One request returns a whole series (every year, or every month for EDGAR) for
 one layer definition and one spatial selection:
@@ -24,7 +24,7 @@ from typing import Optional
 
 import numpy as np
 
-from . import edgar, inverse
+from . import edgar, inverse, mapeire
 
 AGGREGATES = {"mean": np.nanmean, "median": np.nanmedian, "sum": np.nansum}
 WHERE = ("pixel", "region", "whole")
@@ -249,6 +249,53 @@ def _inverse(q: dict) -> Optional[dict]:
     return out
 
 
+def _mapeire(q: dict) -> Optional[dict]:
+    """MapEIre: one value per year of the dataset (2015, 2016, 2019) for one sector and pollutant."""
+    meta = mapeire.load_metadata()
+    code, sector = q.get("gas"), q.get("sector")
+    if code not in meta.get("pollutants", {}) or sector not in meta.get("sectors", {}):
+        return None
+    years = [y for y in meta["years"] if mapeire.band_info(str(y), sector, code) is not None]
+    if not years:
+        return None
+    grids = [mapeire.values(str(y), sector, code) for y in years]
+    stack = np.stack([g.ravel() for g in grids])                     # years × all grid cells
+    cand = np.flatnonzero(np.isfinite(stack).any(axis=0))           # cells inside the layer's clip buffer
+    c = mapeire.centres()
+    lat, lng = c["lat"].ravel()[cand], c["lng"].ravel()[cand]
+    lookup = {int(i): k for k, i in enumerate(cand)}
+
+    def pixel_index(la, ln):
+        i = mapeire.cell_at(la, ln)
+        return None if i is None else lookup.get(i)
+
+    sel, fallback = _pick(q, lat, lng, pixel_index)
+    block = stack[:, cand[sel]]
+    agg = _agg(q)
+    p, s = meta["pollutants"][code], meta["sectors"][sector]
+    formula = p["formula"]
+    unit = p["unit_long"] or "unit not stated in the MapEIre report"
+    if agg == "sum":
+        unit = (f"{p['unit_code']} {formula} per year (total of the cells)" if p["unit_code"]
+                else "total of the cells (unit not stated in the MapEIre report)")
+    out = {
+        "t": [float(y) for y in years], "labels": [str(y) for y in years],
+        "values": _combine(block, agg),
+        "unit": unit, "formula": formula, "n_cells": int(sel.size), "fallback": fallback, "cell": None,
+        "title": f"MapEIre {formula} · {s['name']}",
+        "sparse": True,                    # only some years: the page draws the points, not a trend line
+    }
+    if q.get("where") == "pixel":
+        g = meta["grid"]
+        idx = int(cand[sel[0]])
+        r, col = divmod(idx, g["cols"])
+        la, ln = float(lat[sel[0]]), float(lng[sel[0]])
+        half_lat, half_lng = 0.5 / 111.32, 0.5 / (111.32 * np.cos(np.radians(la)))
+        out["cell"] = [[round(la - half_lat, 5), round(ln - half_lng, 5)], [round(la + half_lat, 5), round(ln + half_lng, 5)]]
+        out["grid_ref"] = {"east": g["west"] + (col + 0.5) * g["res"], "north": g["north"] - (r + 0.5) * g["res"]}
+    return out
+
+
 def series(q: dict) -> Optional[dict]:
     """The series for one request, ``None`` for an unknown layer; raises ``SelectionError``."""
     if q.get("where") not in WHERE:
@@ -260,4 +307,6 @@ def series(q: dict) -> Optional[dict]:
         return _edgar(q)
     if dataset == "inverse":
         return _inverse(q)
+    if dataset == "mapeire":
+        return _mapeire(q)
     return None
