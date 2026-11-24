@@ -13,6 +13,11 @@ if ! swapon --show | grep -q /swapfile; then
   grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 fi
 
+# SSH: keys only (Lightsail default), no root login, no X11 forwarding, few attempts per connection
+printf 'PermitRootLogin no\nX11Forwarding no\nMaxAuthTries 3\nPasswordAuthentication no\n' \
+  | sudo tee /etc/ssh/sshd_config.d/60-inpact-hardening.conf >/dev/null
+sudo sshd -t && sudo systemctl reload ssh
+
 sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y python3-venv python3-pip nginx
 # nginx buffers large responses (the ~1 MB page, images) in these folders; if they are not owned

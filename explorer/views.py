@@ -513,8 +513,17 @@ RESULTS_SALT, RESULTS_DAYS = "inpact.feedback.results", 90
 
 
 def _client_addr(request):
-    fwd = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    return (fwd.split(",")[0].strip() if fwd else request.META.get("REMOTE_ADDR", "")) or "?"
+    # X-Real-IP is set by the proxy (nginx: $remote_addr; Vercel likewise) and overwrites
+    # anything the client sends. The first X-Forwarded-For entry is NOT used: a client can
+    # write any address there and so dodge the rate limits below.
+    return (request.META.get("HTTP_X_REAL_IP", "").strip()
+            or request.META.get("REMOTE_ADDR", "") or "?")
+
+
+def _too_many_key_failures(addr, now):
+    """Recent wrong-key attempts from this address, or None once it has hit the limit."""
+    fails = [t for t in _FB_KEYFAIL.get(addr, []) if now - t < _FB_KEYFAIL_WINDOW]
+    return None if len(fails) >= _FB_KEYFAIL_MAX else fails
 
 
 def _access_group(token):
@@ -571,8 +580,8 @@ def feedback_access(request):
     if data is None or len(request.body) > 2048:
         return JsonResponse({"ok": False, "detail": "Could not read the request."}, status=400)
     now, addr = time.time(), _client_addr(request)
-    fails = [t for t in _FB_KEYFAIL.get(addr, []) if now - t < _FB_KEYFAIL_WINDOW]
-    if len(fails) >= _FB_KEYFAIL_MAX:
+    fails = _too_many_key_failures(addr, now)
+    if fails is None:
         return JsonResponse({"ok": False, "detail": "Too many attempts. Please wait 15 minutes and try again."},
                             status=429)
     group, key = data.get("group"), data.get("key")
@@ -668,7 +677,13 @@ def download_feedback(request):
     if not key:
         return HttpResponse("Downloads are not enabled on this server (FEEDBACK_ADMIN_KEY is not set).",
                             status=403, content_type="text/plain")
+    now, addr = time.time(), _client_addr(request)
+    fails = _too_many_key_failures(addr, now)
+    if fails is None:
+        return HttpResponse("Too many attempts. Please wait 15 minutes and try again.",
+                            status=429, content_type="text/plain")
     if not hmac.compare_digest(given.encode(), key.encode()):
+        _FB_KEYFAIL[addr] = fails + [now]
         time.sleep(1)                                        # slows down guessing
         return HttpResponse("The research-team key is not correct.", status=403, content_type="text/plain")
     stamp = time.strftime("%Y%m%d")

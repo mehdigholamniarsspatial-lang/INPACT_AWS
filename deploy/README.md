@@ -33,6 +33,7 @@ After editing it: `sudo systemctl restart inpact`. `CSRF_TRUSTED_ORIGINS` must l
 3. **Server:** `cd ~/INPACT_AWS && bash deploy/enable_https.sh` (optionally with
    `CERTBOT_EMAIL=...` in front for expiry warnings).
 
+`enable_https.sh` also sets `SECURE_SSL_REDIRECT=1` and `SECURE_HSTS_SECONDS=31536000` in the env file.
 The certificate (Let's Encrypt, 90 days) renews itself through `certbot.timer`; test with
 `sudo certbot renew --dry-run`. If the static IP changes, update both A records and `ALLOWED_HOSTS`.
 
@@ -67,6 +68,23 @@ and copied daily to `/var/lib/inpact/backup/` (30 days). `deploy/ensure_feedback
 * **Copy the raw file to your PC:** `scp inpact-aws:/var/lib/inpact/feedback/responses.jsonl .`
 * The `Contacts` sheet holds personal data (e-mails of interview volunteers): keep it apart from
   the analysis files and delete it when the follow-up is done.
+
+## Security
+
+* **Django** (`inpact_platform/settings.py`): `DEBUG=0`, secret key only in the env file, CSRF and
+  clickjacking middleware, HTTPS redirect, HSTS (1 year, this host only), secure cookies, nosniff,
+  `Referrer-Policy: same-origin`. Check with the real settings:
+  `sudo bash -c 'set -a; . /etc/inpact/inpact.env; set +a; .venv/bin/python manage.py check --deploy'`
+  (W005, W019 and W021 are silenced on purpose; the reasons are in settings.py).
+* **Feedback keys:** wrong group or research-team keys lock an address out for 15 minutes after 8
+  attempts; nginx also limits `/api/feedback/` to 30 requests a minute per address (burst 30).
+  The client address comes from `X-Real-IP`, which nginx overwrites, so it cannot be faked.
+* **nginx:** TLS 1.2/1.3 only (certbot options), version hidden (`server_tokens off`), 2 MB body
+  limit, `Permissions-Policy`; gunicorn listens on 127.0.0.1 only.
+* **Server:** SSH keys only, no root login (`/etc/ssh/sshd_config.d/60-inpact-hardening.conf`),
+  automatic security updates (`unattended-upgrades`). Reboot when `/var/run/reboot-required` exists.
+  In Lightsail's firewall keep only 22, 80 and 443 open; ideally restrict 22 to known addresses.
+* **Data:** `/etc/inpact/inpact.env` is `root:www-data 640`; `/var/lib/inpact` is `750`.
 
 ## Logs
 

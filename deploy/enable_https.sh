@@ -36,7 +36,12 @@ for f in /etc/letsencrypt/options-ssl-nginx.conf /etc/letsencrypt/ssl-dhparams.p
   sudo test -f "$f" || { echo "Missing $f (normally written by certbot's nginx plugin)" >&2; exit 1; }
 done
 
-# 3. HTTPS site; port 80 (domain, www and the bare IP) redirects to it
+# 3. Django's HTTPS-only settings (redirect, HSTS for one year, secure cookies): see settings.py
+for kv in SECURE_SSL_REDIRECT=1 SECURE_HSTS_SECONDS=31536000; do
+  sudo grep -q "^${kv%%=*}=" "$ENV" || echo "$kv" | sudo tee -a "$ENV" >/dev/null
+done
+
+# 4. HTTPS site; port 80 (domain, www and the bare IP) redirects to it
 sudo cp deploy/nginx-inpact-https.conf /etc/nginx/sites-available/inpact
 sudo ln -sf /etc/nginx/sites-available/inpact /etc/nginx/sites-enabled/inpact
 sudo nginx -t
