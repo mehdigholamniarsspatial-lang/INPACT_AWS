@@ -7,15 +7,13 @@
  * "Verify on server" re-runs the same fits there and compares the numbers.
  *
  * What you can do on the chart
- *   Select mode (R):    drag horizontally to draw an analysis range. A live
- *                       preview line and stats appear while you drag; release
- *                       to keep it as a coloured range (up to 8).
- *   Breakpoint mode (B): click a year to add a piecewise breakpoint.
- *   Zoom (Z) / Pan (P): Plotly navigation; double-click resets the view.
- *   Any mode:          drag a dashed breakpoint line, a range edge, or a
- *                       range's top strip (moves it). Fits update live.
- * State (series, model, breakpoints, ranges, options) is kept in the URL
- * hash, #trend/<state>, so a copied link reopens the same analysis.
+ *   Split the trend (B): click a year to add a piecewise breakpoint; drag a
+ *                       dashed breakpoint line to move it. Fits update live.
+ *   Zoom in (Z):        draw a box; double-click or Reset view zooms out.
+ *   Policies:           click a ▲ marker to pin it as a vertical line; hover
+ *                       the line for its description and Policy Timeline link.
+ * State (series, model, breakpoints, pinned policies, options) is kept in the
+ * URL hash, #trend/<state>, so a copied link reopens the same analysis.
  *
  * Exposes one global entry point, initTrendTab(), which the page's tab code
  * calls the first time the tab is opened. Plotly is loaded on demand then.
@@ -28,20 +26,18 @@
   const S = window.TrendStats;
   const UNITS = "kt CO₂-eq";
   const SEG_COLORS = ["#1b6ca8", "#c0392b", "#2e8b57", "#8e44ad", "#d68910", "#16a085", "#7f8c8d", "#2c3e50"];
-  const RANGE_COLORS = ["#e67e22", "#7d3c98", "#138d75", "#cb4335", "#2e4053", "#b7950b", "#1f618d", "#a04000"];
   const POLICY_COLORS = { International: "#5b6b7a", EU: "#1f4e9e", National: "#00843D", Target: "#c0392b" };
-  const MAX_RANGES = 8;
   const MAX_BREAKS = 10;
   const HANDLE_PX = 8;
   // Plotly drag behaviour per tool (Breakpoint mode only reacts to clicks)
-  const DRAGMODE = { select: "select", breakpoint: false, zoom: "zoom" };
+  const DRAGMODE = { breakpoint: false, zoom: "zoom" };
 
   const T = {
     inited: false, data: null, gd: null,
     gas: null, sector: null, method: "ols", conf: 0.95,
-    bps: [2001], ranges: [], preview: null, nextRangeId: 1,
+    bps: [2001],
     opt: { band: true, pred: false, bp: true, policies: true, yoy: true, log: false, mk: true, proj: 2030 },
-    mode: "select", result: null, drag: null, raf: 0, hashTimer: 0, verify: null,
+    mode: "breakpoint", result: null, drag: null, raf: 0, hashTimer: 0, verify: null,
     pins: new Set(),          // pinned policies, keyed "year|name"
     card: null, cardTimer: 0, cardKey: null,
   };
@@ -129,8 +125,6 @@
       if (isNum(st.c) && st.c >= 0.8 && st.c <= 0.99) T.conf = Math.round(st.c * 100) / 100;
       if (Array.isArray(st.p)) st.p.forEach(k => { if (typeof k === "string") T.pins.add(k); });
       if (Array.isArray(st.b)) T.bps = st.b.filter(isNum).slice(0, MAX_BREAKS);
-      if (Array.isArray(st.r)) st.r.filter(r => Array.isArray(r) && isNum(r[0]) && isNum(r[1]) && r[0] < r[1])
-        .slice(0, MAX_RANGES).forEach(r => T.ranges.push(newRange(r[0], r[1])));
       if (st.o && typeof st.o === "object") for (const k of Object.keys(T.opt)) if (k in st.o) T.opt[k] = st.o[k];
     } catch (e) { /* ignore a malformed link and start from defaults */ }
   }
@@ -141,8 +135,7 @@
       history.replaceState(null, "", location.pathname + location.search + "#trend/" + b64e(JSON.stringify(stateObj())));
     }, 250);
   }
-  const stateObj = () => ({ g: T.gas, s: T.sector, m: T.method, c: T.conf, b: T.bps,
-    r: T.ranges.map(r => [r.a, r.b]), o: T.opt, p: [...T.pins] });
+  const stateObj = () => ({ g: T.gas, s: T.sector, m: T.method, c: T.conf, b: T.bps, o: T.opt, p: [...T.pins] });
 
   // ------------------------------------------------------------------
   // Controls
@@ -203,19 +196,7 @@
     document.querySelectorAll("#trModes [data-mode]").forEach(b =>
       b.addEventListener("click", () => setMode(b.dataset.mode)));
     $("trResetView").addEventListener("click", () => window.Plotly.relayout(T.gd, { "xaxis.autorange": true, "yaxis.autorange": true }));
-    $("trClearRanges").addEventListener("click", () => { T.ranges = []; recompute(); });
     $("trPinnedClear").addEventListener("click", () => { T.pins.clear(); hideCard(true); recompute(); });
-    $("trRangeBody").addEventListener("click", e => {
-      const b = e.target.closest("[data-remove]");
-      if (b) { T.ranges = T.ranges.filter(r => r.id !== Number(b.dataset.remove)); recompute(); }
-    });
-    $("trRangeBody").addEventListener("change", e => {
-      const inp = e.target.closest("[data-edge]");
-      if (!inp) return;
-      const r = T.ranges.find(q => q.id === Number(inp.dataset.id));
-      const v = parseInt(inp.value, 10);
-      if (r && isNum(v)) { setRangeEdge(r, inp.dataset.edge, v); recompute(); }
-    });
 
     $("trCsvBtn").addEventListener("click", downloadCsv);
     $("trPngBtn").addEventListener("click", () => window.Plotly.downloadImage(T.gd, {
@@ -227,10 +208,11 @@
 
     document.addEventListener("keydown", e => {
       if (!$("tab-trend").classList.contains("active")) return;
-      if (e.target.closest("input, select, textarea, [contenteditable]") || e.ctrlKey || e.metaKey || e.altKey) return;
-      const k = { r: "select", b: "breakpoint", z: "zoom" }[e.key.toLowerCase()];
+      const el = e.target instanceof Element ? e.target : null;
+      if ((el && el.closest("input, select, textarea, [contenteditable]")) || e.ctrlKey || e.metaKey || e.altKey) return;
+      const k = { b: "breakpoint", z: "zoom" }[e.key.toLowerCase()];
       if (k) { setMode(k); e.preventDefault(); }
-      if (e.key === "Escape") { hideCard(true); if (T.preview) { T.preview = null; scheduleRender(); } }
+      if (e.key === "Escape") hideCard(true);
     });
   }
 
@@ -243,8 +225,7 @@
     });
     if (T.gd && T.gd.layout) window.Plotly.relayout(T.gd, { dragmode: DRAGMODE[mode] });
     $("trModeHint").innerHTML = {
-      select: '<i class="bi bi-hand-index"></i> <b>Measure a period:</b> drag across the chart. Click a ▲ policy marker under the chart to draw it as a line.',
-      breakpoint: '<i class="bi bi-hand-index"></i> <b>Split the trend:</b> click a year to add a breakpoint, or drag a dashed line to move it.',
+      breakpoint: '<i class="bi bi-hand-index"></i> <b>Split the trend:</b> click a year to add a breakpoint, or drag a dashed line to move it. Click a ▲ policy marker under the chart to draw it as a line.',
       zoom: '<i class="bi bi-hand-index"></i> <b>Zoom in:</b> drag a box. Double-click the chart or press Reset view to zoom out.',
     }[mode];
   }
@@ -264,24 +245,6 @@
     if (T.bps.length >= MAX_BREAKS) { setError(`At most ${MAX_BREAKS} breakpoints.`); return; }
     T.bps = [...T.bps, v].sort((a, b) => a - b);
   }
-  function newRange(a, b) {
-    const used = new Set(T.ranges.map(r => r.color));
-    const color = RANGE_COLORS.find(c => !used.has(c)) || RANGE_COLORS[T.nextRangeId % RANGE_COLORS.length];
-    return { id: T.nextRangeId++, a: Math.round(a), b: Math.round(b), color };
-  }
-  function addRange(a, b) {
-    if (T.ranges.length >= MAX_RANGES) { setError(`At most ${MAX_RANGES} ranges; remove one first.`); return; }
-    const { lo, hi } = dataSpan();
-    a = Math.max(lo, Math.ceil(a)); b = Math.min(hi, Math.floor(b));
-    if (b - a < 2) { setError("A range needs at least 3 years. Drag a wider selection."); return; }
-    T.ranges.push(newRange(a, b));
-  }
-  function setRangeEdge(r, edge, v) {
-    const { lo, hi } = dataSpan();
-    if (edge === "a") r.a = Math.max(lo, Math.min(Math.round(v), r.b - 2));
-    else r.b = Math.min(hi, Math.max(Math.round(v), r.a + 2));
-  }
-
   function autoDetect() {
     const { x, y } = series();
     const maxB = parseInt($("trBpMax").value, 10) || 2;
@@ -297,23 +260,10 @@
   // ------------------------------------------------------------------
   // Computation (pure stats.js calls; ~1 ms for an annual series)
   // ------------------------------------------------------------------
-  function fitRange(x, y, a, b) {
-    const idx = []; x.forEach((v, i) => { if (v >= a && v <= b) idx.push(i); });
-    const xs = idx.map(i => x[i]), ys = idx.map(i => y[i]);
-    if (xs.length < S.MIN_POINTS_PER_SEGMENT) return { error: `${xs.length} data point(s) in ${a}–${b}; at least 3 are needed.`, n: xs.length };
-    try {
-      const f = S.fit(xs, ys, { method: T.method, confidence: T.conf });
-      return {
-        fit: f, mk: S.mannKendall(ys), sen: S.sensSlope(xs, ys, T.conf), sum: S.rangeSummary(xs, ys),
-        warn: f.warning,
-      };
-    } catch (e) { return { error: e.message, n: xs.length }; }
-  }
-
   function recompute() {
     if (!T.data) return;
     const { x, y } = series();
-    const res = { x, y, pw: null, pwError: null, ranges: [], chow: [] };
+    const res = { x, y, pw: null, pwError: null, chow: [] };
     // drop breakpoints that fall outside a new series' span
     T.bps = T.bps.filter(b => b > x[0] && b < x[x.length - 1]);
     if (x.length >= S.MIN_POINTS_PER_SEGMENT) {
@@ -330,8 +280,6 @@
       res.pwError = `This series has only ${x.length} valid value(s); at least 3 are needed.`;
       setError(res.pwError);
     }
-    res.ranges = T.ranges.map(r => ({ r, ...fitRange(x, y, r.a, r.b) }));
-    if (T.preview) res.preview = fitRange(x, y, T.preview.a, T.preview.b);
     T.result = res;
     render();
     writeHash();
@@ -370,7 +318,6 @@
     traces.push({
       x: R.x, y: R.y, type: "scatter", mode: "lines+markers", name: "Observed",
       line: { color: "rgba(60,60,60,.45)", width: 1.2 }, marker: { color: "#3c3c3c", size: 6 },
-      unselected: { marker: { opacity: 1 } }, selected: { marker: { opacity: 1 } },
       hovertemplate: `%{y:,.1f} ${UNITS}<extra>Observed</extra>`,
     });
 
@@ -398,24 +345,6 @@
         name: `Projection to ${T.opt.proj}`, hovertemplate: `Projection: %{y:,.1f}<extra></extra>`,
       });
     }
-
-    // Saved ranges: line + translucent rectangle + draggable top strip
-    R.ranges.forEach((rr, k) => {
-      const r = rr.r;
-      shapes.push({ type: "rect", xref: "x", yref: "y domain", x0: r.a, x1: r.b, y0: 0, y1: 1,
-        fillcolor: rgba(r.color, 0.07), line: { color: rgba(r.color, 0.55), width: 1 }, layer: "below" });
-      shapes.push({ type: "rect", xref: "x", yref: "y domain", x0: r.a, x1: r.b, y0: 0.94, y1: 1,
-        fillcolor: rgba(r.color, 0.35), line: { width: 0 }, layer: "above",
-        label: { text: `R${k + 1}`, font: { size: 10, color: "#fff" }, textposition: "middle center" } });
-      if (rr.fit) {
-        const f = rr.fit;
-        traces.push({
-          x: [r.a, r.b], y: [f.intercept + f.slope * r.a, f.intercept + f.slope * r.b], type: "scatter", mode: "lines",
-          line: { color: r.color, width: 3 }, name: `R${k + 1} ${r.a}–${r.b}`,
-          hovertemplate: `R${k + 1}: %{y:,.1f}<extra>${fmtSigned(f.slope)} /yr</extra>`,
-        });
-      }
-    });
 
     // Breakpoints
     if (T.opt.bp && R.pw) R.pw.used.forEach(bp => shapes.push({
@@ -471,14 +400,10 @@
       });
     }
 
-    // a range selection must never dim any trace
-    traces.forEach(t => { t.selectedpoints = null; t.unselected = { marker: { opacity: 1 } }; });
-
     const layout = {
       uirevision: T.gas + "|" + T.sector,
       margin: { l: 70, r: 18, t: 24, b: 70 },
       dragmode: DRAGMODE[T.mode],
-      selectdirection: "h",
       hovermode: "x unified",
       hoverlabel: { bgcolor: "rgba(255,255,255,.96)", bordercolor: "#c9d3dc", font: { size: 12 } },
       showlegend: true,
@@ -507,29 +432,7 @@
     // No Plotly toolbar: the tool buttons above the chart replace it
     window.Plotly.react(T.gd, traces, layout, { responsive: true, displayModeBar: false, scrollZoom: false });
     renderSide();
-    drawOverlay();
     if ($("trAdvancedPanel").classList.contains("show")) renderDiagnostics();
-  }
-
-  /** Preview regression line drawn over the plot without redrawing Plotly. */
-  function drawOverlay() {
-    let svg = T.overlay;
-    if (!svg) {
-      svg = T.overlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("class", "tr-overlay");
-      svg.setAttribute("aria-hidden", "true");
-      T.gd.appendChild(svg);
-    }
-    const pv = T.result && T.result.preview, fl = T.gd._fullLayout;
-    if (!pv || !pv.fit || !fl || !fl.xaxis) { svg.innerHTML = ""; return; }
-    const xa = fl.xaxis, ya = fl.yaxis, f = pv.fit;
-    const P = xv => [xa._offset + xa.c2p(xv), ya._offset + ya.c2p(f.intercept + f.slope * xv)];
-    const [x1, y1] = P(f.start), [x2, y2] = P(f.end);
-    if (![x1, y1, x2, y2].every(isNum)) { svg.innerHTML = ""; return; }
-    const label = `${fmtSigned(f.slope)} /yr · R² ${isNum(f.r2) ? f.r2.toFixed(2) : "–"} · p ${fmtP(f.p)}`;
-    svg.innerHTML =
-      `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#111" stroke-width="2.5" stroke-dasharray="5 4"/>` +
-      `<text x="${(x1 + x2) / 2}" y="${Math.min(y1, y2) - 10}" text-anchor="middle" class="tr-overlay-label">${esc(label)}</text>`;
   }
 
   // ------------------------------------------------------------------
@@ -699,49 +602,13 @@
   }
 
   // ------------------------------------------------------------------
-  // Pointer interaction: select / click / custom handle drags
+  // Pointer interaction: click to add breakpoints, drag breakpoint lines
   // ------------------------------------------------------------------
   function bindChart() {
     const gd = T.gd = $("trChart");
     window.Plotly.newPlot(gd, [], {});
     setMode(T.mode);
 
-    // While a selection is being drawn, Plotly must not be redrawn (that would
-    // cancel the drag), so the preview goes to an SVG overlay and the table only.
-    gd.on("plotly_selecting", ev => {
-      if (!ev || !ev.range || !ev.range.x) return;
-      const [a, b] = ev.range.x;
-      T.preview = { a: Math.ceil(Math.min(a, b)), b: Math.floor(Math.max(a, b)) };
-      if (T.previewRaf) return;
-      T.previewRaf = requestAnimationFrame(() => {
-        T.previewRaf = 0;
-        if (!T.preview || !T.result) return;
-        const { x, y } = series();
-        T.result.preview = fitRange(x, y, T.preview.a, T.preview.b);
-        renderRanges();
-        drawOverlay();
-      });
-    });
-    // Redrawing the figure can itself emit plotly_selected / plotly_deselect,
-    // so only a real, user-drawn selection is acted on, outside the event.
-    gd.on("plotly_selected", ev => {
-      const rng = ev && ev.range && ev.range.x;
-      if (!rng || T.mode !== "select") return;
-      T.preview = null;
-      if (T.previewRaf) { cancelAnimationFrame(T.previewRaf); T.previewRaf = 0; }
-      setTimeout(() => {
-        addRange(Math.min(...rng), Math.max(...rng));
-        // reset Plotly's own selection so the next drag starts fresh
-        gd.layout.selections = [];
-        recompute();
-      }, 0);
-    });
-    gd.on("plotly_deselect", () => {
-      if (!T.preview) return;
-      T.preview = null;
-      if (T.result) T.result.preview = null;
-      renderRanges(); drawOverlay();
-    });
     gd.on("plotly_click", ev => {
       if (T.mode !== "breakpoint" || !ev.points || !ev.points.length) return;
       addBreakpoint(ev.points[0].x);
@@ -781,15 +648,6 @@
       if (d.kind === "bp") {
         const v = Math.max(lo + 1, Math.min(hi - 1, Math.round(xv)));
         if (v !== T.bps[d.i] && !T.bps.includes(v)) { T.bps[d.i] = v; T.bps.sort((a, b) => a - b); d.i = T.bps.indexOf(v); scheduleRender(); }
-      } else if (d.kind === "edge") {
-        const r = T.ranges[d.i], before = r[d.edge];
-        setRangeEdge(r, d.edge, xv);
-        if (r[d.edge] !== before) scheduleRender();
-      } else if (d.kind === "move") {
-        const r = T.ranges[d.i], w = r.b - r.a;
-        let a = Math.round(xv - d.grab);
-        a = Math.max(lo, Math.min(hi - w, a));
-        if (a !== r.a) { r.a = a; r.b = a + w; scheduleRender(); }
       }
     };
     window.addEventListener("mousemove", e => {
@@ -798,8 +656,7 @@
         if (T.card && T.card.contains(e.target)) return;
         const h = hit(e.clientX, e.clientY);
         const pm = !h && policyMarkerHit(e.clientX, e.clientY);
-        gd.classList.toggle("tr-hot-ew", !!h && h.kind !== "move");
-        gd.classList.toggle("tr-hot-move", !!h && h.kind === "move");
+        gd.classList.toggle("tr-hot-ew", !!h);
         gd.classList.toggle("tr-hot-click", !!pm);
         // hovering a pinned policy line shows its full description
         const pl = !h && pinnedLineHit(e.clientX, e.clientY);
@@ -824,20 +681,13 @@
     const g = plotGeom();
     return g ? g.xa.p2l(cx - g.rect.left - g.s.l) : NaN;
   }
-  /** What is under the pointer: a breakpoint line, a range edge, or a range's top strip. */
+  /** The breakpoint line under the pointer, or null. */
   function hit(cx, cy) {
     const g = plotGeom();
     if (!g || !T.result) return null;
     const px = cx - g.rect.left - g.s.l, py = cy - g.rect.top;
     if (px < -HANDLE_PX || px > g.s.w + HANDLE_PX || py < g.top || py > g.bot) return null;
     const xp = v => g.xa.l2p(v);
-    const stripBottom = g.top + (g.bot - g.top) * 0.06;
-    for (let i = T.ranges.length - 1; i >= 0; i--) {
-      const r = T.ranges[i];
-      if (Math.abs(xp(r.a) - px) <= HANDLE_PX) return { kind: "edge", i, edge: "a" };
-      if (Math.abs(xp(r.b) - px) <= HANDLE_PX) return { kind: "edge", i, edge: "b" };
-      if (py <= stripBottom && px > xp(r.a) && px < xp(r.b)) return { kind: "move", i, grab: g.xa.p2l(px) - r.a };
-    }
     if (T.opt.bp) for (let i = 0; i < T.bps.length; i++) {
       if (Math.abs(xp(T.bps[i]) - px) <= HANDLE_PX) return { kind: "bp", i };
     }
@@ -876,7 +726,6 @@
       `<div class="tr-kpi ${cls || ""}"><div class="lbl">${esc(l)}</div><div class="val">${esc(v)}</div><div class="sub">${esc(s)}</div></div>`).join("");
 
     renderDirection();
-    renderRanges();
     renderStatsTables();
   }
 
@@ -902,49 +751,6 @@
         `<span class="td-period">${s.start}–${s.end}</span><i class="bi ${icon}"></i><span>${label}</span>` +
         `<span class="td-stats">${d.stat} · p ${fmtP(d.p)}</span></span>`;
     }).join("");
-  }
-
-  function rangeRowHtml(rr, label, color, editable) {
-    const r = rr.r || {};
-    const edges = editable
-      ? `<input type="number" class="tr-yr" data-id="${r.id}" data-edge="a" value="${r.a}" aria-label="Range start year">–<input type="number" class="tr-yr" data-id="${r.id}" data-edge="b" value="${r.b}" aria-label="Range end year">`
-      : `${rr.fit ? rr.fit.start + "–" + rr.fit.end : "…"}`;
-    const sw = `<span class="tr-swatch" style="background:${color}"></span>`;
-    if (rr.error) return `<tr class="${editable ? "" : "tr-preview"}"><td>${sw}${label}</td><td class="text-nowrap">${edges}</td><td>${rr.n ?? "–"}</td><td colspan="9" class="text-danger">${esc(rr.error)}</td><td>${editable ? removeBtn(r.id) : ""}</td></tr>`;
-    const f = rr.fit, m = rr.mk, su = rr.sum;
-    const pct = f.slope / su.mean * 100;
-    return `<tr class="${editable ? "" : "tr-preview"}">
-      <td>${sw}${label}</td><td class="text-nowrap">${edges}</td><td>${f.n}</td>
-      <td class="text-nowrap ${f.slope <= 0 ? "tr-good" : "tr-bad"}"><b>${fmtSigned(f.slope)}</b></td>
-      <td class="text-nowrap small">${fmtSigned(f.ciLow)} to ${fmtSigned(f.ciHigh)}</td>
-      <td>${fmtSigned(pct, 2)}%</td>
-      <td>${isNum(f.r2) ? f.r2.toFixed(3) : "–"}</td>
-      <td class="text-nowrap">${fmtP(f.p)} <span class="tr-stars">${stars(f.p)}</span></td>
-      <td>${fmtSigned(rr.sen.slope)}</td>
-      <td class="text-nowrap">${fmt(m.tau, 2)} <small class="text-muted">(p ${fmtP(m.p)})</small></td>
-      <td class="text-nowrap">${fmtSigned(su.pctChange)}%</td>
-      <td>${fmtSigned(su.cagr, 2)}%</td>
-      <td>${editable ? removeBtn(r.id) : ""}</td></tr>` +
-      (rr.warn ? `<tr><td></td><td colspan="12" class="small text-warning-emphasis">${esc(rr.warn)}</td></tr>` : "");
-  }
-  const removeBtn = id => `<button type="button" class="btn btn-link btn-sm p-0 text-danger" data-remove="${id}" title="Remove range"><i class="bi bi-x-circle"></i></button>`;
-
-  function renderRanges() {
-    const R = T.result;
-    let rows = R.ranges.map((rr, k) => rangeRowHtml(rr, `R${k + 1}`, rr.r.color, true)).join("");
-    if (R.preview) rows += rangeRowHtml(R.preview, "Preview", "#111", false);
-    $("trRangeBody").innerHTML = rows ||
-      `<tr><td colspan="13" class="text-muted small py-3">No ranges yet. Choose <b>Select range</b> and drag across the chart to analyse a period, for example the years after a policy started.</td></tr>`;
-    $("trClearRanges").disabled = !R.ranges.length;
-    // range-difference test between the first two ranges (slopes compared with a z-test)
-    const ok = R.ranges.filter(rr => rr.fit);
-    const cmp = $("trRangeCompare");
-    if (ok.length >= 2) {
-      const [a, b] = ok, d = b.fit.slope - a.fit.slope, se = Math.sqrt(a.fit.se ** 2 + b.fit.se ** 2), z = d / se;
-      cmp.hidden = false;
-      cmp.innerHTML = `<b>Slope change R1 → R2:</b> ${fmtSigned(d)} ${UNITS}/yr (SE ${fmt(se)}, z = ${fmt(z, 2)}, p ${fmtP(S.normTwoSided(z))} ${stars(S.normTwoSided(z))}). ` +
-        `<span class="text-muted">Assumes the two ranges are independent; overlapping ranges overstate significance.</span>`;
-    } else cmp.hidden = true;
   }
 
   function table(id, cols, rows) {
@@ -1042,8 +848,6 @@
       const R = T.result, base = { gas: T.gas, sector: T.sector, method: T.method, confidence: T.conf };
       const jobs = [];
       if (R.pw) jobs.push(postFit({ ...base, breakpoints: R.pw.used }).then(d => ({ client: R.pw.segments, server: d.segments })));
-      R.ranges.filter(rr => rr.fit).forEach(rr =>
-        jobs.push(postFit({ ...base, breakpoints: [], start: rr.r.a, end: rr.r.b }).then(d => ({ client: [rr.fit], server: d.segments }))));
       const out = await Promise.all(jobs);
       let worst = 0, count = 0;
       for (const { client, server } of out) {
@@ -1080,7 +884,6 @@
       f.intercept, f.levelAtStart, f.r2, f.adjR2, f.rmse, f.mae, f.t, f.p, f.dw, mk.S, mk.tau, mk.Z, mk.p, mk.trend, sen.slope, sen.ciLow, sen.ciHigh];
     const rows = [];
     if (R.pw) R.pw.segments.forEach(s => rows.push(row("segment", `Seg ${s.index}`, s, s.mk, s.sen)));
-    R.ranges.forEach((rr, k) => { if (rr.fit) rows.push(row("range", `R${k + 1}`, rr.fit, rr.mk, rr.sen)); });
     R.chow.forEach(c => rows.push(["chow_test", `break ${c.breakpoint}`, c.breakpoint, "", "", "", "", "", "", "", "", "", "", "", "", "", "", c.F, c.p]));
     const cell = v => { const s = v == null || (typeof v === "number" && !Number.isFinite(v)) ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const meta = `# ${T.gas} | ${T.sector} | ${UNITS} | computed in browser by INPACT Trend Analysis | ${new Date().toISOString().slice(0, 10)}`;

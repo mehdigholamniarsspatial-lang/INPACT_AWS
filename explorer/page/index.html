@@ -3945,23 +3945,7 @@ a.ug-go.alt:hover{color:var(--navy)}
         <div class="tr-toolbar">
           <div class="tr-tools" role="group" aria-label="Chart tool" id="trModes">
             <div class="tr-tool-wrap">
-            <button type="button" class="tr-tool active" data-mode="select" aria-pressed="true" aria-describedby="trGuideSelect">
-              <i class="bi bi-arrows-expand-vertical"></i>
-              <span class="tr-tool-txt"><b>Measure a period</b><small>Drag across years</small></span>
-              <kbd>R</kbd>
-            </button>
-            <div class="tr-guide" role="tooltip" id="trGuideSelect">
-                <b><i class="bi bi-arrows-expand-vertical"></i> Measure a period</b>
-                <ol>
-                  <li>Press and hold on the chart at the first year.</li>
-                  <li>Drag sideways to the last year: the trend line and its slope appear as you move.</li>
-                  <li>Release to keep it as a coloured range. Its statistics are listed under the chart.</li>
-                </ol>
-                <span class="tr-guide-tip">Drag a range's edge to resize it, or its coloured top strip to move it.</span>
-              </div>
-            </div>
-            <div class="tr-tool-wrap">
-            <button type="button" class="tr-tool" data-mode="breakpoint" aria-pressed="false" aria-describedby="trGuideBreak">
+            <button type="button" class="tr-tool active" data-mode="breakpoint" aria-pressed="true" aria-describedby="trGuideBreak">
               <i class="bi bi-signpost-split"></i>
               <span class="tr-tool-txt"><b>Split the trend</b><small>Click a year</small></span>
               <kbd>B</kbd>
@@ -4005,28 +3989,6 @@ a.ug-go.alt:hover{color:var(--navy)}
         <div id="trDirection" class="trend-direction" hidden>
           <span class="td-label">Direction of trend</span>
           <div class="td-segments" id="trDirectionSegments"></div>
-        </div>
-      </section>
-
-      <!-- Range analysis: one row per selected period -->
-      <section class="panel-card mb-3">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <div class="fw-bold" style="color:var(--navy)"><i class="bi bi-bounding-box-circles me-1"></i>Range analysis</div>
-          <button type="button" id="trClearRanges" class="btn btn-link btn-sm text-danger p-0" disabled>Clear all</button>
-        </div>
-        <div class="trend-table-wrap">
-          <table class="table table-sm table-striped align-middle mb-0 tr-ranges">
-            <thead><tr>
-              <th>Range</th><th>Years</th><th>N</th><th>Slope /yr</th><th>Slope CI</th><th>% of mean /yr</th>
-              <th>R²</th><th>p</th><th>Sen's slope</th><th>Kendall τ</th><th>Change</th><th>CAGR</th><th></th>
-            </tr></thead>
-            <tbody id="trRangeBody"></tbody>
-          </table>
-        </div>
-        <div id="trRangeCompare" class="tr-compare" hidden></div>
-        <div class="trend-hint mt-1">
-          Slopes in kt CO₂-eq per year, by the selected regression method. Stars: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001.
-          Edit the years in the table, or drag a range's edges or top strip on the chart.
         </div>
       </section>
 
@@ -5534,7 +5496,7 @@ a.ug-go.alt:hover{color:var(--navy)}
       <div class="ug-card">
         <h3 class="ug-card-title"><i class="bi bi-diagram-2"></i>Two tabs, one question</h3>
         <div class="ug-ideas ug-ideas-2">
-          <div class="ug-idea"><b><i class="bi bi-activity"></i> Trend Analysis</b><span>A <em>quick, built-in</em> tool inside this dashboard. Pick a gas and a sector, then drag across the chart to fit a trend to any period, or drag the dashed breakpoint lines to split the series. Every statistic updates instantly in your browser. Export the statistics as CSV, the chart as PNG, or copy a link to the analysis.</span>
+          <div class="ug-idea"><b><i class="bi bi-activity"></i> Trend Analysis</b><span>A <em>quick, built-in</em> tool inside this dashboard. Pick a gas and a sector, then click a year to split the series into trend periods, drag the dashed breakpoint lines to move them, and click a ▲ policy marker to see that policy on the chart. Every statistic updates instantly in your browser. Export the statistics as CSV, the chart as PNG, or copy a link to the analysis.</span>
             <span class="ug-actions" style="margin-top:.6rem"><button type="button" class="ug-go alt" data-go="trend"><i class="bi bi-activity"></i>Open Trend Analysis</button></span></div>
           <div class="ug-idea"><b><i class="bi bi-bar-chart-steps"></i> Structural Break Analysis</b><span>An <em>advanced</em> tool that runs as a separate Streamlit app. It fits a trend to each period between your break years, overlays EU, national and international climate policies, and gives full control of the figure, statistics, diagnostics and publication-quality exports. <strong>This tutorial covers this app.</strong></span>
             <span class="ug-actions" style="margin-top:.6rem"><a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Open the Streamlit app</a></span></div>

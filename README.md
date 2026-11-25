@@ -308,17 +308,13 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
     first visit to the tab, and falls back to `policies/vendor/plotly.min.js`.
   * `explorer/static/explorer/trend/trend.css`: styles for the tab.
 * What users can do:
-  * **Select range (R):** drag across the chart to fit a period. A live preview
-    line and stats appear during the drag. Release to keep the range, up to 8
-    coloured ranges. Each range reports its slope with CI, % of mean per year,
-    R², p, Sen's slope, Kendall τ, total change and CAGR. With two ranges, the
-    tab also tests the slope change between them.
-  * **Breakpoint (B):** click a year to add a breakpoint. Drag any dashed
-    breakpoint line to move it, with the piecewise fit updating as you drag.
-    **Auto-detect** chooses up to 3 breaks by minimum BIC.
-  * Drag a range's edge to resize it, or its top strip to move it. **Zoom
-    (Z)** draws a box; **Reset view** zooms back out. Each tool button shows a
-    step-by-step guide on hover. Plotly's own toolbar is hidden.
+  * **Split the trend (B, the default tool):** click a year to add a
+    breakpoint. Drag any dashed breakpoint line to move it, with the piecewise
+    fit updating as you drag. **Auto-detect** chooses up to 3 breaks by
+    minimum BIC.
+  * **Zoom in (Z)** draws a box; **Reset view** zooms back out. Each tool
+    button shows a step-by-step guide on hover. Plotly's own toolbar is
+    hidden.
   * **Confidence level** is a slider (80–99%, default 95%; double-click to
     reset). Every band, interval and test updates while you drag it.
   * **Policies:** the ▲ markers under the chart come from `data/policies.csv`.
