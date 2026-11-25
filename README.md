@@ -364,6 +364,36 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
   * Display options: confidence band, prediction interval, log scale, and a
     projection of the last segment to a target year with its prediction
     interval.
+  * **Advanced Plot Settings** (⚙, collapsed, above Advanced Statistics):
+    visual options only, in `explorer/static/explorer/trend/plot-style.js`.
+    The module holds one style object; `trend-chart.js` reads it when it
+    draws the figure and legend. The data, fits and tests are never changed.
+    * Sections: Observed data (line and markers: show, colour, width,
+      style, opacity, symbol, size, edge) · Trends & intervals (segment
+      palette, width, style, opacity; band, prediction interval and
+      projection fills) · Breakpoints (line style; year label font,
+      position and rotation; each breakpoint's line and label on or off) ·
+      Policy overlays (core and sector line styles, width, opacity;
+      annotation font, weight, style, colour, orientation, position,
+      alignment, offset and length; per policy: line, label, colour and
+      label text) · X axis and Y axis (title text and font; tick font,
+      rotation, direction, length, interval, custom positions, minor ticks;
+      limits; linear or log scale for Y; axis line; major and minor
+      gridlines) · Legend (show, position: below, above, right or one of
+      four inside corners; columns, spacing, font, background, border;
+      custom label and visibility per entry) · Figure (title, plot and
+      figure backgrounds, height, margins, plot border, font family and base
+      size).
+    * Toolbar: presets (INPACT default, Scientific publication, MATLAB
+      style, Minimal, High contrast). Presets change the overall look but
+      keep per-item choices (policy overrides, legend labels, hidden
+      breakpoints). Also Live preview (switch it off to stage edits and
+      press Apply), Reset to default, Save / Load / Delete named
+      configurations (kept in the browser), and Export / Import JSON.
+    * The current style is remembered in the viewer's browser
+      (localStorage) and is used by the PNG export. The Display switches in
+      the sidebar and their copies in the panel stay in step. Plotly draws
+      ticks on one side only, so tick direction is outside, inside or none.
   * Advanced Statistics: a full segment table, Chow tests, BIC candidates,
     per-segment Mann–Kendall, and four residual plots (over time, histogram,
     Q–Q, ACF).

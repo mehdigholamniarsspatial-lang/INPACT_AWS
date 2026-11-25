@@ -3973,15 +3973,32 @@ a.ug-go.alt:hover{color:var(--navy)}
         </div>
         <div class="tr-mode-hint" id="trModeHint"></div>
 
-        <div class="tr-plot" id="trChart">
-          <div class="tr-loading" id="trLoading" hidden><span class="spinner-border spinner-border-sm"></span> Loading chart…</div>
+        <!-- Chart + legend; the legend's position (below, above, right, inside) is set in Advanced Plot Settings -->
+        <div class="tr-plotwrap lg-bottom" id="trPlotWrap">
+          <div class="tr-plot" id="trChart">
+            <div class="tr-loading" id="trLoading" hidden><span class="spinner-border spinner-border-sm"></span> Loading chart…</div>
+          </div>
+          <!-- Legend: click an entry to hide or show that series -->
+          <div class="tr-legend" id="trLegend" role="group" aria-label="Chart legend: click an entry to hide or show it"></div>
         </div>
-        <!-- Legend: click an entry to hide or show that series -->
-        <div class="tr-legend" id="trLegend" role="group" aria-label="Chart legend: click an entry to hide or show it"></div>
 
         <div id="trDirection" class="trend-direction" hidden>
           <span class="td-label">Direction of trend</span>
           <div class="td-segments" id="trDirectionSegments"></div>
+        </div>
+      </section>
+
+      <!-- Advanced plot settings: visual options only (plot-style.js); collapsed by default -->
+      <section class="panel-card trend-adv tr-ps mb-3">
+        <button class="trend-adv-toggle collapsed" type="button"
+                data-bs-toggle="collapse" data-bs-target="#trPlotSettings"
+                aria-expanded="false" aria-controls="trPlotSettings">
+          <span><i class="bi bi-gear-fill me-2 tr-ps-gear"></i>Advanced Plot Settings
+            <small class="tr-ps-sub">Colours, lines, markers, axes, legend, presets</small></span>
+          <i class="bi bi-chevron-down td-chev"></i>
+        </button>
+        <div id="trPlotSettings" class="collapse">
+          <div class="trend-adv-body" id="trPlotSettingsBody"></div>
         </div>
       </section>
 
@@ -5910,6 +5927,7 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <!-- Trend Analysis tab (Plotly itself is loaded on first visit to the tab) -->
 <script src="/static/explorer/trend/stats.js"></script>
+<script src="/static/explorer/trend/plot-style.js"></script>
 <script src="/static/explorer/trend/trend-chart.js"></script>
 <script>
 /* =====================================================================

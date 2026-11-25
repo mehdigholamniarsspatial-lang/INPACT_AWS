@@ -98,6 +98,7 @@
       if (pol && pol.ok) setPolicyData(pol);
       buildControls();
       bindPolicyPanel();
+      mountPlotSettings();
       bindChart();
       recompute();
     } catch (err) {
@@ -177,7 +178,7 @@
     for (const [id, key] of Object.entries(toggles)) {
       const el = $(id);
       el.checked = !!T.opt[key];
-      el.addEventListener("change", () => { T.opt[key] = el.checked; recompute(); });
+      el.addEventListener("change", () => { T.opt[key] = el.checked; syncSettingsOpts(); recompute(); });
     }
     $("trProjYear").value = T.opt.proj || "";
 
@@ -231,12 +232,12 @@
       data: T.gd.data,
       layout: {
         ...T.gd.layout, showlegend: true,
-        title: { text: `${T.gas}: ${T.sector}`, x: 0.01, font: { size: 16 } },
+        title: T.gd.layout.title && T.gd.layout.title.text ? T.gd.layout.title : { text: `${T.gas}: ${T.sector}`, x: 0.01, font: { size: 16 } },
         margin: { ...T.gd.layout.margin, t: 56, b: 130 },
         legend: { orientation: "h", x: 0, y: -0.1, yanchor: "top", traceorder: "normal", entrywidth: 0.33, entrywidthmode: "fraction", font: { size: 12 } },
-        font: { ...T.gd.layout.font, family: "Segoe UI, Helvetica, Arial, sans-serif" },
+        font: { ...T.gd.layout.font, family: (PSget().font.family || "Segoe UI, Helvetica, Arial, sans-serif") },
       },
-    }, { format: "png", scale: 2, width: 1400, height: 820, filename: slug(`trend_${T.gas}_${T.sector}`) }));
+    }, { format: "png", scale: 2, width: 1400, height: Math.max(600, (PSget().figure.height || 540) + 280), filename: slug(`trend_${T.gas}_${T.sector}`) }));
     $("trLinkBtn").addEventListener("click", copyLink);
     $("trAdvancedPanel").addEventListener("shown.bs.collapse", renderDiagnostics);
 
@@ -249,6 +250,33 @@
       if (e.key === "Escape") { hideCard(true); closePalette(); }
     });
   }
+
+  // Advanced Plot Settings (plot-style.js): visual options only. The Display
+  // switches (bands, breakpoints, log scale) are shared with the sidebar.
+  const OPT_INPUTS = { band: "trShowBand", pred: "trShowPred", bp: "trShowBp", log: "trLogY" };
+  function mountPlotSettings() {
+    if (!window.TrendPlotStyle) return;
+    window.TrendPlotStyle.mount({
+      root: $("trPlotSettingsBody"),
+      onChange: () => scheduleRender(),
+      getOpt: k => !!T.opt[k],
+      setOpt: (k, v) => { T.opt[k] = !!v; if (OPT_INPUTS[k]) $(OPT_INPUTS[k]).checked = !!v; recompute(); },
+      dynamic: () => {
+        const R = T.result || {};
+        const span = q => R.x && q.year >= R.x[0] && q.year <= R.x[R.x.length - 1];
+        return {
+          breakpoints: R.pw ? R.pw.used.slice() : [],
+          policies: R.x ? pinnedInView(span).map(({ p }) => ({ key: p.key, name: p.name, color: p.color })) : [],
+          legend: (T.legend || []).map(e => ({ key: e.key, label: e.label })),
+        };
+      },
+    });
+    $("trPlotSettings").addEventListener("shown.bs.collapse", () => window.TrendPlotStyle.refresh());
+  }
+  // keep the settings panel's copies of the Display switches in step with the sidebar
+  const syncSettingsOpts = () => document.querySelectorAll("#trPlotSettingsBody [data-opt]").forEach(el => {
+    if (el.type === "checkbox") el.checked = !!T.opt[el.dataset.opt]; else el.value = String(!!T.opt[el.dataset.opt]);
+  });
 
   function setMode(mode) {
     T.mode = mode;
@@ -345,120 +373,205 @@
 
   // Each series also yields a legend entry (drawn as HTML under the chart, in
   // columns) with a key; clicking an entry hides or shows that series (T.hidden).
+  // Every visual property comes from the Advanced Plot Settings (plot-style.js);
+  // the statistics in T.result are only read, never changed, here.
+  const PSget = () => (window.TrendPlotStyle ? window.TrendPlotStyle.get() : null);
+  const fontW = w => (w === "bold" ? 700 : 400);
+  function fam(v, PS) { return v || PS.font.family || "inherit"; }
+
+  function axisLayout(a, PS, isLog) {
+    // custom tick positions: ignore blanks (Number("") would be 0)
+    const vals = String(a.tick.vals || "").split(/[,;\s]+/).filter(t => t.trim() !== "").map(Number).filter(isNum);
+    const lim = v => (v == null ? null : isLog ? (v > 0 ? Math.log10(v) : null) : v);
+    const lo = lim(a.range.min), hi = lim(a.range.max);
+    const box = PS.figure.box;
+    const out = {
+      title: { text: a.title.text, standoff: 8,
+        font: { family: fam(a.title.family, PS), size: a.title.size, weight: fontW(a.title.weight), style: a.title.style, color: a.title.color || PS.font.color } },
+      tickfont: { family: fam(a.tick.family, PS), size: a.tick.size, weight: fontW(a.tick.weight), color: a.tick.color || PS.font.color },
+      tickangle: a.tick.angle === "auto" ? "auto" : +a.tick.angle,
+      ticks: a.tick.dir, ticklen: a.tick.len, tickcolor: box ? PS.figure.boxColor : a.line.color,
+      showgrid: a.grid.show, gridcolor: a.grid.color, gridwidth: a.grid.width, griddash: a.grid.dash,
+      showline: a.line.show || box, linecolor: box ? PS.figure.boxColor : a.line.color,
+      linewidth: box ? PS.figure.boxWidth : a.line.width, mirror: box ? "ticks" : false,
+      zeroline: !!a.zeroline, automargin: true,
+    };
+    if (vals.length) { out.tickmode = "array"; out.tickvals = vals; }
+    else if (isNum(a.tick.dtick) && a.tick.dtick > 0) { out.tickmode = "linear"; out.dtick = isLog ? Math.log10(a.tick.dtick) || 1 : a.tick.dtick; }
+    if (a.tick.minor || a.grid.minor) out.minor = { ticks: a.tick.minor ? (a.tick.dir || "outside") : "", ticklen: Math.max(2, a.tick.len * 0.6),
+      showgrid: !!a.grid.minor, gridcolor: a.grid.minorColor, gridwidth: Math.max(0.5, a.grid.width * 0.6) };
+    if (lo != null && hi != null && hi > lo) { out.range = [lo, hi]; out.autorange = false; }
+    else if (lo != null) { out.range = [lo, null]; out.autorange = "max"; }
+    else if (hi != null) { out.range = [null, hi]; out.autorange = "min"; }
+    return out;
+  }
+
   function buildFigure() {
     const R = T.result, traces = [], shapes = [], annotations = [], legend = [];
+    const PS = PSget() || window.TrendPlotStyle.DEFAULTS;
     const shown = key => !T.hidden.has(key);
+    const L = (key, label) => PS.legend.labels[key] || label;            // custom legend labels
+    const inLegend = key => !PS.legend.omit.includes(key);
+    const segColor = i => PS.trend.palette[i % PS.trend.palette.length] || SEG_COLORS[i % SEG_COLORS.length];
 
     // Observations
-    legend.push({ key: "obs", label: "Observed emissions", color: "#3c3c3c", style: "marker" });
-    if (shown("obs")) traces.push({
-      x: R.x, y: R.y, type: "scatter", mode: "lines+markers", name: "Observed emissions",
-      line: { color: "rgba(60,60,60,.45)", width: 1.2 }, marker: { color: "#3c3c3c", size: 6 },
+    const O = PS.obs;
+    legend.push({ key: "obs", label: L("obs", "Observed emissions"), color: O.marker.show ? O.marker.color : O.line.color,
+      style: O.marker.show ? "marker" : O.line.dash, lineColor: O.line.color, symbol: O.marker.symbol });
+    if (shown("obs") && (O.line.show || O.marker.show)) traces.push({
+      x: R.x, y: R.y, type: "scatter", mode: [O.line.show && "lines", O.marker.show && "markers"].filter(Boolean).join("+"),
+      name: L("obs", "Observed emissions"), showlegend: inLegend("obs"),
+      line: { color: rgba(O.line.color, O.line.opacity), width: O.line.width, dash: O.line.dash },
+      marker: { color: O.marker.color, size: O.marker.size, symbol: O.marker.symbol, opacity: O.marker.opacity,
+        line: { color: O.marker.edge, width: O.marker.edgeWidth } },
       hovertemplate: `%{y:,.1f} ${UNITS}<extra>Observed</extra>`,
     });
 
     // Piecewise segments (line + optional bands share one legend entry)
     if (R.pw) R.pw.segments.forEach((seg, i) => {
-      const c = SEG_COLORS[i % SEG_COLORS.length], key = `seg:${seg.index}`;
-      legend.push({ key, label: `Trend ${seg.start}–${seg.end}`, sub: `${fmtSigned(seg.slope)} kt/yr`,
-        color: c, style: "solid", band: T.opt.band || T.opt.pred });
+      const c = segColor(i), key = `seg:${seg.index}`;
+      const label = L(key, `Trend ${seg.start}–${seg.end}`);
+      legend.push({ key, label, sub: `${fmtSigned(seg.slope)} kt/yr`, color: c, style: PS.trend.dash, band: T.opt.band || T.opt.pred,
+        bandColor: PS.band.color || c, bandOpacity: PS.band.opacity });
       if (!shown(key)) return;
       const g = lineGrid(seg.start, seg.end), bd = S.bands(seg, g, T.conf);
-      if (T.opt.pred) traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, c, "Prediction interval", 0.08));
-      if (T.opt.band) traces.push(...bandTraces(bd.map(p => p.meanLo), bd.map(p => p.meanHi), g, c, "Confidence band", 0.18));
+      if (T.opt.pred) traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, PS.pred.color || c, "Prediction interval", PS.pred.opacity));
+      if (T.opt.band) traces.push(...bandTraces(bd.map(p => p.meanLo), bd.map(p => p.meanHi), g, PS.band.color || c, "Confidence band", PS.band.opacity));
       traces.push({
         x: [seg.start, seg.end], y: [seg.intercept + seg.slope * seg.start, seg.intercept + seg.slope * seg.end],
-        type: "scatter", mode: "lines", line: { color: c, width: 2.6 },
-        name: `Trend ${seg.start}–${seg.end} (${fmtSigned(seg.slope)} kt/yr)`,
+        type: "scatter", mode: "lines", line: { color: rgba(c, PS.trend.opacity), width: PS.trend.width, dash: PS.trend.dash },
+        name: `${label} (${fmtSigned(seg.slope)} kt/yr)`, showlegend: inLegend(key),
         hovertemplate: `Seg ${seg.index} fit: %{y:,.1f}<extra>${fmtSigned(seg.slope)} /yr</extra>`,
       });
     });
 
     // Projection of the last segment
+    const P = PS.proj;
     const last = R.pw && R.pw.segments[R.pw.segments.length - 1];
     if (last && T.opt.proj && T.opt.proj > last.end && T.opt.proj <= last.end + 50) {
-      legend.push({ key: "proj", label: `Projection to ${T.opt.proj}`, sub: `${Math.round(T.conf * 100)}% prediction interval`,
-        color: "#16324F", style: "dash", band: true });
+      const label = L("proj", `Projection to ${T.opt.proj}`);
+      legend.push({ key: "proj", label, sub: `${Math.round(T.conf * 100)}% prediction interval`,
+        color: P.color, style: P.dash, band: true, bandColor: P.bandColor, bandOpacity: P.bandOpacity });
       if (shown("proj")) {
         const g = lineGrid(last.end, T.opt.proj), bd = S.bands(last, g, T.conf);
-        traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, "#16324F", "Projection interval", 0.10));
+        traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, P.bandColor, "Projection interval", P.bandOpacity));
         traces.push({
-          x: g, y: bd.map(p => p.y), type: "scatter", mode: "lines", line: { color: "#16324F", width: 2, dash: "dash" },
-          name: `Projection to ${T.opt.proj}`, hovertemplate: `Projection: %{y:,.1f}<extra></extra>`,
+          x: g, y: bd.map(p => p.y), type: "scatter", mode: "lines", line: { color: rgba(P.color, P.opacity), width: P.width, dash: P.dash },
+          name: label, showlegend: inLegend("proj"), hovertemplate: `Projection: %{y:,.1f}<extra></extra>`,
         });
       }
     }
 
-    // Breakpoints
+    // Breakpoints (each one can hide its line or its year label)
+    const B = PS.bp;
     if (T.opt.bp && R.pw && R.pw.used.length) {
-      legend.push({ key: "bp", label: R.pw.used.length > 1 ? "Breakpoints" : "Breakpoint", sub: R.pw.used.join(", "),
-        color: "#16324F", style: "vdash" });
-      if (shown("bp")) R.pw.used.forEach(bp => shapes.push({
-        type: "line", xref: "x", yref: "y domain", x0: bp, x1: bp, y0: 0, y1: 1,
-        line: { color: "rgba(22,50,79,.75)", width: 2, dash: "dash" },
-        label: { text: String(bp), textposition: "start", font: { size: 10, color: "#16324F" }, yanchor: "bottom" },
-      }));
+      legend.push({ key: "bp", label: L("bp", R.pw.used.length > 1 ? "Breakpoints" : "Breakpoint"), sub: R.pw.used.join(", "),
+        color: B.color, style: "vline", dash: B.dash });
+      if (shown("bp")) R.pw.used.forEach(bp => {
+        if (B.hidden.includes(bp)) return;
+        const lab = B.label.show && !B.hiddenLabel.includes(bp);
+        shapes.push({
+          type: "line", xref: "x", yref: "y domain", x0: bp, x1: bp, y0: 0, y1: 1,
+          line: { color: B.color, width: B.width, dash: B.dash }, opacity: B.opacity,
+          label: lab ? { text: String(bp), textposition: B.label.position, textangle: +B.label.angle,
+            font: { family: fam(B.label.family, PS), size: B.label.size, weight: fontW(B.label.weight), color: B.label.color },
+            yanchor: B.label.position === "start" ? "bottom" : B.label.position === "end" ? "top" : "middle" } : undefined,
+        });
+      });
     }
 
     // Policies ticked in the overlay panel: vertical lines at their start year,
-    // labelled; hover one for its full description. Core = dotted, sector = dash-dot.
+    // labelled; hover one for its full description. Core and sector policies use
+    // the styles set in Advanced Plot Settings; each policy can be overridden.
     // The "Policies" button hides them all at once (T.opt.pol); the legend groups them.
+    const PO = PS.pol;
     const inSpan = p => p.year >= R.x[0] && p.year <= R.x[R.x.length - 1];
     const pinned = pinnedInView(inSpan);
     const byGroup = new Map();
     pinned.forEach(({ p }) => byGroup.set(p.group, [...(byGroup.get(p.group) || []), p]));
-    byGroup.forEach((ps, g) => legend.push({
-      key: `pol:${g}`, label: GROUP_LABEL[g] || (g === "Cross-sectoral" ? "Cross-sectoral laws" : `${g} policies`),
-      sub: `${ps.length} on chart`, color: colorOf(g), style: ps[0].kind === "sector" ? "dashdot" : "dot", off: !T.opt.pol,
-    }));
+    byGroup.forEach((ps, g) => {
+      const key = `pol:${g}`;
+      legend.push({ key, label: L(key, GROUP_LABEL[g] || (g === "Cross-sectoral" ? "Cross-sectoral laws" : `${g} policies`)),
+        sub: `${ps.length} on chart`, color: colorOf(g), style: ps[0].kind === "sector" ? PO.sectorDash : PO.coreDash, off: !T.opt.pol });
+    });
     if (T.opt.pol) pinned.forEach(({ p, x }) => {
       if (!shown(`pol:${p.group}`)) return;
-      const c = p.color;
+      const o = PO.per[p.key] || {};
+      if (o.show === false) return;
+      const c = o.color || p.color, lc = PO.label.color || c;
+      const txt = (o.text || "").trim() || p.name;
+      const showLabel = PO.label.show && o.label !== false;
+      const max = Math.max(8, PO.label.maxChars | 0);
       shapes.push({
         type: "line", xref: "x", yref: "y domain", x0: x, x1: x, y0: 0, y1: 1,
-        line: { color: c, width: 2, dash: p.kind === "sector" ? "dashdot" : "dot" }, layer: "above",
-        label: { text: shortName(p.name), textposition: "end", textangle: -90, xanchor: "right",
-          font: { size: 10, color: c }, padding: 4 },
+        line: { color: c, width: PO.width, dash: p.kind === "sector" ? PO.sectorDash : PO.coreDash }, opacity: PO.opacity, layer: "above",
+        label: showLabel ? { text: txt.length > max ? txt.slice(0, max - 1).trimEnd() + "…" : txt,
+          textposition: PO.label.position, textangle: +PO.label.angle, xanchor: PO.label.anchor, padding: PO.label.padding,
+          font: { family: fam(PO.label.family, PS), size: PO.label.size, weight: fontW(PO.label.weight), style: PO.label.style, color: lc } } : undefined,
       });
     });
     T.legend = legend;
 
+    const F = PS.figure;
+    const titleOn = F.title.show;
     const layout = {
       uirevision: T.gas + "|" + T.sector,
-      margin: { l: 70, r: 18, t: 24, b: 44 },
+      height: F.height,
+      margin: { l: F.margin.l, r: F.margin.r, t: titleOn ? Math.max(F.margin.t, F.title.size + 26) : F.margin.t, b: F.margin.b },
       dragmode: DRAGMODE[T.mode],
       hovermode: "x unified",
       hoverlabel: { bgcolor: "rgba(255,255,255,.96)", bordercolor: "#c9d3dc", font: { size: 12 } },
-      showlegend: false,                       // replaced by the HTML legend under the chart
-      plot_bgcolor: "#fff", paper_bgcolor: "rgba(0,0,0,0)",
-      font: { family: "inherit", color: "#2b3a48" },
-      xaxis: {
-        showspikes: true, spikemode: "across", spikesnap: "cursor",
-        spikecolor: "#8a99a8", spikethickness: 1, spikedash: "dot", gridcolor: "#eef2f5",
-        tickformat: "d", hoverformat: "d", zeroline: false,
-      },
-      yaxis: {
-        title: { text: UNITS, font: { size: 12 } }, gridcolor: "#eef2f5",
-        type: T.opt.log ? "log" : "linear", tickformat: ",~r", zeroline: false,
-      },
+      showlegend: false,                       // replaced by the HTML legend (see renderLegend)
+      plot_bgcolor: F.plot, paper_bgcolor: F.paperTransparent ? "rgba(0,0,0,0)" : F.paper,
+      font: { family: fam("", PS), size: PS.font.size, color: PS.font.color },
+      title: titleOn ? { text: (F.title.text || `${T.gas}: ${T.sector}`), x: 0.01, xanchor: "left",
+        font: { size: F.title.size, weight: fontW(F.title.weight), family: fam("", PS), color: PS.font.color } } : undefined,
+      xaxis: { ...axisLayout(PS.xaxis, PS, false), showspikes: true, spikemode: "across", spikesnap: "cursor",
+        spikecolor: "#8a99a8", spikethickness: 1, spikedash: "dot", tickformat: "d", hoverformat: "d" },
+      yaxis: { ...axisLayout(PS.yaxis, PS, !!T.opt.log), type: T.opt.log ? "log" : "linear", tickformat: ",~r" },
       shapes, annotations,
     };
     return { traces, layout };
   }
 
   // Legend swatch: a short line in the series' style (or a marker), with a band behind it when shown
-  const DASH = { solid: "", dash: "6 4", dot: "1.5 3.5", dashdot: "7 3 1.5 3" };
+  const DASH = { solid: "", dash: "6 4", dot: "1.5 3.5", dashdot: "7 3 1.5 3", longdash: "10 4" };
+  const MARKER_SVG = {
+    circle: c => `<circle cx="17" cy="7" r="3.6" fill="${c}"/>`, "circle-open": c => `<circle cx="17" cy="7" r="3.3" fill="#fff" stroke="${c}" stroke-width="1.5"/>`,
+    square: c => `<rect x="13.5" y="3.5" width="7" height="7" fill="${c}"/>`, "square-open": c => `<rect x="13.7" y="3.7" width="6.6" height="6.6" fill="#fff" stroke="${c}" stroke-width="1.5"/>`,
+    diamond: c => `<path d="M17 2.5 21.5 7 17 11.5 12.5 7z" fill="${c}"/>`, "triangle-up": c => `<path d="M17 2.5 21.5 11 12.5 11z" fill="${c}"/>`,
+    cross: c => `<path d="M15.5 3h3v2.5H21v3h-2.5V11h-3V8.5H13v-3h2.5z" fill="${c}"/>`, x: c => `<path d="M13 4l8 6M21 4l-8 6" stroke="${c}" stroke-width="2"/>`,
+  };
   function swatchSvg(e) {
     const c = e.color;
-    if (e.style === "marker") return `<svg viewBox="0 0 34 14" aria-hidden="true"><line x1="1" y1="7" x2="33" y2="7" stroke="${c}" stroke-opacity=".45" stroke-width="1.5"/><circle cx="17" cy="7" r="3.6" fill="${c}"/></svg>`;
-    if (e.style === "vdash") return `<svg viewBox="0 0 34 14" aria-hidden="true"><line x1="17" y1="0" x2="17" y2="14" stroke="${c}" stroke-width="2" stroke-dasharray="3 2.5"/></svg>`;
-    const band = e.band ? `<rect x="1" y="2" width="32" height="10" rx="2" fill="${rgba(c, 0.18)}"/>` : "";
+    if (e.style === "marker") return `<svg viewBox="0 0 34 14" aria-hidden="true"><line x1="1" y1="7" x2="33" y2="7" stroke="${e.lineColor || c}" stroke-opacity=".45" stroke-width="1.5"/>${(MARKER_SVG[e.symbol] || MARKER_SVG.circle)(c)}</svg>`;
+    if (e.style === "vline") return `<svg viewBox="0 0 34 14" aria-hidden="true"><line x1="17" y1="0" x2="17" y2="14" stroke="${c}" stroke-width="2" stroke-dasharray="${DASH[e.dash] || ""}"/></svg>`;
+    const band = e.band ? `<rect x="1" y="2" width="32" height="10" rx="2" fill="${rgba(e.bandColor || c, Math.max(0.12, e.bandOpacity || 0.18))}"/>` : "";
     return `<svg viewBox="0 0 34 14" aria-hidden="true">${band}<line x1="1" y1="7" x2="33" y2="7" stroke="${c}" stroke-width="${e.style === "solid" ? 2.8 : 2.2}" stroke-dasharray="${DASH[e.style] || ""}" stroke-linecap="round"/></svg>`;
   }
   function renderLegend() {
-    const box = $("trLegend");
+    const box = $("trLegend"), wrap = $("trPlotWrap");
     if (!box) return;
-    box.innerHTML = (T.legend || []).map(e => {
+    const PS = PSget(), G = PS.legend;
+    // position: below / above / right of the chart, or overlaid inside the plot
+    const cls = `tr-plotwrap lg-${G.show ? G.position : "none"}`;
+    if (wrap.className !== cls) {
+      wrap.className = cls;
+      // the chart's container changed width (legend moved beside it or back): let Plotly re-measure
+      requestAnimationFrame(() => window.Plotly.Plots.resize(T.gd));
+    }
+    if (G.position === "top") wrap.insertBefore(box, wrap.firstChild); else wrap.appendChild(box);
+    box.hidden = !G.show;
+    const cols = G.position === "right" ? 1 : Math.max(1, Math.min(4, G.columns | 0));
+    box.style.setProperty("--lg-cols", cols);
+    box.style.setProperty("--lg-gap", `${G.gap}rem`);
+    box.style.setProperty("--lg-size", `${G.size}px`);
+    box.style.color = G.color || PS.font.color;
+    box.style.fontFamily = PS.font.family || "";
+    box.style.background = G.bgOpacity >= 1 ? G.bg : rgba(G.bg, G.bgOpacity);
+    box.style.border = G.border ? `${G.borderWidth}px solid ${G.borderColor}` : "0";
+    const entries = (T.legend || []).filter(e => !G.omit.includes(e.key));
+    box.innerHTML = entries.map(e => {
       const hidden = T.hidden.has(e.key) || e.off;
       return `<button type="button" class="tr-lg-item${hidden ? " is-off" : ""}" data-lg="${esc(e.key)}"
           aria-pressed="${!hidden}" title="${hidden ? "Show" : "Hide"} ${esc(e.label)}"${e.off ? " disabled" : ""}>
@@ -466,6 +579,7 @@
         <span class="tr-lg-txt"><span class="tr-lg-name">${esc(e.label)}</span>${e.sub ? `<small>${esc(e.sub)}</small>` : ""}</span>
       </button>`;
     }).join("");
+    if (!entries.length) box.hidden = true;
   }
 
   function renderPolicyToggle() {
@@ -484,11 +598,16 @@
 
   function render() {
     const { traces, layout } = buildFigure();
+    // the chosen height, capped on small screens
+    layout.height = Math.min(layout.height, window.innerWidth < 520 ? 380 : window.innerWidth < 900 ? 460 : Infinity);
+    const h = layout.height + "px";
+    if (T.gd.style.height !== h) T.gd.style.height = h;
     // No Plotly toolbar: the tool buttons above the chart replace it
     window.Plotly.react(T.gd, traces, layout, { responsive: true, displayModeBar: false, scrollZoom: false });
     renderLegend();
     renderPolicyToggle();
     renderSide();
+    if (window.TrendPlotStyle) window.TrendPlotStyle.refresh();
     if ($("trAdvancedPanel").classList.contains("show")) renderDiagnostics();
   }
 
