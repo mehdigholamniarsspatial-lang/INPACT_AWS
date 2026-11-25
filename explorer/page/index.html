@@ -3957,6 +3957,11 @@ a.ug-go.alt:hover{color:var(--navy)}
               </div>
             </div>
           </div>
+          <!-- Show / hide every policy line ticked in the Policy overlay panel -->
+          <button type="button" class="tr-tool tr-tool-pol" id="trPolToggle" aria-pressed="true" disabled
+                  title="Hide or show the policy lines on the chart (the ticks in the Policy overlay panel are kept)">
+            <i class="bi bi-eye"></i><span class="tr-tool-txt"><b>Policies</b><small>None ticked yet</small></span>
+          </button>
           <button type="button" class="tr-tool tr-tool-reset" id="trResetView">
             <i class="bi bi-arrows-fullscreen"></i><span class="tr-tool-txt"><b>Reset view</b><small>Show all years</small></span>
           </button>
@@ -3966,6 +3971,8 @@ a.ug-go.alt:hover{color:var(--navy)}
         <div class="tr-plot" id="trChart">
           <div class="tr-loading" id="trLoading" hidden><span class="spinner-border spinner-border-sm"></span> Loading chart…</div>
         </div>
+        <!-- Legend: click an entry to hide or show that series -->
+        <div class="tr-legend" id="trLegend" role="group" aria-label="Chart legend: click an entry to hide or show it"></div>
 
         <div id="trDirection" class="trend-direction" hidden>
           <span class="td-label">Direction of trend</span>

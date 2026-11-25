@@ -36,7 +36,8 @@
     inited: false, data: null, gd: null,
     gas: null, sector: null, method: "ols", conf: 0.95,
     bps: [2001],
-    opt: { band: true, pred: false, bp: true, log: false, mk: true, proj: 2030 },
+    opt: { band: true, pred: false, bp: true, log: false, mk: true, proj: 2030, pol: true },
+    hidden: new Set(),        // series hidden from the legend: "obs", "seg:<n>", "proj", "bp", "pol:<group>"
     mode: "breakpoint", result: null, drag: null, raf: 0, hashTimer: 0,
     pins: new Set(),          // policies drawn on the chart: "c|<year>|<name>" or "s|<slug>"
     card: null, cardTimer: 0, cardKey: null,
@@ -208,11 +209,29 @@
     document.querySelectorAll("#trModes [data-mode]").forEach(b =>
       b.addEventListener("click", () => setMode(b.dataset.mode)));
     $("trResetView").addEventListener("click", () => window.Plotly.relayout(T.gd, { "xaxis.autorange": true, "yaxis.autorange": true }));
+    // "Policies" button: hide / show every policy line (the ticks in the panel are kept)
+    $("trPolToggle").addEventListener("click", () => { T.opt.pol = !T.opt.pol; if (!T.opt.pol) hideCard(true); recompute(); });
+    $("trLegend").addEventListener("click", e => {
+      const b = e.target.closest("[data-lg]");
+      if (!b || b.disabled) return;
+      const k = b.dataset.lg;
+      if (T.hidden.has(k)) T.hidden.delete(k); else T.hidden.add(k);
+      if (k.startsWith("pol:")) hideCard(true);
+      recompute();
+    });
 
     $("trCsvBtn").addEventListener("click", downloadCsv);
-    $("trPngBtn").addEventListener("click", () => window.Plotly.downloadImage(T.gd, {
-      format: "png", scale: 2, width: 1400, height: 760, filename: slug(`trend_${T.gas}_${T.sector}`),
-    }));
+    // PNG: the on-screen legend is HTML, so the export gets its own legend in three columns
+    $("trPngBtn").addEventListener("click", () => window.Plotly.downloadImage({
+      data: T.gd.data,
+      layout: {
+        ...T.gd.layout, showlegend: true,
+        title: { text: `${T.gas}: ${T.sector}`, x: 0.01, font: { size: 16 } },
+        margin: { ...T.gd.layout.margin, t: 56, b: 130 },
+        legend: { orientation: "h", x: 0, y: -0.1, yanchor: "top", traceorder: "normal", entrywidth: 0.33, entrywidthmode: "fraction", font: { size: 12 } },
+        font: { ...T.gd.layout.font, family: "Segoe UI, Helvetica, Arial, sans-serif" },
+      },
+    }, { format: "png", scale: 2, width: 1400, height: 820, filename: slug(`trend_${T.gas}_${T.sector}`) }));
     $("trLinkBtn").addEventListener("click", copyLink);
     $("trAdvancedPanel").addEventListener("shown.bs.collapse", renderDiagnostics);
 
@@ -319,26 +338,33 @@
     return out;
   }
 
+  // Each series also yields a legend entry (drawn as HTML under the chart, in
+  // columns) with a key; clicking an entry hides or shows that series (T.hidden).
   function buildFigure() {
-    const R = T.result, traces = [], shapes = [], annotations = [];
+    const R = T.result, traces = [], shapes = [], annotations = [], legend = [];
+    const shown = key => !T.hidden.has(key);
 
     // Observations
-    traces.push({
-      x: R.x, y: R.y, type: "scatter", mode: "lines+markers", name: "Observed",
+    legend.push({ key: "obs", label: "Observed emissions", color: "#3c3c3c", style: "marker" });
+    if (shown("obs")) traces.push({
+      x: R.x, y: R.y, type: "scatter", mode: "lines+markers", name: "Observed emissions",
       line: { color: "rgba(60,60,60,.45)", width: 1.2 }, marker: { color: "#3c3c3c", size: 6 },
       hovertemplate: `%{y:,.1f} ${UNITS}<extra>Observed</extra>`,
     });
 
-    // Piecewise segments
+    // Piecewise segments (line + optional bands share one legend entry)
     if (R.pw) R.pw.segments.forEach((seg, i) => {
-      const c = SEG_COLORS[i % SEG_COLORS.length];
+      const c = SEG_COLORS[i % SEG_COLORS.length], key = `seg:${seg.index}`;
+      legend.push({ key, label: `Trend ${seg.start}–${seg.end}`, sub: `${fmtSigned(seg.slope)} kt/yr`,
+        color: c, style: "solid", band: T.opt.band || T.opt.pred });
+      if (!shown(key)) return;
       const g = lineGrid(seg.start, seg.end), bd = S.bands(seg, g, T.conf);
       if (T.opt.pred) traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, c, "Prediction interval", 0.08));
       if (T.opt.band) traces.push(...bandTraces(bd.map(p => p.meanLo), bd.map(p => p.meanHi), g, c, "Confidence band", 0.18));
       traces.push({
         x: [seg.start, seg.end], y: [seg.intercept + seg.slope * seg.start, seg.intercept + seg.slope * seg.end],
         type: "scatter", mode: "lines", line: { color: c, width: 2.6 },
-        name: `Seg ${seg.index} ${seg.start}–${seg.end}`,
+        name: `Trend ${seg.start}–${seg.end} (${fmtSigned(seg.slope)} kt/yr)`,
         hovertemplate: `Seg ${seg.index} fit: %{y:,.1f}<extra>${fmtSigned(seg.slope)} /yr</extra>`,
       });
     });
@@ -346,25 +372,42 @@
     // Projection of the last segment
     const last = R.pw && R.pw.segments[R.pw.segments.length - 1];
     if (last && T.opt.proj && T.opt.proj > last.end && T.opt.proj <= last.end + 50) {
-      const g = lineGrid(last.end, T.opt.proj), bd = S.bands(last, g, T.conf);
-      traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, "#16324F", "Projection interval", 0.10));
-      traces.push({
-        x: g, y: bd.map(p => p.y), type: "scatter", mode: "lines", line: { color: "#16324F", width: 2, dash: "dash" },
-        name: `Projection to ${T.opt.proj}`, hovertemplate: `Projection: %{y:,.1f}<extra></extra>`,
-      });
+      legend.push({ key: "proj", label: `Projection to ${T.opt.proj}`, sub: `${Math.round(T.conf * 100)}% prediction interval`,
+        color: "#16324F", style: "dash", band: true });
+      if (shown("proj")) {
+        const g = lineGrid(last.end, T.opt.proj), bd = S.bands(last, g, T.conf);
+        traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, "#16324F", "Projection interval", 0.10));
+        traces.push({
+          x: g, y: bd.map(p => p.y), type: "scatter", mode: "lines", line: { color: "#16324F", width: 2, dash: "dash" },
+          name: `Projection to ${T.opt.proj}`, hovertemplate: `Projection: %{y:,.1f}<extra></extra>`,
+        });
+      }
     }
 
     // Breakpoints
-    if (T.opt.bp && R.pw) R.pw.used.forEach(bp => shapes.push({
-      type: "line", xref: "x", yref: "y domain", x0: bp, x1: bp, y0: 0, y1: 1,
-      line: { color: "rgba(22,50,79,.75)", width: 2, dash: "dash" },
-      label: { text: String(bp), textposition: "start", font: { size: 10, color: "#16324F" }, yanchor: "bottom" },
-    }));
+    if (T.opt.bp && R.pw && R.pw.used.length) {
+      legend.push({ key: "bp", label: R.pw.used.length > 1 ? "Breakpoints" : "Breakpoint", sub: R.pw.used.join(", "),
+        color: "#16324F", style: "vdash" });
+      if (shown("bp")) R.pw.used.forEach(bp => shapes.push({
+        type: "line", xref: "x", yref: "y domain", x0: bp, x1: bp, y0: 0, y1: 1,
+        line: { color: "rgba(22,50,79,.75)", width: 2, dash: "dash" },
+        label: { text: String(bp), textposition: "start", font: { size: 10, color: "#16324F" }, yanchor: "bottom" },
+      }));
+    }
 
     // Policies ticked in the overlay panel: vertical lines at their start year,
     // labelled; hover one for its full description. Core = dotted, sector = dash-dot.
+    // The "Policies" button hides them all at once (T.opt.pol); the legend groups them.
     const inSpan = p => p.year >= R.x[0] && p.year <= R.x[R.x.length - 1];
-    pinnedInView(inSpan).forEach(({ p, x }) => {
+    const pinned = pinnedInView(inSpan);
+    const byGroup = new Map();
+    pinned.forEach(({ p }) => byGroup.set(p.group, [...(byGroup.get(p.group) || []), p]));
+    byGroup.forEach((ps, g) => legend.push({
+      key: `pol:${g}`, label: GROUP_LABEL[g] || (g === "Cross-sectoral" ? "Cross-sectoral laws" : `${g} policies`),
+      sub: `${ps.length} on chart`, color: colorOf(g), style: ps[0].kind === "sector" ? "dashdot" : "dot", off: !T.opt.pol,
+    }));
+    if (T.opt.pol) pinned.forEach(({ p, x }) => {
+      if (!shown(`pol:${p.group}`)) return;
       const c = p.color;
       shapes.push({
         type: "line", xref: "x", yref: "y domain", x0: x, x1: x, y0: 0, y1: 1,
@@ -373,15 +416,15 @@
           font: { size: 10, color: c }, padding: 4 },
       });
     });
+    T.legend = legend;
 
     const layout = {
       uirevision: T.gas + "|" + T.sector,
-      margin: { l: 70, r: 18, t: 24, b: 70 },
+      margin: { l: 70, r: 18, t: 24, b: 44 },
       dragmode: DRAGMODE[T.mode],
       hovermode: "x unified",
       hoverlabel: { bgcolor: "rgba(255,255,255,.96)", bordercolor: "#c9d3dc", font: { size: 12 } },
-      showlegend: true,
-      legend: { orientation: "h", y: -0.07, yanchor: "top", x: 0, font: { size: 11 } },
+      showlegend: false,                       // replaced by the HTML legend under the chart
       plot_bgcolor: "#fff", paper_bgcolor: "rgba(0,0,0,0)",
       font: { family: "inherit", color: "#2b3a48" },
       xaxis: {
@@ -398,10 +441,45 @@
     return { traces, layout };
   }
 
+  // Legend swatch: a short line in the series' style (or a marker), with a band behind it when shown
+  const DASH = { solid: "", dash: "6 4", dot: "1.5 3.5", dashdot: "7 3 1.5 3" };
+  function swatchSvg(e) {
+    const c = e.color;
+    if (e.style === "marker") return `<svg viewBox="0 0 34 14" aria-hidden="true"><line x1="1" y1="7" x2="33" y2="7" stroke="${c}" stroke-opacity=".45" stroke-width="1.5"/><circle cx="17" cy="7" r="3.6" fill="${c}"/></svg>`;
+    if (e.style === "vdash") return `<svg viewBox="0 0 34 14" aria-hidden="true"><line x1="17" y1="0" x2="17" y2="14" stroke="${c}" stroke-width="2" stroke-dasharray="3 2.5"/></svg>`;
+    const band = e.band ? `<rect x="1" y="2" width="32" height="10" rx="2" fill="${rgba(c, 0.18)}"/>` : "";
+    return `<svg viewBox="0 0 34 14" aria-hidden="true">${band}<line x1="1" y1="7" x2="33" y2="7" stroke="${c}" stroke-width="${e.style === "solid" ? 2.8 : 2.2}" stroke-dasharray="${DASH[e.style] || ""}" stroke-linecap="round"/></svg>`;
+  }
+  function renderLegend() {
+    const box = $("trLegend");
+    if (!box) return;
+    box.innerHTML = (T.legend || []).map(e => {
+      const hidden = T.hidden.has(e.key) || e.off;
+      return `<button type="button" class="tr-lg-item${hidden ? " is-off" : ""}" data-lg="${esc(e.key)}"
+          aria-pressed="${!hidden}" title="${hidden ? "Show" : "Hide"} ${esc(e.label)}"${e.off ? " disabled" : ""}>
+        <span class="tr-lg-sw">${swatchSvg(e)}</span>
+        <span class="tr-lg-txt"><span class="tr-lg-name">${esc(e.label)}</span>${e.sub ? `<small>${esc(e.sub)}</small>` : ""}</span>
+      </button>`;
+    }).join("");
+  }
+
+  function renderPolicyToggle() {
+    const b = $("trPolToggle");
+    if (!b) return;
+    const n = T.pins.size, on = T.opt.pol;
+    b.classList.toggle("active", on && n > 0);
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.disabled = !n;
+    b.querySelector(".bi").className = `bi ${on ? "bi-eye" : "bi-eye-slash"}`;
+    b.querySelector("small").textContent = !n ? "None ticked yet" : on ? `Hide ${n} line${n > 1 ? "s" : ""}` : `Show ${n} line${n > 1 ? "s" : ""}`;
+  }
+
   function render() {
     const { traces, layout } = buildFigure();
     // No Plotly toolbar: the tool buttons above the chart replace it
     window.Plotly.react(T.gd, traces, layout, { responsive: true, displayModeBar: false, scrollZoom: false });
+    renderLegend();
+    renderPolicyToggle();
     renderSide();
     if ($("trAdvancedPanel").classList.contains("show")) renderDiagnostics();
   }
@@ -548,7 +626,7 @@
   }
   /** Pinned policy line under the pointer, or null. */
   function pinnedLineHit(cx, cy) {
-    if (!T.pins.size || !T.result) return null;
+    if (!T.pins.size || !T.result || !T.opt.pol) return null;   // lines hidden by the Policies button
     const g = plotGeom();
     if (!g) return null;
     const px = cx - g.rect.left, py = cy - g.rect.top;
@@ -556,6 +634,7 @@
     const R = T.result;
     let best = null;
     for (const { p, x } of pinnedInView(q => q.year >= R.x[0] && q.year <= R.x[R.x.length - 1])) {
+      if (T.hidden.has(`pol:${p.group}`)) continue;            // group hidden from the legend
       const lx = g.xa._offset + g.xa.c2p(x), d = Math.abs(lx - px);
       if (d <= 6 && (!best || d < best.d)) best = { d, key: p.key, xPx: lx };
     }

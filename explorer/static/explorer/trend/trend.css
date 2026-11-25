@@ -187,3 +187,28 @@ body.tr-dragging,body.tr-dragging *{cursor:ew-resize!important;user-select:none}
 .tp-range input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 4px rgba(0,132,61,.3)}
 .tp-range-scale{display:flex;justify-content:space-between;align-items:center;font-size:.64rem;color:var(--text-muted)}
 .tp-range-scale .btn-link{font-size:.68rem}
+
+/* ---- Policies show/hide button ---- */
+.tr-tool-pol:disabled{opacity:.5;cursor:not-allowed}
+.tr-tool-pol.active{border-color:#7d3c98;background:#f6effa;color:#5b2c6f;box-shadow:none}
+.tr-tool-pol.active .tr-tool-txt small{color:#7d3c98}
+.tr-tool-pol[aria-pressed="false"]:not(:disabled){border-style:dashed;color:var(--text-muted)}
+
+/* ---- Legend under the chart: three columns, click to hide/show ---- */
+.tr-legend{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.3rem .9rem;
+  margin-top:.35rem;padding:.55rem .7rem;border:1px solid var(--grey-border);border-radius:10px;background:#fafbfc}
+.tr-legend:empty{display:none}
+.tr-lg-item{display:flex;align-items:center;gap:.55rem;min-width:0;border:0;background:none;padding:.25rem .35rem;
+  border-radius:6px;text-align:left;cursor:pointer;color:#2b3a48}
+.tr-lg-item:hover{background:#eef2f5}
+.tr-lg-item:focus-visible{outline:2px solid var(--emerald);outline-offset:1px}
+.tr-lg-item:disabled{cursor:default}
+.tr-lg-sw{flex:none;width:34px;height:14px;display:flex}
+.tr-lg-sw svg{width:34px;height:14px}
+.tr-lg-txt{display:flex;flex-direction:column;min-width:0;line-height:1.2}
+.tr-lg-name{font-size:.76rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-lg-txt small{font-size:.66rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tr-lg-item.is-off{opacity:.42}
+.tr-lg-item.is-off .tr-lg-name{text-decoration:line-through}
+@media (max-width: 900px){ .tr-legend{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width: 520px){ .tr-legend{grid-template-columns:1fr} }

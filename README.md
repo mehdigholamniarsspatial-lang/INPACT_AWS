@@ -315,6 +315,14 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
   * **Zoom in (Z)** draws a box; **Reset view** zooms back out. Each tool
     button shows a step-by-step guide on hover. Plotly's own toolbar is
     hidden.
+  * **Policies** (toolbar button): hides or shows every policy line at once.
+    The ticks in the Policy overlay panel are kept, and the button shows how
+    many lines it affects. Its state is saved in the shareable link.
+  * **Legend** (under the chart): an HTML legend in three columns (two on
+    tablets, one on phones). Each entry has a swatch in the series' line
+    style, and a second line with the slope, breakpoint years or policy
+    count. Clicking an entry hides or shows that series; policy groups are
+    listed by group. The PNG export draws its own three-column legend.
   * **Confidence level** is a slider (80–99%, default 95%; double-click to
     reset). Every band, interval and test updates while you drag it.
   * **Policy overlay panel** (right-hand column; below the controls on
