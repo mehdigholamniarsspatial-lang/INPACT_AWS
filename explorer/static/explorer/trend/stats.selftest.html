@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trend stats self-test</title>
+<style>
+  :root{--ok:#006B31;--bad:#b03a2e;--muted:#5f6b76;--bg:#fff;--fg:#16324F;--line:#d9e0e6}
+  body{font:14px/1.45 system-ui,Segoe UI,Arial,sans-serif;margin:0;padding:16px;background:var(--bg);color:var(--fg);max-width:1000px}
+  h1{font-size:1.2rem;margin:0 0 .3rem}
+  p{color:var(--muted);margin:.2rem 0 1rem}
+  table{border-collapse:collapse;width:100%;margin-bottom:1rem;font-variant-numeric:tabular-nums}
+  th,td{border-bottom:1px solid var(--line);padding:.3rem .5rem;text-align:left;font-size:.85rem}
+  .ok{color:var(--ok);font-weight:700}.bad{color:var(--bad);font-weight:700}
+  #summary{font-size:1rem;font-weight:700;margin:.6rem 0 1rem}
+</style>
+</head>
+<body>
+<h1>Trend Analysis: browser engine self-test</h1>
+<p>Checks <code>stats.js</code> against SciPy reference values, then fits every gas and sector with every
+method (breakpoints 2001 and 2012) in the browser and on the server (<code>/api/trend/fit/</code>, statsmodels),
+and compares slope, intercept, R², standard error, p-value, slope CI and the confidence band.
+Open it on the running site: <code>/static/explorer/trend/stats.selftest.html</code>.</p>
+<div id="summary">Running…</div>
+<table id="tbl"><thead><tr><th>Check</th><th>Cases</th><th>Max relative difference</th><th>Tolerance</th><th>Result</th><th>Worst case</th></tr></thead><tbody></tbody></table>
+<script src="stats.js"></script>
+<script>
+(async function () {
+  const S = window.TrendStats, rows = [], results = {};
+  // Reference values from scipy.stats (scipy 1.18)
+  const REF = {"t_ppf": [[0.975, 1, 12.706204736174694], [0.975, 2, 4.302652729749462], [0.975, 10, 2.2281388519862744], [0.995, 3, 5.840909309733355], [0.95, 30, 1.697260886593957], [0.975, 200, 1.9718962236339088], [0.6, 5, 0.2671808657041451]], "t_sf2": [[2.0, 5, 0.10193947882985835], [0.3, 12, 0.7693104740882523], [-4.5, 20, 0.0002187712117371826], [10.0, 3, 0.0021283990584141503], [0.001, 8, 0.9992266021030893]], "norm_ppf": [[0.5, 0.0], [0.975, 1.959963984540054], [0.995, 2.5758293035489004], [0.001, -3.090232306167813], [0.9999, 3.719016485455709], [1e-08, -5.612001244174789]], "norm_cdf": [[-3.0, 0.0013498980316300933], [-0.4, 0.3445782583896758], [0.0, 0.5], [0.4, 0.6554217416103242], [1.96, 0.9750021048517795], [6.0, 0.9999999990134123]], "f_sf": [[3.0, 2, 10, 0.09536743164062497], [0.5, 2, 30, 0.6114957082084547], [12.0, 2, 20, 0.000376507118583527], [1.0, 1, 1, 0.5000000000000001]]};
+  const rel = (c, s) => Math.abs(c - s) / Math.max(Math.abs(s), 1e-12);
+  function check(name, cases, tol) {
+    let worst = 0, at = "";
+    for (const [label, c, s] of cases) { const d = rel(c, s); if (!(d <= worst)) { worst = d; at = label; } }
+    const ok = worst <= tol;
+    results[name] = { ok, worst, n: cases.length, at };
+    rows.push(`<tr><td>${name}</td><td>${cases.length}</td><td>${worst.toExponential(2)}</td><td>${tol.toExponential(0)}</td><td class="${ok ? "ok" : "bad"}">${ok ? "pass" : "FAIL"}</td><td>${at}</td></tr>`);
+  }
+  check("Student-t quantile", REF.t_ppf.map(([p, df, v]) => [`p=${p}, df=${df}`, S.tPpf(p, df), v]), 1e-9);
+  check("Student-t two-sided p", REF.t_sf2.map(([t, df, v]) => [`t=${t}, df=${df}`, S.tTwoSided(t, df), v]), 1e-9);
+  check("Normal quantile", REF.norm_ppf.map(([p, v]) => [`p=${p}`, S.normPpf(p), v]).filter(c => c[2] !== 0), 1e-9);
+  check("Normal CDF", REF.norm_cdf.map(([z, v]) => [`z=${z}`, S.normCdf(z), v]), 1e-9);
+  check("F upper tail", REF.f_sf.map(([f, a, b, v]) => [`F=${f}, df=${a},${b}`, S.fSf(f, a, b), v]), 1e-9);
+
+  // Known-answer: exact line y = 3x - 10 plus symmetric noise has OLS slope exactly 3
+  const kx = [1, 2, 3, 4, 5, 6], ky = kx.map((v, i) => 3 * v - 10 + [1, -1, 0, 0, -1, 1][i]);
+  check("OLS known answer (slope 3)", [["slope", S.fit(kx, ky).slope, 3]], 1e-12);
+
+  // Server parity
+  const b = await (await fetch("/api/trend/bundle/")).json();
+  const dpDiff = (c, s, dp) => {
+    if (s == null) return Number.isFinite(c) ? Infinity : 0;
+    if (!Number.isFinite(c)) return Infinity;
+    const tol = dp != null ? 0.5 * 10 ** -dp : 0;
+    return Math.max(0, Math.abs(c - s) - tol) / Math.max(Math.abs(s), 1e-9);
+  };
+  const bps = [2001, 2012], conf = 0.95;
+  for (const m of ["ols", "huber", "theilsen"]) {
+    const cases = [], jobs = [];
+    for (const g of Object.keys(b.gases)) for (const s of Object.keys(b.gases[g])) {
+      const x = [], y = [];
+      b.years.forEach((yr, i) => { const v = b.gases[g][s][i]; if (Number.isFinite(v)) { x.push(yr); y.push(v); } });
+      if (x.length < 3) continue;
+      jobs.push(fetch("/api/trend/fit/", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ gas: g, sector: s, method: m, confidence: conf, breakpoints: bps }) })
+        .then(r => r.json()).then(d => {
+          const pw = S.piecewise(x, y, bps, { method: m, confidence: conf });
+          if (!d.ok || pw.segments.length !== d.segments.length) { cases.push([`${g} / ${s}: segment count`, 1, 0]); return; }
+          pw.segments.forEach((c, i) => {
+            const v = d.segments[i], tag = `${g} / ${s} seg ${i + 1}`;
+            const band = S.bands(c, c.x, conf);
+            const diffs = {
+              slope: dpDiff(c.slope, v.Slope, 6), intercept: dpDiff(c.intercept, v.Intercept, 6),
+              R2: dpDiff(c.r2, v.R2, 4), SE: dpDiff(c.se, v.Std_Error, 6), p: dpDiff(c.p, v.p_value, 6),
+              CI: dpDiff(c.ciLow, v.CI_Low_95, 6),
+              band: Math.max(0, ...band.map((q, j) => dpDiff(q.meanLo, v.band_low[j]))),
+            };
+            for (const [k, dv] of Object.entries(diffs)) cases.push([`${tag} ${k}`, dv, 0]);
+          });
+        }));
+    }
+    await Promise.all(jobs);
+    // cases hold differences already: report max(diff)
+    let worst = 0, at = "";
+    for (const [label, d] of cases) if (!(d <= worst)) { worst = d; at = label; }
+    const tol = m === "huber" ? 1e-4 : 1e-6, ok = worst <= tol;
+    results["server:" + m] = { ok, worst, n: cases.length, at };
+    rows.push(`<tr><td>Server parity: ${m}</td><td>${cases.length}</td><td>${worst.toExponential(2)}</td><td>${tol.toExponential(0)}</td><td class="${ok ? "ok" : "bad"}">${ok ? "pass" : "FAIL"}</td><td>${at}</td></tr>`);
+  }
+  document.querySelector("#tbl tbody").innerHTML = rows.join("");
+  const allOk = Object.values(results).every(r => r.ok);
+  const sum = document.getElementById("summary");
+  sum.className = allOk ? "ok" : "bad";
+  sum.textContent = allOk ? "All checks passed." : "Some checks failed: see the table.";
+  window.__selftest = { allOk, results };
+})().catch(e => { document.getElementById("summary").textContent = "Error: " + e.message; window.__selftest = { error: e.message }; });
+</script>
+</body>
+</html>

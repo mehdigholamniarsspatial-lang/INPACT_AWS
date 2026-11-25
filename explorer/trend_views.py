@@ -12,7 +12,10 @@ Endpoints
 ---------
 GET  /api/trend/catalog/   -> gases, their sector lists, and the year axis
 GET  /api/trend/series/    -> raw (year, value) series for one gas + sector
+GET  /api/trend/bundle/    -> every series at once, for the in-browser engine
 POST /api/trend/fit/       -> piecewise fit + stats + diagnostics as JSON
+                              (optional "start"/"end" restrict it to a window;
+                              the browser uses this to verify its own results)
 """
 from __future__ import annotations
 
@@ -44,6 +47,11 @@ _NAME_FIXES = {
     "nann-energy products from fuels and solvent use":
         "Non-energy products from fuels and solvent use",
 }
+
+
+# Input limits for /api/trend/fit/
+YEAR_MIN, YEAR_MAX = 1900, 2200
+MAX_BREAKPOINTS = 10
 
 
 class TrendDataError(Exception):
@@ -129,6 +137,31 @@ def trend_catalog(request):
 
 
 @require_GET
+def trend_bundle(request):
+    """
+    Every gas and sector series in one response, for the browser-side engine
+    (explorer/static/explorer/trend/stats.js). About 150 kB uncompressed, so
+    the front-end loads it once and then works without further requests.
+    """
+    gases, years_out = {}, None
+    try:
+        for gas in _GAS_FILES:
+            years, table = _load_gas_table(gas)
+            years_out = years_out or years
+            gases[gas] = {
+                name: [None if v is None or not math.isfinite(v) else v for v in vals]
+                for name, vals in table.items()
+            }
+    except TrendDataError as exc:
+        return JsonResponse({"ok": False, "detail": str(exc)}, status=500)
+    resp = JsonResponse({
+        "ok": True, "years": years_out, "units": "kt CO₂-eq", "gases": gases,
+    })
+    resp["Cache-Control"] = "public, max-age=600"
+    return resp
+
+
+@require_GET
 def trend_series(request):
     """Raw series for one gas + sector (used to pre-plot before fitting)."""
     gas = (request.GET.get("gas") or "").strip()
@@ -192,21 +225,54 @@ def trend_fit(request):
             status=400,
         )
 
+    # ---- optional analysis window [start, end] (inclusive years) ------
+    window = {}
+    for key in ("start", "end"):
+        raw = payload.get(key)
+        if raw is None:
+            continue
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)) \
+                or not math.isfinite(raw) or not (YEAR_MIN <= raw <= YEAR_MAX):
+            return JsonResponse(
+                {"ok": False,
+                 "detail": f"{key} must be a year between {YEAR_MIN} and {YEAR_MAX}."},
+                status=400,
+            )
+        window[key] = float(raw)
+    if "start" in window and "end" in window and window["start"] >= window["end"]:
+        return JsonResponse(
+            {"ok": False, "detail": "start must be earlier than end."}, status=400
+        )
+
     # ---- data --------------------------------------------------------
     try:
         t, y, report = _get_series(gas, sector)
     except TrendDataError as exc:
         return JsonResponse({"ok": False, "detail": str(exc)}, status=404)
+    if window:
+        keep = (t >= window.get("start", -math.inf)) & (t <= window.get("end", math.inf))
+        t, y = t[keep], y[keep]
+        report = {**report, "n_in_window": int(keep.sum())}
     if len(t) < trend_engine.MIN_POINTS_PER_SEGMENT:
         return JsonResponse(
-            {"ok": False, "detail": "Too few valid data points in this series."},
+            {"ok": False,
+             "detail": (f"Too few valid data points: {len(t)} in this range, "
+                        f"at least {trend_engine.MIN_POINTS_PER_SEGMENT} are needed.")},
             status=422,
         )
 
     # ---- breakpoints (validated against the observed time range) -----
     raw_bps = payload.get("breakpoints") or []
+    if not isinstance(raw_bps, list) or len(raw_bps) > MAX_BREAKPOINTS:
+        return JsonResponse(
+            {"ok": False,
+             "detail": f"breakpoints must be a list of at most {MAX_BREAKPOINTS} numbers."},
+            status=400,
+        )
     try:
         bps = sorted(float(b) for b in raw_bps)
+        if any(isinstance(b, bool) or not math.isfinite(float(b)) for b in raw_bps):
+            raise ValueError
     except (TypeError, ValueError):
         return JsonResponse(
             {"ok": False, "detail": "breakpoints must be a list of numbers."},

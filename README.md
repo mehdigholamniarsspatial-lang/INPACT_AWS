@@ -295,9 +295,44 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
   statsmodels).
 * `explorer/trend_views.py`: the JSON API (see the
   [URL and API reference](#url-and-api-reference)).
-* The front-end uses Chart.js. It includes a segment-statistics table,
-  Mann–Kendall and Sen's-slope KPIs, residual diagnostics, and CSV and PNG
-  export.
+* The front-end is interactive and **computes everything in the browser**, so
+  results update while you drag:
+  * `explorer/static/explorer/trend/stats.js`: pure statistics functions with
+    no DOM access. They cover OLS, Huber (an exact port of statsmodels' RLM
+    loop) and Theil–Sen fits, piecewise splits, Mann–Kendall, Sen's slope,
+    confidence and prediction bands, the Chow test, BIC break detection,
+    Durbin–Watson, Jarque–Bera, ACF and Q–Q. The Student-t, F and normal
+    distributions are implemented here too, so no stats library is needed.
+  * `explorer/static/explorer/trend/trend-chart.js`: the Plotly chart and
+    interface. It loads `plotly.js-basic-dist-min@2.35.2` from jsDelivr on the
+    first visit to the tab, and falls back to `policies/vendor/plotly.min.js`.
+  * `explorer/static/explorer/trend/trend.css`: styles for the tab.
+* What users can do:
+  * **Select range (R):** drag across the chart to fit a period. A live preview
+    line and stats appear during the drag. Release to keep the range, up to 8
+    coloured ranges. Each range reports its slope with CI, % of mean per year,
+    R², p, Sen's slope, Kendall τ, total change and CAGR. With two ranges, the
+    tab also tests the slope change between them.
+  * **Breakpoint (B):** click a year to add a breakpoint. Drag any dashed
+    breakpoint line to move it, with the piecewise fit updating as you drag.
+    **Auto-detect** chooses up to 3 breaks by minimum BIC.
+  * Drag a range's edge to resize it, or its top strip to move it. Zoom (Z) and
+    Pan (P) work as usual.
+  * Display options: confidence band, prediction interval, policy markers
+    (from `data/policies.csv`), a year-on-year panel, log scale, and a
+    projection of the last segment to a target year with its prediction
+    interval.
+  * Advanced Statistics: a full segment table, Chow tests, BIC candidates,
+    per-segment Mann–Kendall, and four residual plots (over time, histogram,
+    Q–Q, ACF).
+  * **Verify on server** re-runs the same fits through `/api/trend/fit/`
+    (statsmodels) and reports the largest relative difference.
+  * Exports: CSV of all statistics, PNG of the chart, and a shareable link.
+    The URL hash `#trend/<state>` stores the series, model, breakpoints,
+    ranges and options.
+* Flat segments (all values equal) return slope 0, with R², SE and p
+  undefined. A Huber fit whose robust scale collapses returns an undefined SE.
+  Both engines apply the same rules.
 
 It reads the same `data/sector_inventory/*.csv` files as the Explorer's Sector
 Explorer, so both always show the same data.
@@ -415,7 +450,8 @@ python manage.py load_policy_data --data-dir /path/to/ireland_core_policy_releas
 | `GET /api/map/export/<geotiff\|jpeg\|zip\|grid>/?dataset=…` | Downloads of the map layer (or B − A) |
 | `GET /api/trend/catalog/` | Gases, sectors and year axis for Trend Analysis |
 | `GET /api/trend/series/?gas=&sector=` | Raw series |
-| `POST /api/trend/fit/` | Fit, statistics and diagnostics |
+| `GET /api/trend/bundle/` | Every gas and sector series in one response (used by the in-browser engine) |
+| `POST /api/trend/fit/` | Fit, statistics and diagnostics. Optional `start` / `end` years restrict the fit to a window. At most 10 breakpoints. |
 | `POST /api/feedback/` | Record a feedback submission |
 | `GET /api/feedback/download/` | Download the feedback workbook |
 
@@ -466,7 +502,14 @@ python manage.py test policies explorer
 * `policies` tests check the dataset's shape, the intensity formula, that every
   page and API responds, and that no internal build wording (file names, notes)
   appears in any public page, API response or download.
-* `explorer` tests cover the Trend Analysis engine.
+* `explorer` tests cover the Trend Analysis engine. They check it against
+  `numpy.polyfit`, closed-form OLS and SciPy's Theil–Sen, and test edge cases
+  and the API's input validation (`explorer/test_trend_stats.py`,
+  `explorer/test_trend_analysis.py`).
+* Browser engine: with the site running, open
+  `/static/explorer/trend/stats.selftest.html`. It checks `stats.js` against
+  SciPy reference values, then fits every gas, sector and method in the
+  browser and on the server and compares the results.
 
 ---
 
@@ -491,5 +534,5 @@ feedback and attribution variables above.
 **Any WSGI host.** Run `python manage.py collectstatic`, then serve with, for
 example, `gunicorn inpact_platform.wsgi`. WhiteNoise already serves the static
 files, including the Policy Timeline's vendored Plotly and D3. Pages load fonts
-and some libraries (Bootstrap, Leaflet, Chart.js) from CDNs, so the Explorer
+and some libraries (Bootstrap, Leaflet, Chart.js, and Plotly for Trend Analysis, which has a local fallback) from CDNs, so the Explorer
 needs an internet connection. The Policy Timeline's charts work offline.

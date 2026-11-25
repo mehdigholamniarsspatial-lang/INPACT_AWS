@@ -101,6 +101,30 @@ class SegmentResult:
         }
 
 
+def _is_constant(y: np.ndarray) -> bool:
+    """True when every value is equal up to rounding noise."""
+    y = np.asarray(y, dtype=float)
+    return bool(np.ptp(y) <= 1e-12 * max(1.0, float(np.max(np.abs(y)))))
+
+
+def _constant_segment(t, y, segment_index, method) -> SegmentResult:
+    """
+    Exact result for a flat segment: slope 0, line at the common value. R², the
+    standard error, t and p are undefined (NaN) instead of floating-point noise.
+    """
+    n = len(t)
+    level = float(np.mean(y))
+    nan = float("nan")
+    zeros = np.zeros(n)
+    return SegmentResult(
+        segment_index=segment_index, start=float(t.min()), end=float(t.max()), n=n,
+        slope=0.0, intercept=level, r_squared=nan, adj_r_squared=nan,
+        rmse=0.0, mae=0.0, mse=0.0, std_error=nan, ci_low=nan, ci_high=nan,
+        t_statistic=nan, p_value=nan, residual_variance=0.0, method=method,
+        t_values=t, y_values=y, y_predicted=np.full(n, level), residuals=zeros,
+    )
+
+
 def _fit_single_segment(
     t: np.ndarray,
     y: np.ndarray,
@@ -116,6 +140,9 @@ def _fit_single_segment(
             "are required to fit a line."
         )
 
+    if _is_constant(y):
+        return _constant_segment(t, y, segment_index, method)
+
     X = sm.add_constant(t)
 
     if method == "huber":
@@ -130,6 +157,10 @@ def _fit_single_segment(
         se_slope = float(fit.bse[1])
         t_stat = float(fit.tvalues[1])
         p_val = float(fit.pvalues[1])
+        if not fit.scale > 1e-10 * max(1.0, float(np.max(np.abs(y)))):
+            # More than half the residuals are exactly zero: the MAD scale
+            # collapses and the robust standard errors are meaningless.
+            se_slope = t_stat = p_val = float("nan")
     elif method == "theilsen":
         slope, intercept, lo_slope, hi_slope = stats.theilslopes(
             y, t, alpha=1 - confidence

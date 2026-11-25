@@ -21,6 +21,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <!-- Bootstrap Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="/static/explorer/trend/trend.css" rel="stylesheet">
 <!-- Leaflet -->
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <!-- Google Fonts -->
@@ -3811,7 +3812,9 @@ a.ug-go.alt:hover{color:var(--navy)}
 </div>
 </div><!-- /tab-explorer -->
 
-<!-- ================= TAB: TREND ANALYSIS (native piecewise-regression dashboard) ================= -->
+<!-- ================= TAB: TREND ANALYSIS (interactive, computed in the browser) =================
+     Logic: /static/explorer/trend/stats.js (statistics) + trend-chart.js (Plotly chart and UI).
+     The server engine (explorer/trend_engine.py, /api/trend/fit/) verifies the browser's results. -->
 <div class="tab-pane" id="tab-trend" role="tabpanel">
   <div class="trend-shell">
 
@@ -3831,78 +3834,147 @@ a.ug-go.alt:hover{color:var(--navy)}
       <label class="side-label" for="trMethod">Regression method</label>
       <select id="trMethod" class="form-select form-select-sm mb-2">
         <option value="ols" selected>Ordinary Least Squares (OLS)</option>
-        <option value="huber">Robust — Huber</option>
+        <option value="huber">Robust: Huber</option>
         <option value="theilsen">Theil–Sen</option>
       </select>
 
       <label class="side-label" for="trConf">Confidence level</label>
       <select id="trConf" class="form-select form-select-sm mb-3">
-        <option value="0.90">90%</option>
+        <option value="0.9">90%</option>
         <option value="0.95" selected>95%</option>
         <option value="0.99">99%</option>
       </select>
 
-      <label class="side-label" for="trBreakpoints">
-        Breakpoint years <span class="text-muted fw-normal">(comma-separated)</span>
-      </label>
-      <input id="trBreakpoints" class="form-control form-control-sm mb-1"
-             value="2001" placeholder="e.g. 2001, 2008, 2015" autocomplete="off">
+      <div class="d-flex align-items-center gap-2 mb-2 mt-1">
+        <span class="panel-num">2</span>
+        <h2 class="panel-title">Breakpoints</h2>
+      </div>
+      <div id="trBpChips" class="tr-chips" aria-live="polite"></div>
+      <div class="input-group input-group-sm mb-1">
+        <input id="trBpInput" class="form-control" placeholder="e.g. 2008, 2015" autocomplete="off" aria-label="Breakpoint years">
+        <button id="trBpAdd" class="btn btn-outline-secondary" type="button">Add</button>
+        <button id="trBpClear" class="btn btn-outline-secondary" type="button" title="Remove all breakpoints"><i class="bi bi-trash"></i></button>
+      </div>
+      <div class="input-group input-group-sm mb-1">
+        <button id="trBpAuto" class="btn btn-outline-success" type="button"><i class="bi bi-magic"></i> Auto-detect</button>
+        <select id="trBpMax" class="form-select" aria-label="Maximum number of breaks">
+          <option value="1">up to 1 break</option>
+          <option value="2" selected>up to 2 breaks</option>
+          <option value="3">up to 3 breaks</option>
+        </select>
+      </div>
       <div class="trend-hint mb-3">
-        Leave empty for a single trend over the full period. Breakpoints outside
-        the data range are ignored; each segment needs ≥ 3 points.
+        Drag the dashed lines on the chart, or click a year in <b>Breakpoint</b> mode.
+        Auto-detect picks the breaks with the lowest BIC (each segment ≥ 4 years).
       </div>
 
-      <div class="form-check form-switch mb-1">
-        <input class="form-check-input" type="checkbox" id="trShowBand" checked>
-        <label class="form-check-label side-check" for="trShowBand">Confidence band</label>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="panel-num">3</span>
+        <h2 class="panel-title">Display</h2>
       </div>
-      <div class="form-check form-switch mb-3">
-        <input class="form-check-input" type="checkbox" id="trShowBp" checked>
+      <div class="form-check form-switch mb-1">
+        <input class="form-check-input" type="checkbox" id="trShowBand">
+        <label class="form-check-label side-check" for="trShowBand">Confidence band (mean)</label>
+      </div>
+      <div class="form-check form-switch mb-1">
+        <input class="form-check-input" type="checkbox" id="trShowPred">
+        <label class="form-check-label side-check" for="trShowPred">Prediction interval</label>
+      </div>
+      <div class="form-check form-switch mb-1">
+        <input class="form-check-input" type="checkbox" id="trShowBp">
         <label class="form-check-label side-check" for="trShowBp">Breakpoint lines</label>
       </div>
-
-      <div class="form-check mb-1">
-        <input class="form-check-input" type="checkbox" id="trEnableMk" checked>
-        <label class="form-check-label side-check" for="trEnableMk">
-          Enable Mann&ndash;Kendall Analysis
-        </label>
+      <div class="form-check form-switch mb-1">
+        <input class="form-check-input" type="checkbox" id="trShowPolicies">
+        <label class="form-check-label side-check" for="trShowPolicies">Policy markers</label>
       </div>
-      <div class="trend-hint mb-3">
-        Runs Mann&ndash;Kendall and Sen&rsquo;s slope separately for every fitted segment.
+      <div class="form-check form-switch mb-1">
+        <input class="form-check-input" type="checkbox" id="trShowYoy">
+        <label class="form-check-label side-check" for="trShowYoy">Year-on-year panel</label>
       </div>
+      <div class="form-check form-switch mb-1">
+        <input class="form-check-input" type="checkbox" id="trLogY">
+        <label class="form-check-label side-check" for="trLogY">Log scale</label>
+      </div>
+      <div class="form-check form-switch mb-2">
+        <input class="form-check-input" type="checkbox" id="trEnableMk">
+        <label class="form-check-label side-check" for="trEnableMk">Mann&ndash;Kendall per segment</label>
+      </div>
+      <label class="side-label" for="trProjYear">Project last trend to</label>
+      <input id="trProjYear" type="number" class="form-control form-control-sm mb-3" min="1990" max="2100" step="1" placeholder="year, e.g. 2030">
 
-      <button id="trFitBtn" class="btn btn-success btn-sm w-100 fw-bold mb-2">
-        <i class="bi bi-play-fill"></i> Fit piecewise regression
-      </button>
-      <div class="d-flex gap-2">
+      <div class="d-flex gap-2 mb-2">
         <button id="trCsvBtn" class="btn btn-outline-secondary btn-sm flex-fill" disabled>
-          <i class="bi bi-filetype-csv"></i> Stats CSV
+          <i class="bi bi-filetype-csv"></i> CSV
         </button>
         <button id="trPngBtn" class="btn btn-outline-secondary btn-sm flex-fill" disabled>
-          <i class="bi bi-image"></i> Chart PNG
+          <i class="bi bi-image"></i> PNG
+        </button>
+        <button id="trLinkBtn" class="btn btn-outline-secondary btn-sm flex-fill" title="Copy a link to this analysis">
+          <i class="bi bi-link-45deg"></i> Link
         </button>
       </div>
+      <button id="trVerifyBtn" class="btn btn-outline-primary btn-sm w-100" type="button"
+              title="Re-run the same fits with the server's statsmodels engine and compare">
+        <i class="bi bi-shield-check"></i> Verify on server
+      </button>
+      <span id="trVerifyBadge" class="tr-verify" hidden></span>
       <div id="trError" class="trend-error" role="alert" hidden></div>
     </aside>
 
     <!-- ---- Main results column ---- -->
     <main class="trend-main">
       <section class="panel-card mb-3">
-        <div class="fw-bold mb-2" id="trChartTitle" style="color:var(--navy)">
-          Piecewise Linear Regression
+        <div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
+          <div class="fw-bold" id="trChartTitle" style="color:var(--navy)">Trend Analysis</div>
+          <div class="trend-hint" id="trChartSub"></div>
         </div>
-        <div class="trend-chart-box"><canvas id="trChart"></canvas></div>
+        <div id="trKpis" class="tr-kpis" aria-live="polite"></div>
 
-        <!-- Simplified, plain-language trend indicator — one pill per fitted
-             segment (start–end + direction); raw Z / p-value live in Advanced
-             Statistics. Pills are injected by renderTrendDirection(). -->
+        <div class="tr-toolbar">
+          <div class="btn-group" role="group" aria-label="Chart mode" id="trModes">
+            <button type="button" class="btn btn-outline-secondary active" data-mode="select" aria-pressed="true"><i class="bi bi-arrows-expand-vertical"></i> Select range<kbd>R</kbd></button>
+            <button type="button" class="btn btn-outline-secondary" data-mode="breakpoint" aria-pressed="false"><i class="bi bi-signpost-split"></i> Breakpoint<kbd>B</kbd></button>
+            <button type="button" class="btn btn-outline-secondary" data-mode="zoom" aria-pressed="false"><i class="bi bi-zoom-in"></i> Zoom<kbd>Z</kbd></button>
+            <button type="button" class="btn btn-outline-secondary" data-mode="pan" aria-pressed="false"><i class="bi bi-arrows-move"></i> Pan<kbd>P</kbd></button>
+          </div>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="trResetView" title="Reset zoom"><i class="bi bi-arrow-counterclockwise"></i></button>
+          <span class="tr-mode-hint" id="trModeHint"></span>
+        </div>
+
+        <div class="tr-plot" id="trChart">
+          <div class="tr-loading" id="trLoading" hidden><span class="spinner-border spinner-border-sm"></span> Loading chart…</div>
+        </div>
+
         <div id="trDirection" class="trend-direction" hidden>
           <span class="td-label">Direction of trend</span>
           <div class="td-segments" id="trDirectionSegments"></div>
         </div>
       </section>
 
-      <!-- Advanced statistics — collapsed by default, expands on click -->
+      <!-- Range analysis: one row per selected period -->
+      <section class="panel-card mb-3">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <div class="fw-bold" style="color:var(--navy)"><i class="bi bi-bounding-box-circles me-1"></i>Range analysis</div>
+          <button type="button" id="trClearRanges" class="btn btn-link btn-sm text-danger p-0" disabled>Clear all</button>
+        </div>
+        <div class="trend-table-wrap">
+          <table class="table table-sm table-striped align-middle mb-0 tr-ranges">
+            <thead><tr>
+              <th>Range</th><th>Years</th><th>N</th><th>Slope /yr</th><th>Slope CI</th><th>% of mean /yr</th>
+              <th>R²</th><th>p</th><th>Sen's slope</th><th>Kendall τ</th><th>Change</th><th>CAGR</th><th></th>
+            </tr></thead>
+            <tbody id="trRangeBody"></tbody>
+          </table>
+        </div>
+        <div id="trRangeCompare" class="tr-compare" hidden></div>
+        <div class="trend-hint mt-1">
+          Slopes in kt CO₂-eq per year, by the selected regression method. Stars: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001.
+          Edit the years in the table, or drag a range's edges or top strip on the chart.
+        </div>
+      </section>
+
+      <!-- Advanced statistics: collapsed by default -->
       <section class="panel-card trend-adv mb-4">
         <button class="trend-adv-toggle collapsed" type="button"
                 data-bs-toggle="collapse" data-bs-target="#trAdvancedPanel"
@@ -3912,45 +3984,46 @@ a.ug-go.alt:hover{color:var(--navy)}
         </button>
         <div id="trAdvancedPanel" class="collapse">
           <div class="trend-adv-body">
-
-            <!-- Segment statistics -->
             <div class="trend-adv-sec">
               <div class="fw-bold mb-2" style="color:var(--navy)">Segment statistics</div>
               <div class="trend-table-wrap">
-                <table class="table table-sm table-striped align-middle mb-0" id="trStatsTable">
-                  <thead></thead><tbody></tbody>
-                </table>
+                <table class="table table-sm table-striped align-middle mb-0" id="trStatsTable"><thead></thead><tbody></tbody></table>
               </div>
               <div class="trend-hint mt-1">
-                Slope units: kt CO₂-eq per year. CI bounds are for the slope at the
-                selected confidence level.
+                Slope units: kt CO₂-eq per year. The intercept is the line's value in year 0; "Level at start" is easier to read.
               </div>
             </div>
-
-            <!-- Segment-level Mann–Kendall -->
-            <div class="trend-adv-sec" id="trMkPanel" hidden>
-              <div class="fw-bold mb-1" style="color:var(--navy)">
-                Segment-level Mann&ndash;Kendall analysis
-              </div>
-              <div class="trend-hint mb-2">
-                Two-sided test with tie correction and continuity-corrected Z; significance threshold &alpha; = 0.05.
-              </div>
+            <div class="trend-adv-sec">
+              <div class="fw-bold mb-1" style="color:var(--navy)">Chow test at each breakpoint</div>
+              <div class="trend-hint mb-2">F-test of one line for the whole series against separate lines on either side of the break.</div>
               <div class="trend-table-wrap">
-                <table class="table table-sm table-striped align-middle mb-0" id="trMkTable">
-                  <thead></thead><tbody></tbody>
-                </table>
+                <table class="table table-sm table-striped align-middle mb-0" id="trChowTable"><thead></thead><tbody></tbody></table>
               </div>
             </div>
-
-            <!-- Residual diagnostics -->
+            <div class="trend-adv-sec" id="trDetectPanel" hidden>
+              <div class="fw-bold mb-1" style="color:var(--navy)">Break detection (BIC)</div>
+              <div class="trend-hint mb-2">Best breakpoint set for each number of breaks, by an exhaustive search. Lower BIC is better.</div>
+              <div class="trend-table-wrap">
+                <table class="table table-sm table-striped align-middle mb-0" id="trDetectTable"><thead></thead><tbody></tbody></table>
+              </div>
+            </div>
+            <div class="trend-adv-sec" id="trMkPanel" hidden>
+              <div class="fw-bold mb-1" style="color:var(--navy)">Segment-level Mann&ndash;Kendall analysis</div>
+              <div class="trend-hint mb-2">Two-sided test with tie correction and continuity-corrected Z; significance threshold &alpha; = 0.05.</div>
+              <div class="trend-table-wrap">
+                <table class="table table-sm table-striped align-middle mb-0" id="trMkTable"><thead></thead><tbody></tbody></table>
+              </div>
+            </div>
             <div class="trend-adv-sec">
               <div class="fw-bold mb-2" style="color:var(--navy)">Residual diagnostics</div>
-              <div class="trend-diag-grid">
-                <div class="trend-chart-box sm"><canvas id="trResChart"></canvas></div>
-                <div class="trend-chart-box sm"><canvas id="trHistChart"></canvas></div>
+              <div class="tr-diag4">
+                <div id="trResChart"></div>
+                <div id="trHistChart"></div>
+                <div id="trQqChart"></div>
+                <div id="trAcfChart"></div>
               </div>
+              <div class="tr-resid-tests" id="trResidTests"></div>
             </div>
-
           </div>
         </div>
       </section>
@@ -5405,7 +5478,7 @@ a.ug-go.alt:hover{color:var(--navy)}
       <div class="ug-card">
         <h3 class="ug-card-title"><i class="bi bi-diagram-2"></i>Two tabs, one question</h3>
         <div class="ug-ideas ug-ideas-2">
-          <div class="ug-idea"><b><i class="bi bi-activity"></i> Trend Analysis</b><span>A <em>quick, built-in</em> tool inside this dashboard. Pick a gas and a sector, type the breakpoint years separated by commas, and press <strong>Fit piecewise regression</strong> to see how emissions change over time. Export the statistics as CSV or the chart as PNG.</span>
+          <div class="ug-idea"><b><i class="bi bi-activity"></i> Trend Analysis</b><span>A <em>quick, built-in</em> tool inside this dashboard. Pick a gas and a sector, then drag across the chart to fit a trend to any period, or drag the dashed breakpoint lines to split the series. Every statistic updates instantly in your browser. Export the statistics as CSV, the chart as PNG, or copy a link to the analysis.</span>
             <span class="ug-actions" style="margin-top:.6rem"><button type="button" class="ug-go alt" data-go="trend"><i class="bi bi-activity"></i>Open Trend Analysis</button></span></div>
           <div class="ug-idea"><b><i class="bi bi-bar-chart-steps"></i> Structural Break Analysis</b><span>An <em>advanced</em> tool that runs as a separate Streamlit app. It fits a trend to each period between your break years, overlays EU, national and international climate policies, and gives full control of the figure, statistics, diagnostics and publication-quality exports. <strong>This tutorial covers this app.</strong></span>
             <span class="ug-actions" style="margin-top:.6rem"><a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Open the Streamlit app</a></span></div>
@@ -5757,6 +5830,9 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<!-- Trend Analysis tab (Plotly itself is loaded on first visit to the tab) -->
+<script src="/static/explorer/trend/stats.js"></script>
+<script src="/static/explorer/trend/trend-chart.js"></script>
 <script>
 /* =====================================================================
    Ireland Greenhouse Gas Policy Impact Explorer
@@ -7765,6 +7841,7 @@ function activateTab(name){
   }
   // Lazy-initialise the Trend Analysis dashboard on first visit.
   if (name === "trend") initTrendTab();
+  else if (location.hash.startsWith("#trend")) history.replaceState(null, "", location.pathname + location.search);
   // Policy Timeline: load the embedded app on first visit and keep #policy/... deep links in sync.
   if (name === "policy") ptActivate();
   else if (location.hash.startsWith("#policy")) history.replaceState(null, "", location.pathname + location.search);
@@ -11842,6 +11919,7 @@ if (MAP_STANDALONE) (function overlayLayers(){
 // Open straight into the Policy Timeline when the page is loaded with #policy...
 if (!MAP_STANDALONE && location.hash.startsWith("#policy")) activateTab("policy");
 if (!MAP_STANDALONE && location.hash.startsWith("#mapping")) activateTab("mapping");
+if (!MAP_STANDALONE && location.hash.startsWith("#trend")) activateTab("trend");
 
 /* ---------------------- 9d. User Guide tab (interactive guide) ----------------------
  * Chapters (sidebar): 1 Introduction, 2 Policy Timeline, 3 Spatial Mapping (subsections 3.1 Time series,
@@ -12032,344 +12110,8 @@ if (!MAP_STANDALONE && location.hash.startsWith("#guide")) activateTab("guide");
 
 
 /* ---------------------- 9b. Trend Analysis dashboard ----------------------
- * Native port of the former Streamlit "Piecewise Regression Dashboard".
- * The numerics run server-side in explorer/trend_engine.py (numpy / scipy /
- * statsmodels) behind /api/trend/*; this block is UI only. */
-const trend = {
-  inited: false, catalog: null, lastFit: null,
-  chart: null, resChart: null, histChart: null,
-  palette: ["#1b6ca8","#c0392b","#2e8b57","#8e44ad","#d68910","#16a085","#7f8c8d","#2c3e50"],
-};
-const $t = id => document.getElementById(id);
-
-function trendError(msg){
-  const box = $t("trError");
-  if (!msg){ box.hidden = true; box.textContent = ""; return; }
-  box.hidden = false; box.textContent = msg;
-}
-
-async function initTrendTab(){
-  if (trend.inited) return;
-  trend.inited = true;
-  try{
-    const r = await fetch("/api/trend/catalog/");
-    const data = await r.json();
-    if (!data.ok) throw new Error(data.detail || "Catalog unavailable.");
-    trend.catalog = data;
-    const gasSel = $t("trGas");
-    gasSel.innerHTML = "";
-    Object.keys(data.gases).forEach(g => {
-      const o = document.createElement("option");
-      o.value = g; o.textContent = g; gasSel.appendChild(o);
-    });
-    gasSel.addEventListener("change", fillTrendSectors);
-    fillTrendSectors();
-    $t("trFitBtn").addEventListener("click", runTrendFit);
-    $t("trCsvBtn").addEventListener("click", downloadTrendCsv);
-    $t("trPngBtn").addEventListener("click", downloadTrendPng);
-    $t("trBreakpoints").addEventListener("keydown", e => {
-      if (e.key === "Enter") runTrendFit();
-    });
-    /* Residual-diagnostic charts live inside the collapsed Advanced Statistics
-       panel (display:none), so they may size to 0 on first render. Nudge them
-       to resize the moment the panel is expanded. */
-    $t("trAdvancedPanel").addEventListener("shown.bs.collapse", () => {
-      [trend.resChart, trend.histChart].forEach(c => { if (c) c.resize(); });
-    });
-    runTrendFit(); // initial fit: first gas, first sector, no breakpoints
-  }catch(err){
-    trendError("Could not load the trend catalogue: " + err.message);
-  }
-}
-
-function fillTrendSectors(){
-  const gas = $t("trGas").value;
-  const secSel = $t("trSector");
-  const prev = secSel.value;
-  secSel.innerHTML = "";
-  (trend.catalog.gases[gas] || []).forEach(s => {
-    const o = document.createElement("option");
-    o.value = s; o.textContent = s; secSel.appendChild(o);
-  });
-  if (prev && [...secSel.options].some(o => o.value === prev)) secSel.value = prev;
-}
-
-function parseTrendBreakpoints(){
-  return $t("trBreakpoints").value
-    .split(/[,;\s]+/).map(s => s.trim()).filter(Boolean)
-    .map(Number).filter(v => Number.isFinite(v));
-}
-
-async function runTrendFit(){
-  trendError(null);
-  const btn = $t("trFitBtn");
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Fitting…';
-  try{
-    const payload = {
-      gas: $t("trGas").value,
-      sector: $t("trSector").value,
-      method: $t("trMethod").value,
-      confidence: parseFloat($t("trConf").value),
-      breakpoints: parseTrendBreakpoints(),
-      mann_kendall_segments: $t("trEnableMk").checked,
-    };
-    const r = await fetch("/api/trend/fit/", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(payload),
-    });
-    const data = await r.json();
-    if (!data.ok) throw new Error(data.detail || `Fit failed (HTTP ${r.status}).`);
-    trend.lastFit = data;
-    renderTrendResults(data);
-    $t("trCsvBtn").disabled = false;
-    $t("trPngBtn").disabled = false;
-    if (data.breakpoints_dropped.length){
-      trendError("Ignored breakpoint(s) outside the data range: " +
-                 data.breakpoints_dropped.join(", "));
-    }
-  }catch(err){
-    trendError(err.message);
-  }finally{
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-play-fill"></i> Fit piecewise regression';
-  }
-}
-
-/* Map a direction key to its pill styling / wording. */
-const TREND_DIR = {
-  up:   {cls: "up",   icon: "bi-arrow-up-right",   label: "Increasing"},
-  down: {cls: "down", icon: "bi-arrow-down-right", label: "Decreasing"},
-  flat: {cls: "flat", icon: "bi-dash-lg",          label: "No significant trend"},
-};
-
-/* Build one "Direction of trend" pill per fitted segment. */
-function renderTrendDirection(d){
-  const box = $t("trDirection");
-  const host = $t("trDirectionSegments");
-  const segs = d.segments || [];
-  if (!segs.length){ box.hidden = true; host.innerHTML = ""; return; }
-
-  // Per-segment Mann–Kendall rows (present only when that toggle is on),
-  // keyed by segment index for quick lookup.
-  const mkBySeg = {};
-  (d.segment_mann_kendall || []).forEach(r => { mkBySeg[r.segment] = r; });
-  const alpha = 1 - (d.confidence || 0.95);
-  const yr = v => String(Math.round(v));
-
-  const multi = segs.length > 1;
-  box.querySelector(".td-label").textContent =
-    multi ? "Direction of trend (per segment)" : "Direction of trend";
-
-  // Test-statistic (Z for Mann–Kendall, t for the regression fallback) and
-  // p-value, formatted for display inside each pill.
-  const fmtStat = v => v == null ? "–" : v.toFixed(2);
-  const fmtP = p => p == null ? "p = –"
-                  : (p < 1e-4 ? "p < 0.0001" : `p = ${p.toFixed(4)}`);
-
-  host.innerHTML = segs.map(s => {
-    const mkRow = mkBySeg[s.Segment];
-    let key, statLabel, statVal, pVal;
-    if (mkRow){
-      const raw = (mkRow.trend || "").toLowerCase();
-      key = raw.includes("increas") ? "up"
-          : raw.includes("decreas") ? "down" : "flat";
-      statLabel = "Z"; statVal = mkRow.Z; pVal = mkRow.p_value;
-    }else{
-      const sig = (s.p_value != null) && (s.p_value < alpha);
-      key = (sig && s.Slope > 0) ? "up"
-          : (sig && s.Slope < 0) ? "down" : "flat";
-      statLabel = "t"; statVal = s.t_statistic; pVal = s.p_value;
-    }
-    const dir = TREND_DIR[key];
-    const period = `${yr(s.Start)}–${yr(s.End)}`;
-    const segTag = multi ? `<span class="td-segno">Seg ${s.Segment}</span>` : "";
-    const stats = `${statLabel} = ${fmtStat(statVal)} · ${fmtP(pVal)}`;
-    return `<span class="td-pill ${dir.cls}">${segTag}` +
-           `<span class="td-period">${period}</span>` +
-           `<i class="bi ${dir.icon}"></i>` +
-           `<span>${dir.label}</span>` +
-           `<span class="td-stats">${stats}</span></span>`;
-  }).join("");
-
-  box.hidden = false;
-}
-
-function renderTrendResults(d){
-  /* --- Plain-language "Direction of trend" indicator, PER SEGMENT ---
-     One pill per fitted segment, each labelled with its own start–end years.
-     With no breakpoints this is a single pill covering the whole period; with
-     breakpoints, each segment is interpreted separately. Prefers the
-     per-segment Mann–Kendall verdict when that analysis is enabled, otherwise
-     falls back to the segment's regression slope + p-value. The raw Z /
-     p-values remain available in the Advanced Statistics panel. --- */
-  renderTrendDirection(d);
-
-  /* --- Main chart --- */
-  $t("trChartTitle").textContent =
-    `${d.gas} — ${d.sector} (${d.method.toUpperCase()}, ` +
-    `${Math.round(d.confidence * 100)}% CI)`;
-  const showBand = $t("trShowBand").checked;
-  const showBp = $t("trShowBp").checked;
-
-  const datasets = [{
-    type: "scatter", label: "Observations",
-    data: d.years.map((x, i) => ({x, y: d.values[i]})),
-    backgroundColor: "rgba(77,77,77,.75)", pointRadius: 3.5, order: 10,
-  }];
-  d.segments.forEach((s, i) => {
-    const c = trend.palette[i % trend.palette.length];
-    if (showBand){
-      datasets.push({
-        type: "line", label: `_band_lo_${i}`,
-        data: s.t.map((x, j) => ({x, y: s.band_low[j]})),
-        borderWidth: 0, pointRadius: 0, fill: false, order: 6,
-      });
-      datasets.push({
-        type: "line", label: `_band_hi_${i}`,
-        data: s.t.map((x, j) => ({x, y: s.band_high[j]})),
-        borderWidth: 0, pointRadius: 0, order: 6,
-        fill: "-1", backgroundColor: c + "26",
-      });
-    }
-    datasets.push({
-      type: "line",
-      label: `Seg ${s.Segment}: ${s.Equation} (R²=${s.R2 == null ? "–" : s.R2})`,
-      data: s.t.map((x, j) => ({x, y: s.y_pred[j]})),
-      borderColor: c, borderWidth: 2.4, pointRadius: 0, order: 5,
-    });
-  });
-  if (showBp){
-    const yAll = d.values.concat(...d.segments.map(s => s.y_pred));
-    const yMin = Math.min(...yAll), yMax = Math.max(...yAll);
-    d.breakpoints_used.forEach(bp => {
-      datasets.push({
-        type: "line", label: `_bp_${bp}`,
-        data: [{x: bp, y: yMin}, {x: bp, y: yMax}],
-        borderColor: "rgba(22,50,79,.55)", borderDash: [6, 5],
-        borderWidth: 1.4, pointRadius: 0, order: 1,
-      });
-    });
-  }
-  if (trend.chart) trend.chart.destroy();
-  trend.chart = new Chart($t("trChart"), {
-    data: {datasets},
-    options: {
-      responsive: true, maintainAspectRatio: false, animation: false,
-      parsing: false, normalized: true,
-      scales: {
-        x: {type: "linear", title: {display: true, text: "Year"},
-            ticks: {callback: v => String(Math.round(v))}},
-        y: {title: {display: true, text: "Emissions (kt CO₂-eq)"}},
-      },
-      plugins: {
-        /* Equation legend removed from the main view; the regression
-           equations remain available in the Advanced Statistics table. */
-        legend: {display: false},
-        tooltip: {filter: it => !it.dataset.label.startsWith("_")},
-      },
-    },
-  });
-
-  /* --- Stats table --- */
-  const cols = ["Segment","Start","End","N","Slope","Intercept","Equation","R2",
-                "Adj_R2","RMSE","MAE","Std_Error","CI_Low_95","CI_High_95",
-                "t_statistic","p_value","Method"];
-  const table = $t("trStatsTable");
-  table.tHead.innerHTML =
-    "<tr>" + cols.map(c => `<th>${c.replaceAll("_"," ")}</th>`).join("") + "</tr>";
-  table.tBodies[0].innerHTML = d.segments.map(s =>
-    "<tr>" + cols.map(c => `<td>${s[c] == null ? "–" : s[c]}</td>`).join("") + "</tr>"
-  ).join("");
-
-  /* --- Optional Mann-Kendall results, calculated per fitted segment --- */
-  const mkPanel = $t("trMkPanel");
-  const mkRows = d.segment_mann_kendall || [];
-  mkPanel.hidden = !d.segment_mann_kendall_enabled;
-  if (!mkPanel.hidden){
-    const mkTable = $t("trMkTable");
-    const mkCols = ["Segment", "Period", "N", "Mann–Kendall S", "Z statistic",
-                    "p-value", "Trend direction", "Statistical significance", "Sen's slope"];
-    mkTable.tHead.innerHTML =
-      "<tr>" + mkCols.map(c => `<th>${c}</th>`).join("") + "</tr>";
-    mkTable.tBodies[0].innerHTML = mkRows.map(r => {
-      const p = r.p_value == null ? "–" :
-        (r.p_value < 1e-4 ? "<0.0001" : r.p_value.toFixed(4));
-      const z = r.Z == null ? "–" : r.Z.toFixed(3);
-      const senSlope = r.sens_slope == null ? "–" : Number(r.sens_slope).toPrecision(5);
-      const cls = r.significant ? ' class="trend-significant"' : "";
-      return `<tr><td>${r.segment}</td><td>${r.period}</td><td>${r.n}</td>` +
-        `<td>${r.S}</td><td>${z}</td><td>${p}</td><td>${r.trend}</td>` +
-        `<td${cls}>${r.significance}</td><td>${senSlope}</td></tr>`;
-    }).join("");
-  }
-
-  /* --- Diagnostics --- */
-  const dg = d.diagnostics;
-  if (trend.resChart) trend.resChart.destroy();
-  trend.resChart = new Chart($t("trResChart"), {
-    type: "scatter",
-    data: {datasets: [{
-      label: "Residual vs fitted",
-      data: dg.fitted.map((x, i) => ({x, y: dg.residuals[i]})),
-      backgroundColor: "rgba(27,108,168,.7)", pointRadius: 3.5,
-    }]},
-    options: {
-      responsive: true, maintainAspectRatio: false, animation: false,
-      scales: {x: {title: {display: true, text: "Fitted value"}},
-               y: {title: {display: true, text: "Residual"}}},
-      plugins: {legend: {display: false},
-                title: {display: true, text: "Residuals vs fitted"}},
-    },
-  });
-  const centers = dg.hist_edges.slice(0, -1).map(
-    (e, i) => (e + dg.hist_edges[i + 1]) / 2);
-  if (trend.histChart) trend.histChart.destroy();
-  trend.histChart = new Chart($t("trHistChart"), {
-    type: "bar",
-    data: {labels: centers.map(c => c.toFixed(1)),
-           datasets: [{label: "Count", data: dg.hist_counts,
-                       backgroundColor: "rgba(0,132,61,.65)"}]},
-    options: {
-      responsive: true, maintainAspectRatio: false, animation: false,
-      scales: {x: {title: {display: true, text: "Residual"}},
-               y: {title: {display: true, text: "Frequency"},
-                   ticks: {precision: 0}}},
-      plugins: {legend: {display: false},
-                title: {display: true, text: "Residual distribution"}},
-    },
-  });
-}
-
-function downloadTrendCsv(){
-  const d = trend.lastFit;
-  if (!d) return;
-  const rows = d.segments;
-  const cols = Object.keys(rows[0]).filter(
-    k => !["t","y_pred","band_low","band_high"].includes(k));
-  const esc = v => {
-    const s = v == null ? "" : String(v);
-    return /[",\n]/.test(s) ? '"' + s.replaceAll('"','""') + '"' : s;
-  };
-  const csv = [cols.join(",")]
-    .concat(rows.map(r => cols.map(c => esc(r[c])).join(",")))
-    .join("\n");
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv"}));
-  a.download = `trend_stats_${d.gas}_${d.sector}`
-    .replace(/[^\w.-]+/g, "_") + ".csv";
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-
-function downloadTrendPng(){
-  if (!trend.chart) return;
-  const a = document.createElement("a");
-  a.href = trend.chart.toBase64Image("image/png", 1);
-  a.download = "trend_regression_chart.png";
-  a.click();
-}
+ * Moved to /static/explorer/trend/: stats.js (statistics, computed in the browser)
+ * and trend-chart.js (Plotly chart; defines initTrendTab, called by activateTab). */
 
 /* ---------------------- 10. Policy consultation (Feedback tab) ----------------------
  * The questionnaires are defined once on the server (explorer/feedback_survey.py) and fetched from
