@@ -14,6 +14,7 @@ import csv
 import hmac
 import io
 import json
+import os
 import time
 import zipfile
 import logging
@@ -433,6 +434,34 @@ _FB_KEYFAIL_MAX, _FB_KEYFAIL_WINDOW = 8, 900
 ACCESS_SALT, ACCESS_HOURS = "inpact.feedback.access", 12
 # A key holder who submits gets a results pass: the results open only after completing the questionnaire
 RESULTS_SALT, RESULTS_DAYS = "inpact.feedback.results", 90
+# The whole Feedback section is closed until the visitor enters the section code (while the
+# consultation is revised for GDPR). The code is FEEDBACK_GATE_CODE in /etc/inpact/inpact.env
+# (never in Git); while it is unset the section cannot be opened. The code is exchanged at /api/feedback/gate/ for a signed token (valid GATE_HOURS) that the
+# page sends as the X-Feedback-Gate header to every other feedback endpoint.
+GATE_SALT, GATE_HOURS = "inpact.feedback.gate", 12
+
+
+def _gate_code():
+    return os.environ.get("FEEDBACK_GATE_CODE", "").strip()
+
+
+def _gate_ok(request):
+    """True when the request carries a valid Feedback-section token."""
+    token = request.headers.get("X-Feedback-Gate", "")
+    if not token:
+        return False
+    try:
+        data = signing.loads(str(token), salt=GATE_SALT, max_age=GATE_HOURS * 3600)
+    except signing.BadSignature:
+        return False
+    return isinstance(data, dict) and data.get("gate") is True
+
+
+def _gate_closed():
+    resp = JsonResponse({"ok": False, "gate": True,
+                         "detail": "The feedback section is closed. Enter the access code to open it."}, status=403)
+    resp["X-Feedback-Gate"] = "closed"
+    return resp
 
 
 def _client_addr(request):
@@ -481,13 +510,37 @@ def _json_body(request):
     return data if isinstance(data, dict) else None
 
 
+@csrf_exempt
+@require_POST
+def feedback_gate(request):
+    """Open the Feedback section. Body: {"code": "..."}. Returns {"ok": true, "token": ..., "hours": ...}."""
+    data = _json_body(request)
+    if data is None or len(request.body) > 2048:
+        return JsonResponse({"ok": False, "detail": "Could not read the request."}, status=400)
+    now, addr = time.time(), _client_addr(request)
+    fails = _too_many_key_failures(addr, now)
+    if fails is None:
+        return JsonResponse({"ok": False, "detail": "Too many attempts. Please wait 15 minutes and try again."},
+                            status=429)
+    code, expected = str(data.get("code") or "").strip(), _gate_code()
+    if not expected or not hmac.compare_digest(code.encode("utf-8"), expected.encode("utf-8")):
+        _FB_KEYFAIL[addr] = fails + [now]
+        time.sleep(0.6)                                       # slows down guessing
+        return JsonResponse({"ok": False, "detail": "This code is not valid."}, status=403)
+    token = signing.dumps({"gate": True}, salt=GATE_SALT, compress=True)
+    return JsonResponse({"ok": True, "token": token, "hours": GATE_HOURS})
+
+
 def feedback_schema(request):
     """The questionnaires (groups, steps, questions, answer codes) for the Feedback tab."""
+    if not _gate_ok(request):
+        return _gate_closed()
     schema = feedback_survey.public_schema()
     for g in schema["groups"]:                       # a keyed group without a key on the server is closed
         g["open"] = (not g["keyed"]) or bool(feedback_store.group_key(g["code"]))
     resp = JsonResponse(schema)
     resp["Cache-Control"] = "no-cache"
+    resp["Vary"] = "X-Feedback-Gate"
     return resp
 
 
@@ -499,6 +552,8 @@ def feedback_access(request):
     without it, the key decides the group, as in the results unlock form).
     Returns {"ok": true, "group": ..., "label": ..., "token": ...}.
     """
+    if not _gate_ok(request):
+        return _gate_closed()
     data = _json_body(request)
     if data is None or len(request.body) > 2048:
         return JsonResponse({"ok": False, "detail": "Could not read the request."}, status=400)
@@ -526,6 +581,8 @@ def feedback_access(request):
 
 def feedback_summary(request):
     """Aggregated results: only for key holders who completed the questionnaire (results pass)."""
+    if not _gate_ok(request):
+        return _gate_closed()
     group = _results_group(request.headers.get("X-Feedback-Results"))
     if not group:
         return JsonResponse({"ok": False, "detail": "The results are shown to stakeholders, researchers, experts "
@@ -545,6 +602,8 @@ def feedback_summary(request):
 @require_POST
 def submit_feedback(request):
     """Validate and store one survey response."""
+    if not _gate_ok(request):
+        return _gate_closed()
     if len(request.body) > 64 * 1024:
         return JsonResponse({"ok": False, "detail": "The submission is too large."}, status=413)
     data = _json_body(request)

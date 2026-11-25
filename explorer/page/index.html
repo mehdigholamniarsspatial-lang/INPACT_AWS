@@ -1240,6 +1240,12 @@ html.hdr-slim .tab-nav{
 .fb-lock p{margin:0;font-size:.82rem;color:var(--text-muted);line-height:1.5}
 .fb-lock form{grid-column:1/-1;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
 .fb-lock .fb-keymsg{flex-basis:100%;margin:0}
+/* Feedback section code: asked in a dialog when the Feedback tab is chosen */
+.fb-gate{border:0;padding:0;border-radius:16px;max-width:min(560px,calc(100vw - 2rem));width:100%;box-shadow:0 20px 50px rgba(16,40,64,.28)}
+.fb-gate::backdrop{background:rgba(16,32,48,.55)}
+.fb-gate .fb-lock{background:#fff;border:0;border-radius:16px;padding:1.4rem 1.5rem}
+.fb-gate input{flex:1 1 220px;max-width:300px}
+.fb-gate .fb-gate-cancel{background:none;border:1px solid var(--grey-border);color:var(--navy)}
 .fb-lock .fb-keyrow{flex:1 1 100%}
 @media (max-width:575px){.fb-lock{grid-template-columns:1fr}}
 .fb-dash-top{display:flex;align-items:flex-start;gap:.8rem;flex-wrap:wrap;margin-bottom:.9rem}
@@ -5023,7 +5029,7 @@ a.ug-go.alt:hover{color:var(--navy)}
           <h3 class="ug-card-title"><i class="bi bi-layout-split"></i>Three ideas behind the Compare analysis</h3>
           <div class="ug-ideas">
             <div class="ug-idea"><b>The map shows B &minus; A.</b><span>Each grid cell is coloured by layer B minus layer A on a diverging scale: one colour where B is higher, another where it is lower, and a neutral colour where the two are about the same.</span></div>
-            <div class="ug-idea"><b>Like is compared with like.</b><span>Both layers come from the same dataset and the same gas, so the difference is meaningful. You can change the year, month, sector, inversion system, transport model or estimate (prior or posterior).</span></div>
+            <div class="ug-idea"><b>Like is compared with like.</b><span>Both layers come from the same dataset and the same gas (for MapEIre, the same pollutant), so the difference is meaningful. You can change the year, month, sector, inversion system, transport model or estimate (prior or posterior).</span></div>
             <div class="ug-idea"><b>Absolute or relative.</b><span><em>Absolute</em> shows the difference in the layer&rsquo;s own units; <em>% change</em> shows it relative to A. In % change, cells where A is below 1% of its mean are left out to avoid misleading ratios.</span></div>
           </div>
           <div class="ug-note"><i class="bi bi-info-circle"></i><span>Compare works within one dataset. For <b>MapEIre</b>, layer B keeps layer A&rsquo;s pollutant and can change the year and the sector, e.g. 2019 &minus; 2015 for road-transport NO&#8339;.</span></div>
@@ -5040,7 +5046,7 @@ a.ug-go.alt:hover{color:var(--navy)}
           <div class="ug-step" data-step="sm-cmp-dataset">
             <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugC1">
               <span class="ug-step-num">1</span><i class="bi bi-layout-split ug-step-ic" aria-hidden="true"></i>
-              <span class="ug-step-txt"><b>Switch on Compare and choose a dataset</b><span>EDGAR or the Inverse model.</span></span>
+              <span class="ug-step-txt"><b>Switch on Compare and choose a dataset</b><span>MapEIre, EDGAR or the Inverse model.</span></span>
               <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
             </button>
             <div class="ug-step-body" id="ugC1">
@@ -5062,11 +5068,11 @@ a.ug-go.alt:hover{color:var(--navy)}
           <div class="ug-step" data-step="sm-cmp-layers">
             <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugC2">
               <span class="ug-step-num">2</span><i class="bi bi-intersect ug-step-ic" aria-hidden="true"></i>
-              <span class="ug-step-txt"><b>Select Layer A and Layer B</b><span>Two layers of the same dataset and gas, side by side.</span></span>
+              <span class="ug-step-txt"><b>Select Layer A and Layer B</b><span>Two layers of the same dataset and gas (or MapEIre pollutant), side by side.</span></span>
               <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
             </button>
             <div class="ug-step-body" id="ugC2">
-              <p>In <b>Step 2 &middot; Select the layer</b>, the panel shows two columns. Fill <b>Layer A</b> (the reference) first, then <b>Layer B</b>; the gas of B follows A automatically. As soon as both are complete, the difference map is drawn and the statistics appear on the right.</p>
+              <p>In <b>Step 2 &middot; Select the layer</b>, the panel shows two columns. Fill <b>Layer A</b> (the reference) first, then <b>Layer B</b>; the gas of B (for MapEIre, the pollutant) follows A automatically. As soon as both are complete, the difference map is drawn and the statistics appear on the right.</p>
               <ul class="ug-list">
                 <li><b>Map shows B &minus; A as</b>: choose <b>Absolute</b> (difference in the layer&rsquo;s units) or <b>% change</b> (difference relative to A).</li>
                 <li>Hover over a cell to read its values in A and B and their difference.</li>
@@ -5643,6 +5649,11 @@ a.ug-go.alt:hover{color:var(--navy)}
 <div class="tab-pane" id="tab-feedback" role="tabpanel">
   <div class="fb-wrap">
 
+    <!-- The Feedback section is closed while the consultation is revised for GDPR; the code is checked on the
+         server (/api/feedback/gate/, FEEDBACK_GATE_CODE) and every feedback endpoint needs its token. -->
+
+    <div id="fbGated" hidden>
+
     <header class="fb-hero">
       <div class="fb-hero-txt">
         <div class="eyebrow"><i class="bi bi-people-fill"></i>Policy consultation</div>
@@ -5704,8 +5715,23 @@ a.ug-go.alt:hover{color:var(--navy)}
       </form>
     </details>
 
+    </div><!-- /fbGated -->
   </div>
 </div><!-- /tab-feedback -->
+    <!-- Shown as a dialog when the Feedback tab is chosen; the tab opens only after the code is accepted -->
+    <dialog class="fb-gate" id="fbGate" aria-labelledby="fbGateH">
+      <div class="fb-lock">
+        <span class="ico"><i class="bi bi-shield-lock"></i></span>
+        <div><h4 id="fbGateH">Enter the access key</h4>
+          <p>The feedback section is open to people who have received an access key from the INPACT team. Enter it to open the feedback page.</p></div>
+        <form id="fbGateForm" autocomplete="off" novalidate>
+          <input type="password" class="form-control" id="fbGateCode" maxlength="64" autocomplete="off" spellcheck="false" placeholder="Access key" aria-label="Access key for the feedback section" aria-describedby="fbGateMsg">
+          <button type="submit" class="btn btn-submit text-white" id="fbGateBtn"><i class="bi bi-unlock me-1"></i>Open</button>
+          <button type="button" class="btn fb-gate-cancel" id="fbGateCancel">Cancel</button>
+          <div class="fb-keymsg" id="fbGateMsg" role="status"></div>
+        </form>
+      </div>
+    </dialog>
 
 <!-- ================= FOOTER ================= -->
 <footer class="app-footer">
@@ -7714,6 +7740,8 @@ const tabPanes = {
 };
 
 function activateTab(name){
+  // Feedback: ask for the access key first (section 10); the tab opens once it is accepted
+  if (name === "feedback" && window.fbGate && !window.fbGate.ok()){ window.fbGate.ask(); return; }
   tabButtons.forEach(b => {
     const on = b.dataset.tab === name;
     b.classList.toggle("active", on);
@@ -9312,7 +9340,7 @@ if (MAP_STANDALONE) (function mapWindow(){
     return { get result(){ return st.result; } };
   })();
 
-  // ---- Time series of a pixel, a region or the whole grid (EDGAR and the inverse model) ----
+  // ---- Time series of a pixel, a region or the whole grid (MapEIre, EDGAR and the inverse model) ----
   // The left panel's layer is added to the plot ("basket") on the right with Add to plot.
   // A plot holds one gas; every layer follows the same area (pixel, region or whole image),
   // which can be moved or switched at any time.
@@ -10258,10 +10286,9 @@ if (MAP_STANDALONE) (function mapWindow(){
       const dup = !def.missing && st.layers.some(l => l.key === keyOf(def));
       addBtn.disabled = !!def.missing || wrongGas || dup || !locReady() || st.busy;
       const needArea = !def.missing && !wrongGas && !dup && !locReady();
-      const noTs = false;                       // every dataset has a time series (MapEIre: three years)
-      dsWarn.hidden = !noTs;
-      addBtn.querySelector("span").textContent = st.busy ? "Adding…" : noTs ? "Not available for MapEIre" : dup ? "Already in the plot" : needArea ? "Choose the area first (step 3)" : "Add to plot";
-      addBtn.querySelector("i").className = noTs ? "bi bi-slash-circle" : dup ? "bi bi-check2" : needArea ? "bi bi-arrow-up" : "bi bi-plus-lg";
+      dsWarn.hidden = true;                     // every dataset has a time series (MapEIre: three years)
+      addBtn.querySelector("span").textContent = st.busy ? "Adding…" : dup ? "Already in the plot" : needArea ? "Choose the area first (step 3)" : "Add to plot";
+      addBtn.querySelector("i").className = dup ? "bi bi-check2" : needArea ? "bi bi-arrow-up" : "bi bi-plus-lg";
       if (!st.busy && !msgEl.classList.contains("warn"))
         setMsg(needArea ? `In step 3, ${st.where === "pixel" ? "click a pixel on the map" : st.shape === "county" ? "choose a county" : "draw a region on the map"}; Add to plot then becomes active.` : "");
       syncTsSteps();
@@ -10363,11 +10390,10 @@ if (MAP_STANDALONE) (function mapWindow(){
         t.title = b.title + (sel ? " · click again to close" : "");
         if (sel) on = t;
       });
-      const off = tabs.find(t => t.disabled);
       // No tip while an analysis is on; with none open, a one-line pointer to the tabs
+      // (Compare and Time series work with every dataset, MapEIre included)
       hint.innerHTML = on ? ""
-        : `<i class="bi bi-map" aria-hidden="true"></i><span>Showing one layer on the map. Choose <b>Compare</b> or <b>Time series</b> to start an analysis.${
-            off ? ` ${off.querySelector(".t").textContent} needs EDGAR or the Inverse model.` : ""}</span>`;
+        : `<i class="bi bi-map" aria-hidden="true"></i><span>Showing one layer on the map. Choose <b>Compare</b> or <b>Time series</b> to start an analysis.</span>`;
     }
 
     // While "About this dataset" is made bigger (opened, or More details) the numbered steps
@@ -12356,13 +12382,38 @@ function downloadTrendPng(){
   const $ = id => document.getElementById(id);
   const form = $("fbForm"); if (!form) return;
   const E = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const KEY_DRAFT = "inpact.survey.draft2", KEY_DONE = "inpact.survey.submitted", KEY_CLIENT = "inpact.survey.client", KEY_ACCESS = "inpact.survey.access", KEY_RESULTS = "inpact.survey.results";
+  const KEY_DRAFT = "inpact.survey.draft2", KEY_DONE = "inpact.survey.submitted", KEY_CLIENT = "inpact.survey.client", KEY_ACCESS = "inpact.survey.access", KEY_RESULTS = "inpact.survey.results", KEY_GATE = "inpact.feedback.gate";
   const mk = st => ({
     get(k){ try { return JSON.parse(st.getItem(k)); } catch (e){ return null; } },
     set(k, v){ try { st.setItem(k, JSON.stringify(v)); } catch (e){ /* private mode */ } },
     del(k){ try { st.removeItem(k); } catch (e){ /* ignore */ } },
   });
   const store = mk(localStorage), sess = mk(sessionStorage);
+  // ---- Section code: every feedback request carries the token from /api/feedback/gate/ ----
+  let gate = sess.get(KEY_GATE);
+  const gateOk = () => !!(gate && gate.token && gate.exp > Date.now());
+  const gateHeaders = (h = {}) => gateOk() ? { ...h, "X-Feedback-Gate": gate.token } : h;
+  const gateDlg = $("fbGate");
+  function askKey(msg){
+    const m = $("fbGateMsg"); m.className = "fb-keymsg" + (msg ? " err" : ""); m.textContent = msg || "";
+    $("fbGateCode").value = "";
+    if (!gateDlg.open) gateDlg.showModal();
+    $("fbGateCode").focus();
+  }
+  function lockSection(msg){
+    gate = null; sess.del(KEY_GATE);
+    $("fbGated").hidden = true;
+    if (msg) askKey(msg);               // the key expired while the section was in use
+  }
+  // fetch with the section token; a "closed" answer (expired token) locks the section again
+  async function fbFetch(url, opts = {}){
+    const resp = await fetch(url, { ...opts, headers: gateHeaders(opts.headers || {}) });
+    if (resp.status === 403 && resp.headers.get("X-Feedback-Gate") === "closed"){
+      lockSection("Your access to the feedback section has expired. Please enter the code again.");
+      throw new Error("The feedback section is closed.");
+    }
+    return resp;
+  }
   const RESULTS_STEP = { id: "results", title: "Results", icon: "bi-bar-chart-line", questions: [] };
   const REVIEW = { id: "review", title: "Review", icon: "bi-check2-square", intro: "Check your answers. Use Edit to change anything before you submit.", questions: [] };
   const S = { schema: null, groups: [], gmap: {}, steps: [], step: 0, max: 0, answers: {}, started: null, lab: {}, polQ: "", polLevel: "all",
@@ -12516,7 +12567,7 @@ function downloadTrendPng(){
     renderNav();
   }
   async function postAccess(payload){
-    const resp = await fetch("/api/feedback/access/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    const resp = await fbFetch("/api/feedback/access/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     const r = await resp.json().catch(() => ({}));
     if (!resp.ok || !r.ok) throw new Error(r.detail || "The key could not be checked. Please try again.");
     const a = { group: r.group, label: r.label, token: r.token, exp: Date.now() + (r.hours || 12) * 3600e3 };
@@ -12597,11 +12648,15 @@ function downloadTrendPng(){
     </div>
     <div class="fb-privacy"><b>Your data</b>
       <ul>
-        <li>The survey is anonymous: we do not record your name, IP address or location. Please do not include personal details in the text boxes.</li>
-        <li>Nothing is sent until you press <b>Submit</b> on the last page. Until then your answers are kept only in this browser, so you can stop and come back later.</li>
-        <li>Answers are stored on the project&rsquo;s server and used only for research. Aggregated results may appear in this dashboard, reports and scientific publications. Results for a group are shown only once at least three people from that group have answered.</li>
-        <li>An e-mail address is asked for only if you volunteer for a follow-up interview. It is kept separately from your answers and deleted after the study.</li>
-        <li>Taking part is voluntary. You can skip any optional question and leave at any time.</li>
+        <li><b>Who is responsible.</b> The University of Galway is the data controller for this survey. It is run by the INPACT research team (Principal Investigator: Dr Liz Coleman) with funding from the Environmental Protection Agency.</li>
+        <li><b>Anonymous answers.</b> We do not ask for your name or your organisation&rsquo;s name, and your IP address and location are not stored with your answers or logged by the survey. Please do not include personal details in the text boxes.</li>
+        <li><b>Before you submit.</b> Nothing is sent until you press <b>Submit</b> on the last page. Until then your answers, and a random number used only to spot duplicate submissions, are kept only in this browser, so you can stop and come back later.</li>
+        <li><b>How answers are used.</b> Answers are stored securely on the project&rsquo;s server and used only for research. Aggregated results may appear in this dashboard, reports and scientific publications. Results for a group are shown only once at least three people from that group have answered. Individual answers are never shared with the funder or anyone outside the research team.</li>
+        <li><b>Legal basis.</b> We process your answers on the basis of your consent (Article 6(1)(a) GDPR), which you give by ticking the box below, with the safeguards for scientific research in Article 89 GDPR.</li>
+        <li><b>How long we keep them.</b> Anonymous answers are kept for as long as the University of Galway&rsquo;s research data policy requires after the project ends, then deleted or archived. Daily backups are deleted after 30 days.</li>
+        <li><b>Follow-up e-mail.</b> An e-mail address is asked for only if you volunteer for a follow-up interview. It is kept separately from your answers, used only to contact you about the interview, and deleted when the interviews are complete, at the latest at the end of the study.</li>
+        <li><b>Taking part is voluntary.</b> You can skip any optional question and leave at any time without submitting. Once you submit, your answers cannot be withdrawn, because they are anonymous and cannot be linked to you. You can ask for your follow-up e-mail to be deleted at any time.</li>
+        <li><b>Questions and your rights.</b> Contact the research team at <a href="mailto:mehdi.gholamnia@universityofgalway.ie">mehdi.gholamnia@universityofgalway.ie</a>, or the University&rsquo;s Data Protection Officer at <a href="mailto:dataprotection@universityofgalway.ie">dataprotection@universityofgalway.ie</a>. You also have the right to complain to the <a href="https://www.dataprotection.ie" target="_blank" rel="noopener">Data Protection Commission</a>.</li>
       </ul></div>`;
 
   // ---- A step ----
@@ -12830,7 +12885,7 @@ function downloadTrendPng(){
     nextBtn.disabled = true; prevBtn.disabled = true;
     setStatus("sending", '<span class="spinner-border spinner-border-sm"></span>Sending your answers&hellip;');
     try {
-      const resp = await fetch("/api/feedback/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const resp = await fbFetch("/api/feedback/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       const r = await resp.json().catch(() => ({}));
       if (r.code === "access"){                                // key expired: back to the first page, answers kept
         setAccess(null); S.step = 0; render(true); validate();
@@ -13260,7 +13315,7 @@ function downloadTrendPng(){
     if (!resultsOk()){ renderLock(); return; }
     if (!R.data) resBody.innerHTML = '<p class="fb-empty"><span class="spinner-border spinner-border-sm"></span>Loading the results&hellip;</p>';
     try {
-      const resp = await fetch("/api/feedback/summary/" + (fresh ? "?t=" + Date.now() : ""), { headers: { "X-Feedback-Results": S.results.token }, cache: "no-store" });
+      const resp = await fbFetch("/api/feedback/summary/" + (fresh ? "?t=" + Date.now() : ""), { headers: { "X-Feedback-Results": S.results.token }, cache: "no-store" });
       if (resp.status === 403){ S.results = null; store.del(KEY_RESULTS); renderLock("Your access to the results has expired. Complete the questionnaire again to see the latest results."); return; }
       const d = await resp.json();
       if (!d.ok) throw new Error(d.detail);
@@ -13291,8 +13346,41 @@ function downloadTrendPng(){
     }
   });
 
-  // ---- Start ----
-  fetch("/api/feedback/schema/").then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(schema => {
+  // ---- Start (only once the section code has been accepted) ----
+  let started = false;
+  function openSection(){
+    $("fbGated").hidden = false;
+    if (!started){ started = true; start(); }
+  }
+  window.fbGate = { ok: gateOk, ask: () => askKey() };
+  // Cancel or Escape: stay where you were; if the Feedback tab was showing (key expired), leave it
+  gateDlg.addEventListener("close", () => {
+    if (!gateOk() && $("tab-feedback").classList.contains("active") && typeof activateTab === "function") activateTab("explorer");
+  });
+  $("fbGateCancel").addEventListener("click", () => gateDlg.close());
+  $("fbGateForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const inp = $("fbGateCode"), btn = $("fbGateBtn"), m = $("fbGateMsg"), code = inp.value.trim();
+    if (!code){ m.className = "fb-keymsg err"; m.textContent = "Please enter the access code."; inp.focus(); return; }
+    btn.disabled = true; m.className = "fb-keymsg"; m.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Checking&hellip;';
+    try {
+      const resp = await fetch("/api/feedback/gate/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
+      const d = await resp.json().catch(() => ({}));
+      if (!resp.ok || !d.ok) throw new Error(d.detail || "The code could not be checked. Please try again.");
+      gate = { token: d.token, exp: Date.now() + (d.hours || 12) * 3600 * 1000 };
+      sess.set(KEY_GATE, gate);
+      inp.value = ""; m.textContent = "";
+      openSection();
+      gateDlg.close();
+      if (typeof activateTab === "function") activateTab("feedback");
+    } catch (err){
+      m.className = "fb-keymsg err"; m.textContent = err.message; inp.select();
+    } finally { btn.disabled = false; }
+  });
+  if (gateOk()) openSection(); else lockSection();
+
+  function start(){
+  fbFetch("/api/feedback/schema/").then(r => { if (!r.ok) throw new Error(); return r.json(); }).then(schema => {
     S.schema = schema;
     S.groups = schema.groups;
     S.gmap = Object.fromEntries(schema.groups.map(g => [g.code, g]));
@@ -13309,9 +13397,11 @@ function downloadTrendPng(){
     if (g && g.keyed && !accessOk(g.code) && S.step > 0){ S.step = 0; }   // key needed again (new browser session)
     render(false);
   }).catch(() => {
+    started = false;                       // try again after the code is entered (or on reload)
     body.innerHTML = '<p class="fb-empty"><i class="bi bi-exclamation-triangle"></i>The survey could not be loaded. Please reload the page.</p>';
     resBody.innerHTML = "";
   });
+  }
   $("fbBanner").addEventListener("click", e => {
     if (e.target.id === "fbViewResults"){ showResults(true); $("fbResults").scrollIntoView({ behavior: "smooth", block: "start" }); return; }
     if (e.target.id !== "fbRestart") return;

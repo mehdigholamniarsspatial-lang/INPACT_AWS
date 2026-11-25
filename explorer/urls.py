@@ -21,6 +21,7 @@ urlpatterns = [
     path("api/overlays/", views.overlay_catalog, name="overlay_catalog"),
     path("api/overlays/<str:layer_id>/", views.overlay_layer, name="overlay_layer"),
     path("api/feedback/", views.submit_feedback, name="submit_feedback"),
+    path("api/feedback/gate/", views.feedback_gate, name="feedback_gate"),
     path("api/feedback/schema/", views.feedback_schema, name="feedback_schema"),
     path("api/feedback/access/", views.feedback_access, name="feedback_access"),
     path("api/feedback/summary/", views.feedback_summary, name="feedback_summary"),

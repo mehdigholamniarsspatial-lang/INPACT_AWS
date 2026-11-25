@@ -54,6 +54,9 @@ created by `deploy/ensure_feedback.sh`). Key holders see the results dashboard a
 they have submitted (the server then issues a results pass kept in their browser for 90 days); members
 of the public do not see results. A group's answers are charted from `FEEDBACK_MIN_CELL` responses (default 3).
 
+* **The section key:** the whole Feedback tab opens only after the visitor enters `FEEDBACK_GATE_CODE`
+  (in `/etc/inpact/inpact.env`; while it is unset the tab cannot be opened). To change it, edit that
+  line and run `sudo systemctl restart inpact`. Access granted with the old key ends within 12 hours.
 * **The group keys:** `ssh inpact-aws 'sudo grep FEEDBACK_KEY_ /etc/inpact/inpact.env'`. To change a key,
   edit (or delete) its line, run `bash deploy/ensure_feedback.sh` to create a missing one, then
   `sudo systemctl restart inpact`. Access granted with an old key ends within 12 hours.
