@@ -317,26 +317,37 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
     hidden.
   * **Confidence level** is a slider (80–99%, default 95%; double-click to
     reset). Every band, interval and test updates while you drag it.
-  * **Policies:** the ▲ markers under the chart come from `data/policies.csv`.
-    Click one to draw it as a labelled vertical line; if several policies
-    share a year, a chooser lists them. Hover a line for a card with the full
-    description, and a link to the policy's profile in the Policy Timeline
-    tab. The 6 policies that have a profile there are matched in
-    `PROFILE_MAP` in `trend-chart.js`; the others link to the timeline view.
-    Pinned policies are saved in the shareable link.
+  * **Policy overlay panel** (right-hand column; below the controls on
+    narrower screens). Tick a policy to draw it as a labelled vertical line
+    at its start year: dotted for core policies, dash-dot for sector
+    policies. Hover the line for a card with the full description and a link
+    to its profile in the Policy Timeline tab. The panel has two tabs:
+    * **Core policies:** the main laws, plans and agreements from
+      `data/policies.csv`, grouped as International, EU, National and
+      Targets. 6 of them have a Policy Timeline profile, matched in
+      `PROFILE_MAP` in `trend-chart.js`; the others link to the timeline view.
+    * **Sector policies:** the Policy Timeline's policy–sector series
+      (residual aggregates excluded). The list follows the chart's sector
+      through `sector_map`, built in `trend_views.policy_sector_for`; for
+      example, Road transportation maps to Transport. Rows with no single
+      match ("Fugitive emissions", "Other") ask the user to choose a sector.
+      Only policies affecting the chart's gas are listed (any gas for Total
+      GHG), with a switch to show the rest. Cross-sectoral laws can be added
+      with another switch.
+    * The panel also has search, "Show / Hide all listed" and "Remove all
+      policy lines". Ticked policies are saved in the shareable link.
   * The bars in the bottom panel are the **change from the previous year
     (%)**: green when emissions fell, red when they rose.
-  * Display options: confidence band, prediction interval, policy markers,
-    the year-on-year panel, log scale, and a projection of the last segment
-    to a target year with its prediction interval.
+  * Display options: confidence band, prediction interval, the
+    year-on-year panel, log scale, and a projection of the last segment to a
+    target year with its prediction interval.
   * Advanced Statistics: a full segment table, Chow tests, BIC candidates,
     per-segment Mann–Kendall, and four residual plots (over time, histogram,
     Q–Q, ACF).
-  * **Verify on server** re-runs the same fits through `/api/trend/fit/`
-    (statsmodels) and reports the largest relative difference.
   * Exports: CSV of all statistics, PNG of the chart, and a shareable link.
     The URL hash `#trend/<state>` stores the series, model, breakpoints,
-    ranges and options.
+    policy lines and options. Agreement with the server engine is checked by
+    `stats.selftest.html` (see [Testing](#testing)).
 * Flat segments (all values equal) return slope 0, with R², SE and p
   undefined. A Huber fit whose robust scale collapses returns an undefined SE.
   Both engines apply the same rules.
@@ -458,6 +469,7 @@ python manage.py load_policy_data --data-dir /path/to/ireland_core_policy_releas
 | `GET /api/trend/catalog/` | Gases, sectors and year axis for Trend Analysis |
 | `GET /api/trend/series/?gas=&sector=` | Raw series |
 | `GET /api/trend/bundle/` | Every gas and sector series in one response (used by the in-browser engine) |
+| `GET /api/trend/policies/` | Core and sector policies for the overlay panel, with the inventory-sector → policy-sector map |
 | `POST /api/trend/fit/` | Fit, statistics and diagnostics. Optional `start` / `end` years restrict the fit to a window. At most 10 breakpoints. |
 | `POST /api/feedback/` | Record a feedback submission |
 | `GET /api/feedback/download/` | Download the feedback workbook |

@@ -4,7 +4,7 @@
  * Every statistic is computed in the browser by stats.js (window.TrendStats),
  * so the chart responds while you drag. The server engine
  * (/api/trend/fit/, explorer/trend_engine.py) stays the reference:
- * "Verify on server" re-runs the same fits there and compares the numbers.
+ * explorer/static/explorer/trend/stats.selftest.html compares the two engines.
  *
  * What you can do on the chart
  *   Split the trend (B): click a year to add a piecewise breakpoint; drag a
@@ -36,10 +36,12 @@
     inited: false, data: null, gd: null,
     gas: null, sector: null, method: "ols", conf: 0.95,
     bps: [2001],
-    opt: { band: true, pred: false, bp: true, policies: true, yoy: true, log: false, mk: true, proj: 2030 },
-    mode: "breakpoint", result: null, drag: null, raf: 0, hashTimer: 0, verify: null,
-    pins: new Set(),          // pinned policies, keyed "year|name"
+    opt: { band: true, pred: false, bp: true, yoy: true, log: false, mk: true, proj: 2030 },
+    mode: "breakpoint", result: null, drag: null, raf: 0, hashTimer: 0,
+    pins: new Set(),          // policies drawn on the chart: "c|<year>|<name>" or "s|<slug>"
     card: null, cardTimer: 0, cardKey: null,
+    // policy panel: which list, sector override (null = follow the chart), filters
+    polData: null, polTab: "core", polSector: null, polCross: false, polAllGases: false,
   };
   const $ = id => document.getElementById(id);
 
@@ -81,14 +83,18 @@
     T.inited = true;
     $("trLoading").hidden = false;
     try {
-      const [bundle] = await Promise.all([
+      const [bundle, pol] = await Promise.all([
         fetch("/api/trend/bundle/").then(r => r.json()),
+        // policy overlay data; the chart still works if it cannot be loaded
+        fetch("/api/trend/policies/").then(r => r.json()).catch(() => null),
         loadPlotly(),
       ]);
       if (!bundle.ok) throw new Error(bundle.detail || "Trend data unavailable.");
       T.data = bundle;
       readHash();
+      if (pol && pol.ok) setPolicyData(pol);
       buildControls();
+      bindPolicyPanel();
       bindChart();
       recompute();
     } catch (err) {
@@ -159,9 +165,9 @@
     conf.value = String(Math.round(T.conf * 100));
     showConf();
     // live while dragging: every step re-fits in the browser
-    conf.addEventListener("input", () => { T.conf = parseInt(conf.value, 10) / 100; showConf(); resetVerify(); scheduleRender(); });
+    conf.addEventListener("input", () => { T.conf = parseInt(conf.value, 10) / 100; showConf(); scheduleRender(); });
     conf.addEventListener("dblclick", () => { conf.value = "95"; conf.dispatchEvent(new Event("input")); });
-    const toggles = { trShowBand: "band", trShowPred: "pred", trShowBp: "bp", trShowPolicies: "policies", trShowYoy: "yoy", trLogY: "log", trEnableMk: "mk" };
+    const toggles = { trShowBand: "band", trShowPred: "pred", trShowBp: "bp", trShowYoy: "yoy", trLogY: "log", trEnableMk: "mk" };
     for (const [id, key] of Object.entries(toggles)) {
       const el = $(id);
       el.checked = !!T.opt[key];
@@ -169,9 +175,10 @@
     }
     $("trProjYear").value = T.opt.proj || "";
 
-    gasSel.addEventListener("change", () => { T.gas = gasSel.value; fillSectors(); resetVerify(); hideCard(true); recompute(); });
-    $("trSector").addEventListener("change", e => { T.sector = e.target.value; resetVerify(); hideCard(true); recompute(); });
-    $("trMethod").addEventListener("change", e => { T.method = e.target.value; resetVerify(); recompute(); });
+    // a new gas or sector re-targets the sector policy list (back to "same as the chart")
+    gasSel.addEventListener("change", () => { T.gas = gasSel.value; fillSectors(); T.polSector = null; hideCard(true); recompute(); });
+    $("trSector").addEventListener("change", e => { T.sector = e.target.value; T.polSector = null; hideCard(true); recompute(); });
+    $("trMethod").addEventListener("change", e => { T.method = e.target.value; recompute(); });
     $("trProjYear").addEventListener("input", e => {
       const v = parseInt(e.target.value, 10);
       T.opt.proj = isNum(v) && v > 0 ? v : null;
@@ -196,14 +203,12 @@
     document.querySelectorAll("#trModes [data-mode]").forEach(b =>
       b.addEventListener("click", () => setMode(b.dataset.mode)));
     $("trResetView").addEventListener("click", () => window.Plotly.relayout(T.gd, { "xaxis.autorange": true, "yaxis.autorange": true }));
-    $("trPinnedClear").addEventListener("click", () => { T.pins.clear(); hideCard(true); recompute(); });
 
     $("trCsvBtn").addEventListener("click", downloadCsv);
     $("trPngBtn").addEventListener("click", () => window.Plotly.downloadImage(T.gd, {
       format: "png", scale: 2, width: 1400, height: 760, filename: slug(`trend_${T.gas}_${T.sector}`),
     }));
     $("trLinkBtn").addEventListener("click", copyLink);
-    $("trVerifyBtn").addEventListener("click", verifyOnServer);
     $("trAdvancedPanel").addEventListener("shown.bs.collapse", renderDiagnostics);
 
     document.addEventListener("keydown", e => {
@@ -225,7 +230,7 @@
     });
     if (T.gd && T.gd.layout) window.Plotly.relayout(T.gd, { dragmode: DRAGMODE[mode] });
     $("trModeHint").innerHTML = {
-      breakpoint: '<i class="bi bi-hand-index"></i> <b>Split the trend:</b> click a year to add a breakpoint, or drag a dashed line to move it. Click a ▲ policy marker under the chart to draw it as a line.',
+      breakpoint: '<i class="bi bi-hand-index"></i> <b>Split the trend:</b> click a year to add a breakpoint, or drag a dashed line to move it. Tick policies in the <b>Policy overlay</b> panel to draw them on the chart.',
       zoom: '<i class="bi bi-hand-index"></i> <b>Zoom in:</b> drag a box. Double-click the chart or press Reset view to zoom out.',
     }[mode];
   }
@@ -264,8 +269,8 @@
     if (!T.data) return;
     const { x, y } = series();
     const res = { x, y, pw: null, pwError: null, chow: [] };
-    // drop breakpoints that fall outside a new series' span
-    T.bps = T.bps.filter(b => b > x[0] && b < x[x.length - 1]);
+    // Breakpoints outside this series' span are kept (not deleted) but not used:
+    // piecewise() ignores them, so they come back when a longer series is chosen.
     if (x.length >= S.MIN_POINTS_PER_SEGMENT) {
       try {
         res.pw = S.piecewise(x, y, T.bps, { method: T.method, confidence: T.conf });
@@ -353,30 +358,14 @@
       label: { text: String(bp), textposition: "start", font: { size: 10, color: "#16324F" }, yanchor: "bottom" },
     }));
 
-    // Policy markers (data/policies.csv): ▲ along the bottom of the chart; click one to pin it
+    // Policies ticked in the overlay panel: vertical lines at their start year,
+    // labelled; hover one for its full description. Core = dotted, sector = dash-dot.
     const inSpan = p => p.year >= R.x[0] && p.year <= R.x[R.x.length - 1];
-    const pol = policies().filter(inSpan);
-    if (T.opt.policies && pol.length) {
-      const levels = [...new Set(pol.map(p => p.level))];
-      levels.forEach(lv => {
-        const ps = pol.filter(p => p.level === lv);
-        traces.push({
-          x: ps.map(p => p.year), y: ps.map(() => POLICY_Y), yaxis: "y3", type: "scatter", mode: "markers",
-          marker: {
-            symbol: "triangle-up", size: ps.map(p => T.pins.has(p.key) ? 15 : 12), color: POLICY_COLORS[lv] || "#666",
-            line: { color: ps.map(p => T.pins.has(p.key) ? "#111" : "#fff"), width: ps.map(p => T.pins.has(p.key) ? 2 : 1) },
-          },
-          name: `▲ ${lv} policy`, text: ps.map(p => p.name), customdata: ps.map(p => p.key), meta: "policy",
-          hovertemplate: `▲ %{text}  <i>(click to show on chart)</i><extra>${esc(lv)}</extra>`,
-        });
-      });
-    }
-    // Pinned policies: vertical lines with a label; hover one for its full description
     pinnedInView(inSpan).forEach(({ p, x }) => {
-      const c = POLICY_COLORS[p.level] || "#666";
+      const c = p.color;
       shapes.push({
-        type: "line", xref: "x", yref: "y domain", x0: x, x1: x, y0: 0.07, y1: 1,
-        line: { color: c, width: 2, dash: "dot" }, layer: "above",
+        type: "line", xref: "x", yref: "y domain", x0: x, x1: x, y0: 0, y1: 1,
+        line: { color: c, width: 2, dash: p.kind === "sector" ? "dashdot" : "dot" }, layer: "above",
         label: { text: shortName(p.name), textposition: "end", textangle: -90, xanchor: "right",
           font: { size: 10, color: c }, padding: 4 },
       });
@@ -421,7 +410,6 @@
       },
       yaxis2: { domain: [0, 0.2], gridcolor: "#f2f5f7",
         zeroline: true, zerolinecolor: "#9aa7b3", ticksuffix: "%", visible: yoy, fixedrange: true },
-      yaxis3: { overlaying: "y", range: [0, 1], visible: false, fixedrange: true },
       shapes, annotations,
     };
     return { traces, layout };
@@ -436,59 +424,64 @@
   }
 
   // ------------------------------------------------------------------
-  // Policies: ▲ markers, pinned vertical lines, detail card with a link
-  // to the Policy Timeline tab
+  // Policy overlay: right-hand panel (core / sector policies), vertical
+  // lines on the chart, and a detail card with a Policy Timeline link
   // ------------------------------------------------------------------
-  const POLICY_Y = 0.035;                 // marker height on the hidden 0..1 axis (y3)
-  let POLICY_LIST = null;
-  function policies() {
-    if (!POLICY_LIST) {
-      const raw = typeof POLICIES_RAW !== "undefined" ? POLICIES_RAW : [];
-      POLICY_LIST = raw.map(p => ({ ...p, key: `${p.year}|${p.name}` }));
-    }
-    return POLICY_LIST;
+  // Data: /api/trend/policies/ -> core milestones (data/policies.csv) and the
+  // Policy Timeline's sector series. Keys: "c|<year>|<name>" or "s|<slug>".
+  let POLICY_LIST = [];
+  function setPolicyData(d) {
+    T.polData = d;
+    POLICY_LIST = [
+      ...(d.core || []).map(p => ({ ...p, kind: "core", key: `c|${p.year}|${p.name}`,
+        color: POLICY_COLORS[p.level] || "#666" })),
+      ...(d.sector || []).map(p => ({ ...p, kind: "sector", key: `s|${p.slug}`, year: p.start })),
+    ];
+    // links from before the panel existed stored core keys as "<year>|<name>"
+    T.pins = new Set([...T.pins].map(k => /^[cs]\|/.test(k) ? k : `c|${k}`).filter(policyByKey));
   }
-  const policyByKey = k => policies().find(p => p.key === k);
+  const policies = () => POLICY_LIST;
+  const policyByKey = k => POLICY_LIST.find(p => p.key === k);
   const shortName = s => s.length > 34 ? s.slice(0, 32).trimEnd() + "…" : s;
   /** Pinned policies inside the data span, with a small x offset when several share a year. */
   function pinnedInView(inSpan) {
     const perYear = {};
-    return policies().filter(p => T.pins.has(p.key) && inSpan(p)).map(p => {
+    return POLICY_LIST.filter(p => T.pins.has(p.key) && isNum(p.year) && inSpan(p)).map(p => {
       const k = perYear[p.year] = (perYear[p.year] ?? -1) + 1;
       return { p, x: p.year + k * 0.22 };
     });
   }
 
-  // Policy Timeline profiles that match a chart policy. Several profiles exist
-  // per sector; the one for the sector being analysed is used when it exists.
+  // Core milestones that have a profile in the Policy Timeline. Several
+  // profiles exist per sector; the one for the analysed sector is used.
   const PROFILE_MAP = [
-    [/Emissions Trading System/i, { electricity: "capmf-eu-ets--electricity", industry: "capmf-eu-ets--industry", transport: "capmf-eu-ets--transport", _: "capmf-eu-ets--electricity" }],
-    [/^Carbon Tax/i, { transport: "irl-p0005--transport", industry: "irl-p0005--industry", _: "irl-p0005--buildings" }],
+    [/Emissions Trading System/i, { Electricity: "capmf-eu-ets--electricity", Industry: "capmf-eu-ets--industry", Transport: "capmf-eu-ets--transport", _: "capmf-eu-ets--electricity" }],
+    [/^Carbon Tax/i, { Transport: "irl-p0005--transport", Industry: "irl-p0005--industry", _: "irl-p0005--buildings" }],
     [/\(Amendment\) Act 2021/i, "capmf-act-2021--cross-sectoral"],
     [/Low Carbon Development Act 2015/i, "capmf-act-2015--cross-sectoral"],
     [/Carbon Budgets/i, "capmf-carbon-budgets--cross-sectoral"],
     [/Climate-Neutral Ireland/i, "capmf-net-zero--cross-sectoral"],
   ];
-  function sectorKey() {
-    const s = T.sector || "";
-    if (/energy industries|electricity|power|heat production/i.test(s)) return "electricity";
-    if (/transport|road|aviation|navigation|railway/i.test(s)) return "transport";
-    if (/industr|manufactur|cement|chemical|mineral|metal/i.test(s)) return "industry";
-    return "_";
-  }
+  /** Policy Timeline sector that matches the chart's inventory sector, or null. */
+  const matchedSector = () => (T.polData && T.polData.sector_map[T.sector]) || null;
   function policyLink(p) {
-    for (const [re, target] of PROFILE_MAP) if (re.test(p.name)) {
-      const slugId = typeof target === "string" ? target : (target[sectorKey()] || target._);
-      return { inApp: `#policy/policies/${slugId}/`, standalone: `/policy/policies/${slugId}/`, profile: true };
+    let slugId = p.kind === "sector" ? p.slug : null;
+    if (!slugId) for (const [re, target] of PROFILE_MAP) if (re.test(p.name)) {
+      slugId = typeof target === "string" ? target : (target[matchedSector()] || target._);
+      break;
     }
-    return { inApp: "#policy/timeline/", standalone: "/policy/timeline/", profile: false };
+    return slugId
+      ? { inApp: `#policy/policies/${slugId}/`, standalone: `/policy/policies/${slugId}/`, profile: true }
+      : { inApp: "#policy/timeline/", standalone: "/policy/timeline/", profile: false };
   }
 
-  function togglePin(key) {
-    if (T.pins.has(key)) T.pins.delete(key); else T.pins.add(key);
+  function togglePin(key, on) {
+    const want = on == null ? !T.pins.has(key) : on;
+    if (want) T.pins.add(key); else T.pins.delete(key);
     recompute();
   }
 
+  // ---- detail card (hover / click a policy line) ----
   function ensureCard() {
     if (T.card) return T.card;
     const c = T.card = document.createElement("div");
@@ -497,7 +490,7 @@
     c.addEventListener("mouseleave", () => { if (!c.dataset.sticky) hideCard(); });
     c.addEventListener("click", e => {
       const pin = e.target.closest("[data-pin]");
-      if (pin) { togglePin(pin.dataset.pin); if (c.dataset.list) showList(c.dataset.list.split("\n"), null, true); else hideCard(true); return; }
+      if (pin) { togglePin(pin.dataset.pin); hideCard(true); return; }
       if (e.target.closest(".pc-close")) hideCard(true);
     });
     T.gd.appendChild(c);
@@ -511,15 +504,24 @@
     c.style.left = left + "px";
     c.style.top = (fl.yaxis._offset + 6) + "px";
   }
+  const GAS_LABEL = { CO2: "CO₂", CH4: "CH₄", N2O: "N₂O", "F-gases": "F-gases", All: "All gases" };
   function policyCardHtml(p) {
-    const link = policyLink(p), c = POLICY_COLORS[p.level] || "#666";
+    const link = policyLink(p), c = p.color;
     const row = (k, v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : "";
+    const tags = p.kind === "core"
+      ? `<span class="pc-tag" style="background:${rgba(c, 0.15)};color:${c}"><b>${esc(p.level)}</b></span>
+         <span class="pc-tag">${p.year}</span>${p.agency ? `<span class="pc-tag">${esc(p.agency)}</span>` : ""}`
+      : `<span class="pc-tag" style="background:${rgba(c, 0.15)};color:${c}"><b>${esc(p.mechanism)}</b></span>
+         <span class="pc-tag">${esc(p.sector)}</span><span class="pc-tag">${p.start}–${p.end || "ongoing"}</span>`;
+    const details = p.kind === "core"
+      ? row("Sector", p.sector) + row("Type", p.type) + row("Instrument", p.instrument) + row("Direction", p.direction) + row("Outcome", p.outcome)
+      : row("Layer", p.layer) + row("Instrument", p.instrument) + row("Gases", (p.gases || []).map(g => GAS_LABEL[g] || g).join(", ")) +
+        (isNum(p.effect_kt) ? row("Reported effect", `${fmt(p.effect_kt, 1)} kt CO₂-eq/yr${p.effect_year ? ` (${p.effect_year})` : ""}`) : "");
     return `<button type="button" class="pc-close" aria-label="Close">×</button>
       <h4>${esc(p.name)}</h4>
-      <div class="pc-meta"><span class="pc-tag" style="background:${rgba(c, 0.15)};color:${c}"><b>${esc(p.level)}</b></span>
-        <span class="pc-tag">${p.year}</span>${p.agency ? `<span class="pc-tag">${esc(p.agency)}</span>` : ""}</div>
-      ${p.description ? `<div>${esc(p.description)}</div>` : ""}
-      <dl>${row("Sector", p.sector)}${row("Type", p.type)}${row("Instrument", p.instrument)}${row("Direction", p.direction)}${row("Outcome", p.outcome)}</dl>
+      <div class="pc-meta">${tags}</div>
+      ${p.description ? `<div class="pc-desc">${esc(p.description)}</div>` : ""}
+      <dl>${details}</dl>
       <div class="pc-actions">
         <a class="btn btn-success btn-sm py-0" href="${link.inApp}"><i class="bi bi-diagram-3"></i> ${link.profile ? "Open policy profile" : "Open the Policy Timeline"}</a>
         <a class="small" href="${link.standalone}" target="_blank" rel="noopener" title="Open in a new tab"><i class="bi bi-box-arrow-up-right"></i> new tab</a>
@@ -534,56 +536,20 @@
     clearTimeout(T.cardTimer);
     if (T.cardKey !== key || c.hidden) {
       c.innerHTML = policyCardHtml(p);
-      c.style.setProperty("--pc", POLICY_COLORS[p.level] || "#666");
+      c.style.setProperty("--pc", p.color);
       placeCard(c, xPx);
     }
     const sameOpen = T.cardKey === key && !c.hidden;
-    delete c.dataset.list;
     if (sticky) c.dataset.sticky = "1"; else if (!sameOpen) delete c.dataset.sticky;
     T.cardKey = key; c.hidden = false;
-    T.gd.classList.add("tr-card-open");
-  }
-  /** Several policies share the clicked year: choose which to show as lines. */
-  function showList(keys, xPx, keepPos) {
-    const c = ensureCard();
-    clearTimeout(T.cardTimer);
-    const ps = keys.map(policyByKey).filter(Boolean);
-    c.innerHTML = `<button type="button" class="pc-close" aria-label="Close">×</button>
-      <h4>${ps.length} policies in ${ps[0].year}</h4>
-      <div class="trend-hint mb-1">Choose which to draw on the chart. Hover a line for its full description.</div>
-      <ul class="pc-list">${ps.map(p => `<li><span class="pc-dot" style="background:${POLICY_COLORS[p.level] || "#666"}"></span>
-        <span class="flex-fill">${esc(p.name)}</span>
-        <button type="button" class="btn btn-sm py-0 ${T.pins.has(p.key) ? "btn-success" : "btn-outline-secondary"}" data-pin="${esc(p.key)}">${T.pins.has(p.key) ? "Shown" : "Show"}</button></li>`).join("")}</ul>`;
-    c.style.setProperty("--pc", "#16324F");
-    if (!keepPos && xPx != null) placeCard(c, xPx);
-    c.dataset.list = keys.join("\n"); c.dataset.sticky = "1";
-    T.cardKey = null; c.hidden = false;
     T.gd.classList.add("tr-card-open");
   }
   function hideCard(now) {
     const c = T.card;
     if (!c || c.hidden) return;
     clearTimeout(T.cardTimer);
-    const go = () => { c.hidden = true; T.cardKey = null; delete c.dataset.sticky; delete c.dataset.list; T.gd.classList.remove("tr-card-open"); };
+    const go = () => { c.hidden = true; T.cardKey = null; delete c.dataset.sticky; T.gd.classList.remove("tr-card-open"); };
     if (now) go(); else T.cardTimer = setTimeout(go, 350);
-  }
-
-  /** ▲ markers under the pointer (all policies of that year), or null. */
-  function policyMarkerHit(cx, cy) {
-    if (!T.opt.policies || !T.result || !T.result.x.length) return null;
-    const fl = T.gd._fullLayout, ya3 = fl && fl.yaxis3;
-    if (!ya3 || !ya3.c2p) return null;
-    const rect = T.gd.getBoundingClientRect(), xa = fl.xaxis;
-    const px = cx - rect.left, py = cy - rect.top;
-    const my = ya3._offset + ya3.c2p(POLICY_Y);
-    if (Math.abs(py - my) > 12) return null;
-    const R = T.result, ps = policies().filter(p => p.year >= R.x[0] && p.year <= R.x[R.x.length - 1]);
-    let best = null;
-    for (const p of ps) {
-      const d = Math.abs(xa._offset + xa.c2p(p.year) - px);
-      if (d <= 9 && (!best || d < best.d)) best = { d, year: p.year, x: xa._offset + xa.c2p(p.year) };
-    }
-    return best && { year: best.year, xPx: best.x, keys: ps.filter(p => p.year === best.year).map(p => p.key) };
   }
   /** Pinned policy line under the pointer, or null. */
   function pinnedLineHit(cx, cy) {
@@ -599,6 +565,112 @@
       if (d <= 6 && (!best || d < best.d)) best = { d, key: p.key, xPx: lx };
     }
     return best;
+  }
+
+  // ---- right-hand panel ----
+  /** Does a sector series affect the gas being analysed? */
+  function affectsGas(p) {
+    const code = T.polData && T.polData.gas_codes[T.gas];
+    if (!code || T.polAllGases) return true;           // Total GHG: every series is relevant
+    return (p.gases || []).some(g => g === code || g === "All");
+  }
+  function bindPolicyPanel() {
+    const panel = $("trPolPanel");
+    panel.querySelectorAll("[data-poltab]").forEach(b => b.addEventListener("click", () => {
+      T.polTab = b.dataset.poltab; renderPolicyPanel();
+    }));
+    $("trPolSearch").addEventListener("input", renderPolicyPanel);
+    $("trPolSector").addEventListener("change", e => { T.polSector = e.target.value || null; renderPolicyPanel(); });
+    $("trPolCross").addEventListener("change", e => { T.polCross = e.target.checked; renderPolicyPanel(); });
+    $("trPolAllGases").addEventListener("change", e => { T.polAllGases = e.target.checked; renderPolicyPanel(); });
+    $("trPolClear").addEventListener("click", () => { T.pins.clear(); hideCard(true); recompute(); });
+    panel.addEventListener("change", e => {
+      const cb = e.target.closest("input[data-polkey]");
+      if (cb) togglePin(cb.dataset.polkey, cb.checked);
+    });
+    panel.addEventListener("click", e => {
+      const all = e.target.closest("[data-polall]");
+      if (!all) return;
+      const on = all.dataset.polall === "1";
+      panel.querySelectorAll("input[data-polkey]:not(:disabled)").forEach(cb => { if (on) T.pins.add(cb.dataset.polkey); else T.pins.delete(cb.dataset.polkey); });
+      recompute();
+    });
+  }
+  function polItem(p, inData, meta) {
+    const checked = T.pins.has(p.key) ? "checked" : "";
+    const dis = inData ? "" : "disabled";
+    const title = inData ? "" : ` title="${p.year} is outside the years shown on the chart"`;
+    return `<label class="tp-item${inData ? "" : " off"}"${title}>
+      <input type="checkbox" class="form-check-input" data-polkey="${esc(p.key)}" ${checked} ${dis}>
+      <span class="tp-dot" style="background:${p.color}"></span>
+      <span class="tp-yr">${p.year ?? "–"}</span>
+      <span class="tp-txt"><span class="tp-nm">${esc(p.name)}</span>${meta ? `<small>${meta}</small>` : ""}</span>
+    </label>`;
+  }
+  function renderPolicyPanel() {
+    const panel = $("trPolPanel");
+    if (!panel || !T.result) return;
+    const d = T.polData;
+    $("trPolCount").textContent = T.pins.size;
+    $("trPolClear").disabled = !T.pins.size;
+    if (!d) { $("trPolBody").innerHTML = `<div class="trend-hint">Policy data could not be loaded.</div>`; return; }
+    panel.querySelectorAll("[data-poltab]").forEach(b => {
+      const on = b.dataset.poltab === T.polTab;
+      b.classList.toggle("active", on); b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    $("trPolCorePane").hidden = T.polTab !== "core";
+    $("trPolSectorPane").hidden = T.polTab !== "sector";
+    const R = T.result, lo = R.x[0], hi = R.x[R.x.length - 1];
+    const inData = p => isNum(p.year) && p.year >= lo && p.year <= hi;
+    const q = $("trPolSearch").value.trim().toLowerCase();
+    const match = p => !q || p.name.toLowerCase().includes(q);
+    const selectBar = `<div class="tp-bar"><button type="button" class="btn btn-link btn-sm p-0" data-polall="1">Show all listed</button>
+      <button type="button" class="btn btn-link btn-sm p-0" data-polall="0">Hide all listed</button></div>`;
+
+    let html = "";
+    if (T.polTab === "core") {
+      const core = POLICY_LIST.filter(p => p.kind === "core" && match(p));
+      const levels = ["International", "EU", "National", "Target"];
+      html = selectBar + levels.map(lv => {
+        const ps = core.filter(p => p.level === lv);
+        if (!ps.length) return "";
+        return `<div class="tp-group"><div class="tp-gh"><span class="tp-dot" style="background:${POLICY_COLORS[lv] || "#666"}"></span>${esc(lv === "Target" ? "Targets" : lv + " policies")} <span class="tp-n">${ps.length}</span></div>
+          ${ps.map(p => polItem(p, inData(p), esc(p.sector))).join("")}</div>`;
+      }).join("") || `<div class="trend-hint">No core policy matches “${esc(q)}”.</div>`;
+    } else {
+      // sector pane: the chart's sector decides, unless it has no match (or the user picked another)
+      const auto = matchedSector();
+      const sel = $("trPolSector");
+      const sectors = d.sectors.filter(s => s !== "Cross-sectoral");
+      if (!sel.options.length || sel.dataset.built !== sectors.join("|")) {
+        sel.innerHTML = `<option value="">${auto ? "Same as the chart" : "Choose a sector…"}</option>` +
+          sectors.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+        sel.dataset.built = sectors.join("|");
+      }
+      sel.options[0].textContent = auto ? `Same as the chart (${auto})` : "Choose a sector…";
+      sel.value = T.polSector || "";
+      const sector = T.polSector || auto;
+      const gasName = T.gas === "Total GHG" ? "all greenhouse gases" : T.gas;
+      $("trPolSectorNote").innerHTML = auto
+        ? `The chart shows <b>${esc(T.sector)}</b>, matched to the <b>${esc(auto)}</b> sector.`
+        : `<b>${esc(T.sector)}</b> has no single matching policy sector: choose one.`;
+      $("trPolGasNote").textContent = `Listing policies that affect ${gasName}.`;
+      $("trPolAllGasesWrap").hidden = T.gas === "Total GHG";
+      if (!sector) {
+        html = `<div class="trend-hint">Choose a sector above to list its policies.</div>`;
+      } else {
+        const pool = POLICY_LIST.filter(p => p.kind === "sector" && (p.sector === sector || (T.polCross && p.sector === "Cross-sectoral")) && match(p));
+        const shown = pool.filter(affectsGas), hidden = pool.length - shown.length;
+        const body = shown.map(p => polItem(p, inData(p),
+          `${esc(p.mechanism)}${p.sector === "Cross-sectoral" ? " · cross-sectoral" : ""} · ${(p.gases || []).map(g => GAS_LABEL[g] || g).join(", ")}`)).join("");
+        const sc = d.sector_colors[sector] || "#16324F";
+        html = (shown.length ? selectBar : "") +
+          `<div class="tp-group"><div class="tp-gh"><span class="tp-dot" style="background:${sc}"></span>${esc(sector)} policies <span class="tp-n">${shown.length}</span></div>${body ||
+            `<div class="trend-hint py-1">No ${esc(sector)} policies in the Policy Timeline${T.gas === "Total GHG" ? "" : ` affect ${esc(T.gas)}`}${q ? ` matching “${esc(q)}”` : ""}.</div>`}</div>` +
+          (hidden ? `<div class="trend-hint mt-1">${hidden} more ${esc(sector)} ${hidden === 1 ? "policy targets" : "policies target"} other gases.</div>` : "");
+      }
+    }
+    $("trPolBody").innerHTML = html;
   }
 
   // ------------------------------------------------------------------
@@ -618,18 +690,7 @@
     // Custom drags (capture phase, so Plotly's own drag never starts)
     const start = (cx, cy, e) => {
       if (T.card && T.card.contains(e.target)) return;      // clicks inside the policy card
-      // ▲ policy marker: pin/unpin it (one policy) or list that year's policies
-      const pm = policyMarkerHit(cx, cy);
-      if (pm) {
-        e.stopPropagation(); e.preventDefault();
-        if (pm.keys.length === 1) {
-          const k = pm.keys[0], pinning = !T.pins.has(k);
-          togglePin(k);
-          if (pinning) showCard(k, pm.xPx, true); else hideCard(true);
-        } else showList(pm.keys, pm.xPx);
-        return;
-      }
-      // pinned policy line: keep its card open so the link can be clicked
+      // policy line: keep its card open so the link can be clicked
       const pl = pinnedLineHit(cx, cy);
       if (pl && !hit(cx, cy)) { e.stopPropagation(); e.preventDefault(); showCard(pl.key, pl.xPx, true); return; }
       const h = hit(cx, cy);
@@ -655,11 +716,10 @@
       if (e.target instanceof Node && gd.contains(e.target)) {
         if (T.card && T.card.contains(e.target)) return;
         const h = hit(e.clientX, e.clientY);
-        const pm = !h && policyMarkerHit(e.clientX, e.clientY);
-        gd.classList.toggle("tr-hot-ew", !!h);
-        gd.classList.toggle("tr-hot-click", !!pm);
-        // hovering a pinned policy line shows its full description
+        // hovering a policy line shows its full description
         const pl = !h && pinnedLineHit(e.clientX, e.clientY);
+        gd.classList.toggle("tr-hot-ew", !!h);
+        gd.classList.toggle("tr-hot-click", !!pl);
         if (pl) showCard(pl.key, pl.xPx, false);
         else if (T.card && !T.card.hidden && !T.card.dataset.sticky) hideCard();
       }
@@ -705,8 +765,6 @@
       `<button type="button" class="tr-chip" data-bp="${b}" title="Remove breakpoint ${b}">${b}<i class="bi bi-x"></i></button>`).join("")
       || `<span class="trend-hint">None: one trend over the whole period.</span>`;
     $("trCsvBtn").disabled = $("trPngBtn").disabled = !R.x.length;
-    $("trPinnedBox").hidden = !T.pins.size;
-    $("trPinnedCount").textContent = T.pins.size;
 
     // KPI strip
     const n = R.x.length, last = R.pw && R.pw.segments[R.pw.segments.length - 1];
@@ -727,6 +785,7 @@
 
     renderDirection();
     renderStatsTables();
+    renderPolicyPanel();
   }
 
   function directionOf(seg) {
@@ -821,54 +880,6 @@
       `<span><b>Durbin–Watson</b> ${fmt(dw, 3)} <small class="text-muted">(≈2 no autocorrelation; &lt;1.5 positive)</small></span>` +
       `<span><b>Jarque–Bera</b> ${fmt(jb.JB, 2)}, p ${fmtP(jb.p)} <small class="text-muted">(p &lt; 0.05 suggests non-normal residuals)</small></span>` +
       `<span><b>Skew</b> ${fmt(jb.skew, 2)} · <b>Kurtosis</b> ${fmt(jb.kurtosis, 2)}</span>`;
-  }
-
-  // ------------------------------------------------------------------
-  // Server verification: same fits on the reference engine
-  // ------------------------------------------------------------------
-  function resetVerify() { const b = $("trVerifyBadge"); b.hidden = true; b.className = "tr-verify"; }
-
-  async function postFit(body) {
-    const r = await fetch("/api/trend/fit/", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const d = await r.json();
-    if (!d.ok) throw new Error(d.detail || `HTTP ${r.status}`);
-    return d;
-  }
-  /** Relative difference, allowing for the server's rounding to `dp` decimals. */
-  function diff(client, server, dp) {
-    if (server == null || !isNum(client)) return (server == null && !isNum(client)) ? 0 : Infinity;
-    const tol = dp != null ? 0.5 * Math.pow(10, -dp) : 0;
-    const ad = Math.max(0, Math.abs(client - server) - tol);
-    return ad / Math.max(Math.abs(server), 1e-9);
-  }
-  async function verifyOnServer() {
-    const badge = $("trVerifyBadge"), btn = $("trVerifyBtn");
-    btn.disabled = true; badge.hidden = false; badge.className = "tr-verify"; badge.textContent = "Checking…";
-    try {
-      const R = T.result, base = { gas: T.gas, sector: T.sector, method: T.method, confidence: T.conf };
-      const jobs = [];
-      if (R.pw) jobs.push(postFit({ ...base, breakpoints: R.pw.used }).then(d => ({ client: R.pw.segments, server: d.segments })));
-      const out = await Promise.all(jobs);
-      let worst = 0, count = 0;
-      for (const { client, server } of out) {
-        if (client.length !== server.length) throw new Error("Segment count differs from the server.");
-        client.forEach((c, i) => {
-          const s = server[i];
-          const ds = [diff(c.slope, s.Slope, 6), diff(c.intercept, s.Intercept, 6), diff(c.r2, s.R2, 4),
-            diff(c.se, s.Std_Error, 6), diff(c.p, s.p_value, 6)];
-          s.y_pred.forEach((v, j) => ds.push(diff(c.yhat[j], v)));
-          worst = Math.max(worst, ...ds); count++;
-        });
-      }
-      const tol = T.method === "ols" ? 1e-6 : 1e-4;
-      const ok = worst <= tol;
-      badge.className = "tr-verify " + (ok ? "ok" : "bad");
-      badge.innerHTML = ok
-        ? `<i class="bi bi-patch-check-fill"></i> Server agrees: ${count} fit(s), max relative difference ${worst.toExponential(1)}`
-        : `<i class="bi bi-exclamation-triangle-fill"></i> Server differs: max relative difference ${worst.toExponential(2)}`;
-    } catch (e) {
-      badge.className = "tr-verify bad"; badge.textContent = "Verification failed: " + e.message;
-    } finally { btn.disabled = false; }
   }
 
   // ------------------------------------------------------------------

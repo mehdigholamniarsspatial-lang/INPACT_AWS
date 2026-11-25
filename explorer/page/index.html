@@ -3889,16 +3889,6 @@ a.ug-go.alt:hover{color:var(--navy)}
         <label class="form-check-label side-check" for="trShowBp">Breakpoint lines</label>
       </div>
       <div class="form-check form-switch mb-1">
-        <input class="form-check-input" type="checkbox" id="trShowPolicies">
-        <label class="form-check-label side-check" for="trShowPolicies">Policy markers (▲ under the chart)</label>
-      </div>
-      <div id="trPinnedBox" class="tr-pinned" hidden>
-        <div class="d-flex justify-content-between align-items-center">
-          <span class="trend-hint"><b id="trPinnedCount">0</b> policy line(s) on the chart</span>
-          <button type="button" id="trPinnedClear" class="btn btn-link btn-sm p-0 text-danger">Clear</button>
-        </div>
-      </div>
-      <div class="form-check form-switch mb-1">
         <input class="form-check-input" type="checkbox" id="trShowYoy">
         <label class="form-check-label side-check" for="trShowYoy">Year-on-year panel</label>
       </div>
@@ -3924,11 +3914,6 @@ a.ug-go.alt:hover{color:var(--navy)}
           <i class="bi bi-link-45deg"></i> Link
         </button>
       </div>
-      <button id="trVerifyBtn" class="btn btn-outline-primary btn-sm w-100" type="button"
-              title="Re-run the same fits with the server's statsmodels engine and compare">
-        <i class="bi bi-shield-check"></i> Verify on server
-      </button>
-      <span id="trVerifyBadge" class="tr-verify" hidden></span>
       <div id="trError" class="trend-error" role="alert" hidden></div>
     </aside>
 
@@ -4046,6 +4031,51 @@ a.ug-go.alt:hover{color:var(--navy)}
         </div>
       </section>
     </main>
+
+    <!-- ---- Policy overlay panel: tick policies to draw them on the chart ---- -->
+    <aside class="trend-pol" id="trPolPanel" aria-label="Policy overlay">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="panel-num"><i class="bi bi-flag-fill" style="font-size:.7rem"></i></span>
+        <h2 class="panel-title mb-0">Policy overlay</h2>
+        <span class="tp-count" title="Policies drawn on the chart"><b id="trPolCount">0</b> on chart</span>
+      </div>
+      <div class="trend-hint mb-2">
+        Tick a policy to draw it as a vertical line at the year it started.
+        Hover the line for its full description and a link to the Policy Timeline.
+      </div>
+      <div class="tp-tabs" role="tablist" aria-label="Policy list">
+        <button type="button" role="tab" class="tp-tab active" data-poltab="core" aria-selected="true">
+          <i class="bi bi-bank"></i> Core policies
+        </button>
+        <button type="button" role="tab" class="tp-tab" data-poltab="sector" aria-selected="false">
+          <i class="bi bi-grid-3x3-gap"></i> Sector policies
+        </button>
+      </div>
+
+      <div id="trPolCorePane" class="tp-pane">
+        <div class="trend-hint">Main climate laws, plans and agreements, at national, EU and international level.</div>
+      </div>
+      <div id="trPolSectorPane" class="tp-pane" hidden>
+        <div class="trend-hint mb-1" id="trPolSectorNote"></div>
+        <label class="side-label" for="trPolSector">Policy sector</label>
+        <select id="trPolSector" class="form-select form-select-sm mb-1"></select>
+        <div class="trend-hint mb-1" id="trPolGasNote"></div>
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" id="trPolCross">
+          <label class="form-check-label side-check" for="trPolCross">Include cross-sectoral laws</label>
+        </div>
+        <div class="form-check form-switch mb-0" id="trPolAllGasesWrap">
+          <input class="form-check-input" type="checkbox" id="trPolAllGases">
+          <label class="form-check-label side-check" for="trPolAllGases">Also list policies for other gases</label>
+        </div>
+      </div>
+
+      <input id="trPolSearch" type="search" class="form-control form-control-sm my-2" placeholder="Search policies…" aria-label="Search policies">
+      <div id="trPolBody" class="tp-list" aria-live="polite"></div>
+      <button type="button" id="trPolClear" class="btn btn-outline-danger btn-sm w-100 mt-2" disabled>
+        <i class="bi bi-eraser"></i> Remove all policy lines
+      </button>
+    </aside>
   </div>
 </div><!-- /tab-trend -->
 
@@ -5496,7 +5526,7 @@ a.ug-go.alt:hover{color:var(--navy)}
       <div class="ug-card">
         <h3 class="ug-card-title"><i class="bi bi-diagram-2"></i>Two tabs, one question</h3>
         <div class="ug-ideas ug-ideas-2">
-          <div class="ug-idea"><b><i class="bi bi-activity"></i> Trend Analysis</b><span>A <em>quick, built-in</em> tool inside this dashboard. Pick a gas and a sector, then click a year to split the series into trend periods, drag the dashed breakpoint lines to move them, and click a ▲ policy marker to see that policy on the chart. Every statistic updates instantly in your browser. Export the statistics as CSV, the chart as PNG, or copy a link to the analysis.</span>
+          <div class="ug-idea"><b><i class="bi bi-activity"></i> Trend Analysis</b><span>A <em>quick, built-in</em> tool inside this dashboard. Pick a gas and a sector, then click a year to split the series into trend periods, drag the dashed breakpoint lines to move them, and tick core or sector policies in the Policy overlay panel to draw them on the chart. Every statistic updates instantly in your browser. Export the statistics as CSV, the chart as PNG, or copy a link to the analysis.</span>
             <span class="ug-actions" style="margin-top:.6rem"><button type="button" class="ug-go alt" data-go="trend"><i class="bi bi-activity"></i>Open Trend Analysis</button></span></div>
           <div class="ug-idea"><b><i class="bi bi-bar-chart-steps"></i> Structural Break Analysis</b><span>An <em>advanced</em> tool that runs as a separate Streamlit app. It fits a trend to each period between your break years, overlays EU, national and international climate policies, and gives full control of the figure, statistics, diagnostics and publication-quality exports. <strong>This tutorial covers this app.</strong></span>
             <span class="ug-actions" style="margin-top:.6rem"><a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Open the Streamlit app</a></span></div>

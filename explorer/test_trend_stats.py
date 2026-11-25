@@ -168,3 +168,36 @@ class TrendApiTests(TestCase):
 
     def test_unknown_series(self):
         self.assertEqual(self._fit(sector="Nope").status_code, 404)
+
+
+class TrendPoliciesApiTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # the test database starts empty; load the Policy Timeline release as its tests do
+        from django.core.management import call_command
+        call_command("load_policy_data", verbosity=0)
+
+    def test_policy_lists_and_sector_mapping(self):
+        body = self.client.get("/api/trend/policies/").json()
+        self.assertTrue(body["ok"])
+        self.assertGreater(len(body["core"]), 10)
+        self.assertTrue(all({"year", "name", "level"} <= set(p) for p in body["core"]))
+        self.assertGreater(len(body["sector"]), 10)
+        for p in body["sector"]:
+            self.assertTrue(p["slug"] and p["sector"] and isinstance(p["gases"], list))
+            self.assertIn(p["sector"], body["sectors"])
+        # residual aggregates are not offered as policies
+        self.assertFalse(any(p["slug"].startswith("res-") for p in body["sector"]))
+        m = body["sector_map"]
+        self.assertEqual(m["Energy Industries"], "Electricity")
+        self.assertEqual(m["Road transportation"], "Transport")
+        self.assertEqual(m["Enteric fermentation"], "Agriculture")
+        self.assertEqual(m["Residential"], "Buildings")
+        self.assertIsNone(m["Other"])
+        # every inventory sector of the trend data is in the map
+        self.assertEqual(set(m), set(tv._load_gas_table("Total GHG")[1]))
+
+    def test_policy_sector_rules(self):
+        self.assertEqual(tv.policy_sector_for("Non-energy products from fuels and solvent use"), "Industry")
+        self.assertEqual(tv.policy_sector_for("Wastewater treatment and discharge"), "Waste")
+        self.assertIsNone(tv.policy_sector_for("Fugitive emissions"))

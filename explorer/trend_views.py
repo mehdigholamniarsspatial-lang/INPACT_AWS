@@ -161,6 +161,94 @@ def trend_bundle(request):
     return resp
 
 
+# Inventory sector (row of data/sector_inventory/*.csv) -> Policy Timeline sector.
+# Sub-sectors follow their parent; rows with no clear match (e.g. "Other",
+# "Fugitive emissions") return None and the user picks a sector instead.
+_POLICY_SECTOR_RULES = [
+    (("energy industries", "public electricity", "petroleum refining", "solid fuels"), "Electricity"),
+    (("residential", "commercial services", "public services"), "Buildings"),
+    (("manufacturing combustion", "industrial processes", "mineral industry", "chemical industry",
+      "metal industry", "non-energy products", "other product manufacture"), "Industry"),
+    (("transport", "aviation", "road transportation", "railways", "navigation"), "Transport"),
+    (("f-gases",), "F-gases"),
+    (("agriculture", "enteric", "manure", "agricultural soils", "liming", "urea", "fishing"), "Agriculture"),
+    (("waste", "landfill", "biological treatment", "incineration", "wastewater"), "Waste"),
+    (("land use", "forest land", "cropland", "grassland", "wetlands", "settlements",
+      "other land", "harvested wood"), "LULUCF"),
+]
+# Trend-tab gas label -> the codes used in PolicySeries.ghg_affected
+_GAS_CODES = {"Total GHG": None, "CO₂": "CO2", "CH₄": "CH4", "N₂O": "N2O"}
+
+
+def policy_sector_for(inventory_sector: str):
+    name = (inventory_sector or "").strip().lower()
+    for keys, target in _POLICY_SECTOR_RULES:
+        if any(k in name for k in keys):
+            return target
+    return None
+
+
+def _series_gases(ghg_affected: str):
+    """'CO2;CH4' -> ['CO2', 'CH4']; 'All' -> ['All']."""
+    return [g.strip() for g in (ghg_affected or "").split(";") if g.strip()]
+
+
+@require_GET
+def trend_policies(request):
+    """
+    Policies for the Trend Analysis overlay panel.
+
+    * ``core``: the main national, EU and international milestones
+      (``data/policies.csv``, the same list as the Explorer's policy lines).
+    * ``sector``: the Policy Timeline's policy-sector series (residual
+      aggregates excluded), with the gases each one affects and a link to
+      its profile.
+    * ``sector_map`` / ``gas_codes``: how the tab's inventory sectors and
+      gas labels relate to those series, so the browser can filter them.
+    """
+    # Imported here so the trend API keeps working if the policies app is absent.
+    from policies import glossary
+    from policies import models as pm
+    from .views import _POLICIES_PATH, _load_policies
+
+    try:
+        core = _load_policies(_POLICIES_PATH)
+    except FileNotFoundError:
+        core = []
+    core_out = [
+        {k: p.get(k, "") for k in ("year", "name", "level", "agency", "sector", "type",
+                                   "instrument", "description", "direction", "outcome")}
+        for p in core
+    ]
+
+    sector_out = []
+    for s in pm.PolicySeries.objects.exclude(layer="residual").order_by("sector", "start_year", "policy_name"):
+        mech = glossary.MECHANISMS.get(s.mechanism, ("#666", s.mechanism, ""))
+        layer = glossary.LAYERS.get(s.layer, (s.layer, "", ""))
+        sector_out.append({
+            "slug": s.slug, "name": s.policy_name, "sector": s.sector,
+            "start": s.start_year, "end": s.end_year,
+            "gases": _series_gases(s.ghg_affected),
+            "mechanism": mech[1], "color": mech[0], "layer": layer[0],
+            "instrument": s.instrument_type or "",
+            "effect_kt": s.reported_effect_kt, "effect_year": s.effect_reference_year,
+            "description": (s.description or "")[:700],
+        })
+
+    _, table = _load_gas_table("Total GHG")
+    resp = JsonResponse({
+        "ok": True,
+        "core": core_out,
+        "sector": sector_out,
+        "sectors": [s for s in glossary.SECTOR_ORDER if any(p["sector"] == s for p in sector_out)],
+        "sector_colors": {k: v[0] for k, v in glossary.SECTORS.items()},
+        "sector_map": {name: policy_sector_for(name) for name in table},
+        "gas_codes": _GAS_CODES,
+    })
+    resp["Cache-Control"] = "public, max-age=600"
+    return resp
+
+
 @require_GET
 def trend_series(request):
     """Raw series for one gas + sector (used to pre-plot before fitting)."""

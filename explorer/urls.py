@@ -30,5 +30,6 @@ urlpatterns = [
     path("api/trend/catalog/", trend_views.trend_catalog, name="trend_catalog"),
     path("api/trend/series/", trend_views.trend_series, name="trend_series"),
     path("api/trend/bundle/", trend_views.trend_bundle, name="trend_bundle"),
+    path("api/trend/policies/", trend_views.trend_policies, name="trend_policies"),
     path("api/trend/fit/", trend_views.trend_fit, name="trend_fit"),
 ]
