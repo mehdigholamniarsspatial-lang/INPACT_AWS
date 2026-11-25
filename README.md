@@ -316,12 +316,23 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
   * **Breakpoint (B):** click a year to add a breakpoint. Drag any dashed
     breakpoint line to move it, with the piecewise fit updating as you drag.
     **Auto-detect** chooses up to 3 breaks by minimum BIC.
-  * Drag a range's edge to resize it, or its top strip to move it. Zoom (Z) and
-    Pan (P) work as usual.
-  * Display options: confidence band, prediction interval, policy markers
-    (from `data/policies.csv`), a year-on-year panel, log scale, and a
-    projection of the last segment to a target year with its prediction
-    interval.
+  * Drag a range's edge to resize it, or its top strip to move it. **Zoom
+    (Z)** draws a box; **Reset view** zooms back out. Each tool button shows a
+    step-by-step guide on hover. Plotly's own toolbar is hidden.
+  * **Confidence level** is a slider (80–99%, default 95%; double-click to
+    reset). Every band, interval and test updates while you drag it.
+  * **Policies:** the ▲ markers under the chart come from `data/policies.csv`.
+    Click one to draw it as a labelled vertical line; if several policies
+    share a year, a chooser lists them. Hover a line for a card with the full
+    description, and a link to the policy's profile in the Policy Timeline
+    tab. The 6 policies that have a profile there are matched in
+    `PROFILE_MAP` in `trend-chart.js`; the others link to the timeline view.
+    Pinned policies are saved in the shareable link.
+  * The bars in the bottom panel are the **change from the previous year
+    (%)**: green when emissions fell, red when they rose.
+  * Display options: confidence band, prediction interval, policy markers,
+    the year-on-year panel, log scale, and a projection of the last segment
+    to a target year with its prediction interval.
   * Advanced Statistics: a full segment table, Chow tests, BIC candidates,
     per-segment Mann–Kendall, and four residual plots (over time, histogram,
     Q–Q, ACF).

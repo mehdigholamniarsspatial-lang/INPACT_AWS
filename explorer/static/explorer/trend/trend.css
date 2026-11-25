@@ -2,12 +2,60 @@
    The layout shell (.trend-shell, .trend-side, .trend-direction, .trend-adv*)
    is still defined in explorer/page/index.html. */
 
-.tr-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:.5rem}
-.tr-toolbar .btn-group .btn{font-size:.78rem;padding:.25rem .6rem}
-.tr-toolbar .btn-group .btn.active{background:var(--navy);border-color:var(--navy);color:#fff}
-.tr-toolbar kbd{font-size:.62rem;padding:.05rem .25rem;margin-left:.25rem;background:rgba(0,0,0,.12);color:inherit}
-.tr-toolbar .btn.active kbd{background:rgba(255,255,255,.25)}
-.tr-mode-hint{font-size:.72rem;color:var(--text-muted);flex:1 1 220px;min-width:0}
+/* ---- Chart tools (mode buttons with hover guides) ---- */
+.tr-toolbar{display:flex;flex-wrap:wrap;align-items:stretch;gap:.5rem;margin-bottom:.35rem}
+.tr-tools{display:flex;flex-wrap:wrap;gap:.4rem}
+.tr-tool{position:relative;display:flex;align-items:center;gap:.5rem;text-align:left;cursor:pointer;
+  border:1.5px solid var(--grey-border);background:#fff;color:var(--navy);border-radius:10px;
+  padding:.38rem .7rem .38rem .6rem;transition:border-color .15s,background .15s,box-shadow .15s}
+.tr-tool > .bi{font-size:1.15rem;line-height:1}
+.tr-tool-txt{display:flex;flex-direction:column;line-height:1.15}
+.tr-tool-txt b{font-size:.8rem}
+.tr-tool-txt small{font-size:.66rem;color:var(--text-muted)}
+.tr-tool kbd{font-size:.6rem;padding:.05rem .3rem;margin-left:.15rem;background:#eef2f5;color:var(--text-muted);border-radius:4px;align-self:flex-start}
+.tr-tool:hover{border-color:var(--emerald);background:#f6fbf8}
+.tr-tool:focus-visible{outline:3px solid rgba(0,132,61,.35);outline-offset:1px}
+.tr-tool.active{border-color:var(--navy);background:var(--navy);color:#fff;box-shadow:0 2px 6px rgba(22,50,79,.25)}
+.tr-tool.active .tr-tool-txt small{color:rgba(255,255,255,.75)}
+.tr-tool.active kbd{background:rgba(255,255,255,.2);color:#fff}
+.tr-tool-reset{margin-left:auto}
+.tr-guide{position:absolute;left:0;top:calc(100% + 8px);z-index:30;width:300px;max-width:80vw;
+  background:#fff;color:#2b3a48;border:1px solid #c9d3dc;border-radius:10px;padding:.65rem .8rem;
+  box-shadow:0 8px 24px rgba(22,50,79,.18);font-size:.76rem;line-height:1.4;font-weight:400;
+  opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility .15s;pointer-events:none}
+.tr-guide::before{content:"";position:absolute;top:-6px;left:22px;width:10px;height:10px;background:#fff;
+  border-left:1px solid #c9d3dc;border-top:1px solid #c9d3dc;transform:rotate(45deg)}
+.tr-guide > b{display:block;color:var(--navy);font-size:.8rem;margin-bottom:.3rem}
+.tr-guide ol{margin:0 0 .3rem;padding-left:1.1rem}
+.tr-guide li{margin-bottom:.15rem}
+.tr-guide-tip{display:block;color:var(--text-muted);border-top:1px dashed #dbe2e8;padding-top:.3rem}
+.tr-tool-wrap{position:relative;display:flex}
+.tr-tool-wrap:hover .tr-guide,.tr-tool:focus-visible + .tr-guide{opacity:1;visibility:visible;transform:none;transition-delay:.25s}
+.tr-mode-hint{font-size:.72rem;color:var(--text-muted);margin-bottom:.3rem;min-height:1.1em}
+
+/* ---- Confidence slider ---- */
+.tr-conf-out{font-weight:700;color:var(--navy);font-size:.85rem;font-variant-numeric:tabular-nums}
+.tr-conf{accent-color:var(--emerald)}
+.tr-conf-scale{display:flex;justify-content:space-between;font-size:.62rem;color:var(--text-muted);margin-top:-.35rem}
+.tr-conf-scale span:nth-child(2){position:relative;left:-6%}
+
+/* ---- Pinned policies ---- */
+.tr-pinned{margin:.1rem 0 .5rem;padding:.3rem .5rem;border-radius:6px;background:#f4f7fa}
+.tr-pcard{position:absolute;z-index:20;width:330px;max-width:calc(100% - 16px);background:#fff;color:#2b3a48;
+  border:1px solid #c9d3dc;border-left:5px solid var(--pc,#16324F);border-radius:10px;padding:.6rem .75rem;
+  box-shadow:0 10px 28px rgba(22,50,79,.22);font-size:.76rem;line-height:1.4}
+.tr-pcard[hidden]{display:none}
+.tr-pcard h4{font-size:.86rem;margin:0 0 .25rem;color:var(--navy);font-weight:700;padding-right:1.2rem}
+.tr-pcard .pc-meta{display:flex;flex-wrap:wrap;gap:.25rem;margin-bottom:.4rem}
+.tr-pcard .pc-tag{background:#eef2f5;border-radius:999px;padding:.02rem .45rem;font-size:.66rem}
+.tr-pcard dl{display:grid;grid-template-columns:auto 1fr;gap:.1rem .5rem;margin:.35rem 0}
+.tr-pcard dt{color:var(--text-muted);font-weight:600}
+.tr-pcard dd{margin:0}
+.tr-pcard .pc-actions{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.45rem;align-items:center}
+.tr-pcard .pc-close{position:absolute;top:.35rem;right:.45rem;border:0;background:none;color:var(--text-muted);font-size:1rem;line-height:1}
+.tr-pcard .pc-list{list-style:none;margin:0;padding:0;max-height:240px;overflow:auto}
+.tr-pcard .pc-list li{display:flex;align-items:center;gap:.4rem;padding:.25rem 0;border-bottom:1px solid #eef2f5}
+.tr-pcard .pc-dot{width:.6rem;height:.6rem;border-radius:50%;flex:none}
 
 .tr-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.5rem;margin-bottom:.6rem}
 .tr-kpi{border:1px solid var(--grey-border);border-radius:8px;padding:.4rem .6rem;background:#fff;min-width:0}
@@ -20,6 +68,7 @@
 .tr-plot{position:relative;height:540px;width:100%}
 .tr-plot.tr-hot-ew .nsewdrag,.tr-plot.tr-hot-ew .draglayer *{cursor:ew-resize!important}
 .tr-plot.tr-hot-move .nsewdrag,.tr-plot.tr-hot-move .draglayer *{cursor:grab!important}
+.tr-plot.tr-hot-click .nsewdrag,.tr-plot.tr-hot-click .draglayer *{cursor:pointer!important}
 body.tr-dragging,body.tr-dragging *{cursor:ew-resize!important;user-select:none}
 .tr-overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible}
 .tr-overlay-label{font-size:12px;font-weight:700;fill:#111;paint-order:stroke;stroke:#fff;stroke-width:4px}
@@ -55,6 +104,8 @@ body.tr-dragging,body.tr-dragging *{cursor:ew-resize!important;user-select:none}
 }
 @media (max-width: 520px){
   .tr-plot{height:360px}
-  .tr-toolbar .btn-group .btn{padding:.25rem .45rem}
-  .tr-toolbar kbd{display:none}
-}
+  .tr-tool{padding:.3rem .5rem}
+  .tr-tool-txt small,.tr-tool kbd{display:none}
+  .tr-tool-reset{margin-left:0}
+}/* while a policy card is open, Plotly's own hover box would sit behind it */
+.tr-plot.tr-card-open .hoverlayer{display:none}

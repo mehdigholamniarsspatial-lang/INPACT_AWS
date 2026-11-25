@@ -3838,12 +3838,16 @@ a.ug-go.alt:hover{color:var(--navy)}
         <option value="theilsen">Theil–Sen</option>
       </select>
 
-      <label class="side-label" for="trConf">Confidence level</label>
-      <select id="trConf" class="form-select form-select-sm mb-3">
-        <option value="0.9">90%</option>
-        <option value="0.95" selected>95%</option>
-        <option value="0.99">99%</option>
-      </select>
+      <div class="d-flex justify-content-between align-items-baseline">
+        <label class="side-label" for="trConf">Confidence level</label>
+        <output id="trConfOut" for="trConf" class="tr-conf-out">95%</output>
+      </div>
+      <input id="trConf" type="range" class="form-range tr-conf" min="80" max="99" step="1" value="95"
+             aria-describedby="trConfHint">
+      <div class="tr-conf-scale" aria-hidden="true"><span>80%</span><span>90%</span><span>99%</span></div>
+      <div class="trend-hint mb-3" id="trConfHint">
+        Drag to widen or narrow the bands and slope intervals. Double-click to reset to 95%.
+      </div>
 
       <div class="d-flex align-items-center gap-2 mb-2 mt-1">
         <span class="panel-num">2</span>
@@ -3886,7 +3890,13 @@ a.ug-go.alt:hover{color:var(--navy)}
       </div>
       <div class="form-check form-switch mb-1">
         <input class="form-check-input" type="checkbox" id="trShowPolicies">
-        <label class="form-check-label side-check" for="trShowPolicies">Policy markers</label>
+        <label class="form-check-label side-check" for="trShowPolicies">Policy markers (▲ under the chart)</label>
+      </div>
+      <div id="trPinnedBox" class="tr-pinned" hidden>
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="trend-hint"><b id="trPinnedCount">0</b> policy line(s) on the chart</span>
+          <button type="button" id="trPinnedClear" class="btn btn-link btn-sm p-0 text-danger">Clear</button>
+        </div>
       </div>
       <div class="form-check form-switch mb-1">
         <input class="form-check-input" type="checkbox" id="trShowYoy">
@@ -3931,16 +3941,62 @@ a.ug-go.alt:hover{color:var(--navy)}
         </div>
         <div id="trKpis" class="tr-kpis" aria-live="polite"></div>
 
+        <!-- Chart tools: each button shows a short how-to guide on hover / keyboard focus -->
         <div class="tr-toolbar">
-          <div class="btn-group" role="group" aria-label="Chart mode" id="trModes">
-            <button type="button" class="btn btn-outline-secondary active" data-mode="select" aria-pressed="true"><i class="bi bi-arrows-expand-vertical"></i> Select range<kbd>R</kbd></button>
-            <button type="button" class="btn btn-outline-secondary" data-mode="breakpoint" aria-pressed="false"><i class="bi bi-signpost-split"></i> Breakpoint<kbd>B</kbd></button>
-            <button type="button" class="btn btn-outline-secondary" data-mode="zoom" aria-pressed="false"><i class="bi bi-zoom-in"></i> Zoom<kbd>Z</kbd></button>
-            <button type="button" class="btn btn-outline-secondary" data-mode="pan" aria-pressed="false"><i class="bi bi-arrows-move"></i> Pan<kbd>P</kbd></button>
+          <div class="tr-tools" role="group" aria-label="Chart tool" id="trModes">
+            <div class="tr-tool-wrap">
+            <button type="button" class="tr-tool active" data-mode="select" aria-pressed="true" aria-describedby="trGuideSelect">
+              <i class="bi bi-arrows-expand-vertical"></i>
+              <span class="tr-tool-txt"><b>Measure a period</b><small>Drag across years</small></span>
+              <kbd>R</kbd>
+            </button>
+            <div class="tr-guide" role="tooltip" id="trGuideSelect">
+                <b><i class="bi bi-arrows-expand-vertical"></i> Measure a period</b>
+                <ol>
+                  <li>Press and hold on the chart at the first year.</li>
+                  <li>Drag sideways to the last year: the trend line and its slope appear as you move.</li>
+                  <li>Release to keep it as a coloured range. Its statistics are listed under the chart.</li>
+                </ol>
+                <span class="tr-guide-tip">Drag a range's edge to resize it, or its coloured top strip to move it.</span>
+              </div>
+            </div>
+            <div class="tr-tool-wrap">
+            <button type="button" class="tr-tool" data-mode="breakpoint" aria-pressed="false" aria-describedby="trGuideBreak">
+              <i class="bi bi-signpost-split"></i>
+              <span class="tr-tool-txt"><b>Split the trend</b><small>Click a year</small></span>
+              <kbd>B</kbd>
+            </button>
+            <div class="tr-guide" role="tooltip" id="trGuideBreak">
+                <b><i class="bi bi-signpost-split"></i> Split the trend at a breakpoint</b>
+                <ol>
+                  <li>Click any year on the chart to add a dashed breakpoint line.</li>
+                  <li>A separate trend line is fitted before and after it.</li>
+                  <li>Drag the dashed line left or right: the fits update as you move it.</li>
+                </ol>
+                <span class="tr-guide-tip">Remove a breakpoint with its × in the sidebar, or let <b>Auto-detect</b> find them.</span>
+              </div>
+            </div>
+            <div class="tr-tool-wrap">
+            <button type="button" class="tr-tool" data-mode="zoom" aria-pressed="false" aria-describedby="trGuideZoom">
+              <i class="bi bi-zoom-in"></i>
+              <span class="tr-tool-txt"><b>Zoom in</b><small>Draw a box</small></span>
+              <kbd>Z</kbd>
+            </button>
+            <div class="tr-guide" role="tooltip" id="trGuideZoom">
+                <b><i class="bi bi-zoom-in"></i> Zoom in on part of the chart</b>
+                <ol>
+                  <li>Drag a box around the years and values you want to see.</li>
+                  <li>The chart zooms to that box.</li>
+                  <li>Double-click the chart, or press <b>Reset view</b>, to see everything again.</li>
+                </ol>
+              </div>
+            </div>
           </div>
-          <button type="button" class="btn btn-outline-secondary btn-sm" id="trResetView" title="Reset zoom"><i class="bi bi-arrow-counterclockwise"></i></button>
-          <span class="tr-mode-hint" id="trModeHint"></span>
+          <button type="button" class="tr-tool tr-tool-reset" id="trResetView">
+            <i class="bi bi-arrows-fullscreen"></i><span class="tr-tool-txt"><b>Reset view</b><small>Show all years</small></span>
+          </button>
         </div>
+        <div class="tr-mode-hint" id="trModeHint"></div>
 
         <div class="tr-plot" id="trChart">
           <div class="tr-loading" id="trLoading" hidden><span class="spinner-border spinner-border-sm"></span> Loading chart…</div>

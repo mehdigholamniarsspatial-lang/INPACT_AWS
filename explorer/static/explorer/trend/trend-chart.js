@@ -33,6 +33,8 @@
   const MAX_RANGES = 8;
   const MAX_BREAKS = 10;
   const HANDLE_PX = 8;
+  // Plotly drag behaviour per tool (Breakpoint mode only reacts to clicks)
+  const DRAGMODE = { select: "select", breakpoint: false, zoom: "zoom" };
 
   const T = {
     inited: false, data: null, gd: null,
@@ -40,6 +42,8 @@
     bps: [2001], ranges: [], preview: null, nextRangeId: 1,
     opt: { band: true, pred: false, bp: true, policies: true, yoy: true, log: false, mk: true, proj: 2030 },
     mode: "select", result: null, drag: null, raf: 0, hashTimer: 0, verify: null,
+    pins: new Set(),          // pinned policies, keyed "year|name"
+    card: null, cardTimer: 0, cardKey: null,
   };
   const $ = id => document.getElementById(id);
 
@@ -122,7 +126,8 @@
       if (T.data.gases[st.g]) T.gas = st.g;
       if (T.data.gases[T.gas][st.s]) T.sector = st.s;
       if (["ols", "huber", "theilsen"].includes(st.m)) T.method = st.m;
-      if ([0.9, 0.95, 0.99].includes(st.c)) T.conf = st.c;
+      if (isNum(st.c) && st.c >= 0.8 && st.c <= 0.99) T.conf = Math.round(st.c * 100) / 100;
+      if (Array.isArray(st.p)) st.p.forEach(k => { if (typeof k === "string") T.pins.add(k); });
       if (Array.isArray(st.b)) T.bps = st.b.filter(isNum).slice(0, MAX_BREAKS);
       if (Array.isArray(st.r)) st.r.filter(r => Array.isArray(r) && isNum(r[0]) && isNum(r[1]) && r[0] < r[1])
         .slice(0, MAX_RANGES).forEach(r => T.ranges.push(newRange(r[0], r[1])));
@@ -133,10 +138,11 @@
     clearTimeout(T.hashTimer);
     T.hashTimer = setTimeout(() => {
       if (!location.hash.startsWith("#trend") && !document.getElementById("tab-trend").classList.contains("active")) return;
-      const st = { g: T.gas, s: T.sector, m: T.method, c: T.conf, b: T.bps, r: T.ranges.map(r => [r.a, r.b]), o: T.opt };
-      history.replaceState(null, "", location.pathname + location.search + "#trend/" + b64e(JSON.stringify(st)));
+      history.replaceState(null, "", location.pathname + location.search + "#trend/" + b64e(JSON.stringify(stateObj())));
     }, 250);
   }
+  const stateObj = () => ({ g: T.gas, s: T.sector, m: T.method, c: T.conf, b: T.bps,
+    r: T.ranges.map(r => [r.a, r.b]), o: T.opt, p: [...T.pins] });
 
   // ------------------------------------------------------------------
   // Controls
@@ -155,7 +161,13 @@
     gasSel.value = T.gas;
     fillSectors();
     $("trMethod").value = T.method;
-    $("trConf").value = String(T.conf);
+    const conf = $("trConf"), confOut = $("trConfOut");
+    const showConf = () => { confOut.textContent = `${Math.round(T.conf * 100)}%`; conf.setAttribute("aria-valuetext", confOut.textContent); };
+    conf.value = String(Math.round(T.conf * 100));
+    showConf();
+    // live while dragging: every step re-fits in the browser
+    conf.addEventListener("input", () => { T.conf = parseInt(conf.value, 10) / 100; showConf(); resetVerify(); scheduleRender(); });
+    conf.addEventListener("dblclick", () => { conf.value = "95"; conf.dispatchEvent(new Event("input")); });
     const toggles = { trShowBand: "band", trShowPred: "pred", trShowBp: "bp", trShowPolicies: "policies", trShowYoy: "yoy", trLogY: "log", trEnableMk: "mk" };
     for (const [id, key] of Object.entries(toggles)) {
       const el = $(id);
@@ -164,10 +176,9 @@
     }
     $("trProjYear").value = T.opt.proj || "";
 
-    gasSel.addEventListener("change", () => { T.gas = gasSel.value; fillSectors(); resetVerify(); recompute(); });
-    $("trSector").addEventListener("change", e => { T.sector = e.target.value; resetVerify(); recompute(); });
+    gasSel.addEventListener("change", () => { T.gas = gasSel.value; fillSectors(); resetVerify(); hideCard(true); recompute(); });
+    $("trSector").addEventListener("change", e => { T.sector = e.target.value; resetVerify(); hideCard(true); recompute(); });
     $("trMethod").addEventListener("change", e => { T.method = e.target.value; resetVerify(); recompute(); });
-    $("trConf").addEventListener("change", e => { T.conf = parseFloat(e.target.value); resetVerify(); recompute(); });
     $("trProjYear").addEventListener("input", e => {
       const v = parseInt(e.target.value, 10);
       T.opt.proj = isNum(v) && v > 0 ? v : null;
@@ -193,6 +204,7 @@
       b.addEventListener("click", () => setMode(b.dataset.mode)));
     $("trResetView").addEventListener("click", () => window.Plotly.relayout(T.gd, { "xaxis.autorange": true, "yaxis.autorange": true }));
     $("trClearRanges").addEventListener("click", () => { T.ranges = []; recompute(); });
+    $("trPinnedClear").addEventListener("click", () => { T.pins.clear(); hideCard(true); recompute(); });
     $("trRangeBody").addEventListener("click", e => {
       const b = e.target.closest("[data-remove]");
       if (b) { T.ranges = T.ranges.filter(r => r.id !== Number(b.dataset.remove)); recompute(); }
@@ -216,9 +228,9 @@
     document.addEventListener("keydown", e => {
       if (!$("tab-trend").classList.contains("active")) return;
       if (e.target.closest("input, select, textarea, [contenteditable]") || e.ctrlKey || e.metaKey || e.altKey) return;
-      const k = { r: "select", b: "breakpoint", z: "zoom", p: "pan" }[e.key.toLowerCase()];
+      const k = { r: "select", b: "breakpoint", z: "zoom" }[e.key.toLowerCase()];
       if (k) { setMode(k); e.preventDefault(); }
-      if (e.key === "Escape" && T.preview) { T.preview = null; scheduleRender(); }
+      if (e.key === "Escape") { hideCard(true); if (T.preview) { T.preview = null; scheduleRender(); } }
     });
   }
 
@@ -229,13 +241,11 @@
       b.classList.toggle("active", on);
       b.setAttribute("aria-pressed", on ? "true" : "false");
     });
-    const dragmode = { select: "select", breakpoint: "zoom", zoom: "zoom", pan: "pan" }[mode];
-    if (T.gd && T.gd.layout) window.Plotly.relayout(T.gd, { dragmode });
-    $("trModeHint").textContent = {
-      select: "Drag across the chart to analyse a period. Drag a range's edge or its top strip to change it.",
-      breakpoint: "Click a year to add a breakpoint. Drag a dashed line to move it.",
-      zoom: "Drag to zoom. Double-click to reset the view.",
-      pan: "Drag to pan. Double-click to reset the view.",
+    if (T.gd && T.gd.layout) window.Plotly.relayout(T.gd, { dragmode: DRAGMODE[mode] });
+    $("trModeHint").innerHTML = {
+      select: '<i class="bi bi-hand-index"></i> <b>Measure a period:</b> drag across the chart. Click a ▲ policy marker under the chart to draw it as a line.',
+      breakpoint: '<i class="bi bi-hand-index"></i> <b>Split the trend:</b> click a year to add a breakpoint, or drag a dashed line to move it.',
+      zoom: '<i class="bi bi-hand-index"></i> <b>Zoom in:</b> drag a box. Double-click the chart or press Reset view to zoom out.',
     }[mode];
   }
 
@@ -414,31 +424,50 @@
       label: { text: String(bp), textposition: "start", font: { size: 10, color: "#16324F" }, yanchor: "bottom" },
     }));
 
-    // Policy markers (data from the page's policy timeline CSV)
-    const pol = (typeof POLICIES_RAW !== "undefined" ? POLICIES_RAW : []).filter(p => p.year >= R.x[0] && p.year <= R.x[R.x.length - 1]);
+    // Policy markers (data/policies.csv): ▲ along the bottom of the chart; click one to pin it
+    const inSpan = p => p.year >= R.x[0] && p.year <= R.x[R.x.length - 1];
+    const pol = policies().filter(inSpan);
     if (T.opt.policies && pol.length) {
       const levels = [...new Set(pol.map(p => p.level))];
       levels.forEach(lv => {
         const ps = pol.filter(p => p.level === lv);
         traces.push({
-          x: ps.map(p => p.year), y: ps.map(() => 0.035), yaxis: "y3", type: "scatter", mode: "markers",
-          marker: { symbol: "triangle-up", size: 9, color: POLICY_COLORS[lv] || "#666", line: { color: "#fff", width: 1 } },
-          name: `${lv} policy`, text: ps.map(p => p.name),
-          hovertemplate: `%{text}<extra>${esc(lv)}</extra>`,
+          x: ps.map(p => p.year), y: ps.map(() => POLICY_Y), yaxis: "y3", type: "scatter", mode: "markers",
+          marker: {
+            symbol: "triangle-up", size: ps.map(p => T.pins.has(p.key) ? 15 : 12), color: POLICY_COLORS[lv] || "#666",
+            line: { color: ps.map(p => T.pins.has(p.key) ? "#111" : "#fff"), width: ps.map(p => T.pins.has(p.key) ? 2 : 1) },
+          },
+          name: `▲ ${lv} policy`, text: ps.map(p => p.name), customdata: ps.map(p => p.key), meta: "policy",
+          hovertemplate: `▲ %{text}  <i>(click to show on chart)</i><extra>${esc(lv)}</extra>`,
         });
       });
     }
+    // Pinned policies: vertical lines with a label; hover one for its full description
+    pinnedInView(inSpan).forEach(({ p, x }) => {
+      const c = POLICY_COLORS[p.level] || "#666";
+      shapes.push({
+        type: "line", xref: "x", yref: "y domain", x0: x, x1: x, y0: 0.07, y1: 1,
+        line: { color: c, width: 2, dash: "dot" }, layer: "above",
+        label: { text: shortName(p.name), textposition: "end", textangle: -90, xanchor: "right",
+          font: { size: 10, color: c }, padding: 4 },
+      });
+    });
 
-    // Year-on-year change bars
+    // Year-on-year change bars (not policies): % change in emissions from the year before
     if (yoy) {
       const xs = [], ys = [];
       for (let i = 1; i < R.x.length; i++) if (R.x[i] - R.x[i - 1] === 1 && R.y[i - 1] !== 0) {
         xs.push(R.x[i]); ys.push((R.y[i] / R.y[i - 1] - 1) * 100);
       }
       traces.push({
-        x: xs, y: ys, type: "bar", yaxis: "y2", name: "YoY %",
+        x: xs, y: ys, type: "bar", yaxis: "y2", name: "Change from previous year (%)",
         marker: { color: ys.map(v => v <= 0 ? "rgba(0,132,61,.7)" : "rgba(192,57,43,.7)") },
-        hovertemplate: "YoY %{y:+.1f}%<extra></extra>",
+        hovertemplate: "%{y:+.1f}% vs previous year<extra></extra>",
+      });
+      annotations.push({
+        xref: "paper", yref: "y2 domain", x: 0.005, y: 1.12, xanchor: "left", yanchor: "bottom", showarrow: false,
+        text: "<b>Change from previous year (%)</b>: green = emissions fell, red = rose",
+        font: { size: 10, color: "#5f6b76" },
       });
     }
 
@@ -448,7 +477,7 @@
     const layout = {
       uirevision: T.gas + "|" + T.sector,
       margin: { l: 70, r: 18, t: 24, b: 70 },
-      dragmode: { select: "select", breakpoint: "zoom", zoom: "zoom", pan: "pan" }[T.mode],
+      dragmode: DRAGMODE[T.mode],
       selectdirection: "h",
       hovermode: "x unified",
       hoverlabel: { bgcolor: "rgba(255,255,255,.96)", bordercolor: "#c9d3dc", font: { size: 12 } },
@@ -465,7 +494,7 @@
         domain: mainDomain, title: { text: UNITS, font: { size: 12 } }, gridcolor: "#eef2f5",
         type: T.opt.log ? "log" : "linear", tickformat: ",~r", zeroline: false,
       },
-      yaxis2: { domain: [0, 0.2], title: { text: "YoY %", font: { size: 11 } }, gridcolor: "#f2f5f7",
+      yaxis2: { domain: [0, 0.2], gridcolor: "#f2f5f7",
         zeroline: true, zerolinecolor: "#9aa7b3", ticksuffix: "%", visible: yoy, fixedrange: true },
       yaxis3: { overlaying: "y", range: [0, 1], visible: false, fixedrange: true },
       shapes, annotations,
@@ -475,11 +504,8 @@
 
   function render() {
     const { traces, layout } = buildFigure();
-    window.Plotly.react(T.gd, traces, layout, {
-      responsive: true, displaylogo: false, scrollZoom: false,
-      modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d", "toggleSpikelines"],
-      toImageButtonOptions: { format: "png", scale: 2, filename: slug(`trend_${T.gas}_${T.sector}`) },
-    });
+    // No Plotly toolbar: the tool buttons above the chart replace it
+    window.Plotly.react(T.gd, traces, layout, { responsive: true, displayModeBar: false, scrollZoom: false });
     renderSide();
     drawOverlay();
     if ($("trAdvancedPanel").classList.contains("show")) renderDiagnostics();
@@ -504,6 +530,172 @@
     svg.innerHTML =
       `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#111" stroke-width="2.5" stroke-dasharray="5 4"/>` +
       `<text x="${(x1 + x2) / 2}" y="${Math.min(y1, y2) - 10}" text-anchor="middle" class="tr-overlay-label">${esc(label)}</text>`;
+  }
+
+  // ------------------------------------------------------------------
+  // Policies: ▲ markers, pinned vertical lines, detail card with a link
+  // to the Policy Timeline tab
+  // ------------------------------------------------------------------
+  const POLICY_Y = 0.035;                 // marker height on the hidden 0..1 axis (y3)
+  let POLICY_LIST = null;
+  function policies() {
+    if (!POLICY_LIST) {
+      const raw = typeof POLICIES_RAW !== "undefined" ? POLICIES_RAW : [];
+      POLICY_LIST = raw.map(p => ({ ...p, key: `${p.year}|${p.name}` }));
+    }
+    return POLICY_LIST;
+  }
+  const policyByKey = k => policies().find(p => p.key === k);
+  const shortName = s => s.length > 34 ? s.slice(0, 32).trimEnd() + "…" : s;
+  /** Pinned policies inside the data span, with a small x offset when several share a year. */
+  function pinnedInView(inSpan) {
+    const perYear = {};
+    return policies().filter(p => T.pins.has(p.key) && inSpan(p)).map(p => {
+      const k = perYear[p.year] = (perYear[p.year] ?? -1) + 1;
+      return { p, x: p.year + k * 0.22 };
+    });
+  }
+
+  // Policy Timeline profiles that match a chart policy. Several profiles exist
+  // per sector; the one for the sector being analysed is used when it exists.
+  const PROFILE_MAP = [
+    [/Emissions Trading System/i, { electricity: "capmf-eu-ets--electricity", industry: "capmf-eu-ets--industry", transport: "capmf-eu-ets--transport", _: "capmf-eu-ets--electricity" }],
+    [/^Carbon Tax/i, { transport: "irl-p0005--transport", industry: "irl-p0005--industry", _: "irl-p0005--buildings" }],
+    [/\(Amendment\) Act 2021/i, "capmf-act-2021--cross-sectoral"],
+    [/Low Carbon Development Act 2015/i, "capmf-act-2015--cross-sectoral"],
+    [/Carbon Budgets/i, "capmf-carbon-budgets--cross-sectoral"],
+    [/Climate-Neutral Ireland/i, "capmf-net-zero--cross-sectoral"],
+  ];
+  function sectorKey() {
+    const s = T.sector || "";
+    if (/energy industries|electricity|power|heat production/i.test(s)) return "electricity";
+    if (/transport|road|aviation|navigation|railway/i.test(s)) return "transport";
+    if (/industr|manufactur|cement|chemical|mineral|metal/i.test(s)) return "industry";
+    return "_";
+  }
+  function policyLink(p) {
+    for (const [re, target] of PROFILE_MAP) if (re.test(p.name)) {
+      const slugId = typeof target === "string" ? target : (target[sectorKey()] || target._);
+      return { inApp: `#policy/policies/${slugId}/`, standalone: `/policy/policies/${slugId}/`, profile: true };
+    }
+    return { inApp: "#policy/timeline/", standalone: "/policy/timeline/", profile: false };
+  }
+
+  function togglePin(key) {
+    if (T.pins.has(key)) T.pins.delete(key); else T.pins.add(key);
+    recompute();
+  }
+
+  function ensureCard() {
+    if (T.card) return T.card;
+    const c = T.card = document.createElement("div");
+    c.className = "tr-pcard"; c.hidden = true; c.setAttribute("role", "dialog");
+    c.addEventListener("mouseenter", () => clearTimeout(T.cardTimer));
+    c.addEventListener("mouseleave", () => { if (!c.dataset.sticky) hideCard(); });
+    c.addEventListener("click", e => {
+      const pin = e.target.closest("[data-pin]");
+      if (pin) { togglePin(pin.dataset.pin); if (c.dataset.list) showList(c.dataset.list.split("\n"), null, true); else hideCard(true); return; }
+      if (e.target.closest(".pc-close")) hideCard(true);
+    });
+    T.gd.appendChild(c);
+    document.addEventListener("mousedown", e => { if (!c.hidden && !c.contains(e.target) && !T.gd.contains(e.target)) hideCard(true); });
+    return c;
+  }
+  function placeCard(c, xPx) {
+    const fl = T.gd._fullLayout, w = T.gd.clientWidth, cw = Math.min(330, w - 16);
+    let left = xPx + 14;
+    if (left + cw > w - 8) left = Math.max(8, xPx - cw - 14);
+    c.style.left = left + "px";
+    c.style.top = (fl.yaxis._offset + 6) + "px";
+  }
+  function policyCardHtml(p) {
+    const link = policyLink(p), c = POLICY_COLORS[p.level] || "#666";
+    const row = (k, v) => v ? `<dt>${k}</dt><dd>${esc(v)}</dd>` : "";
+    return `<button type="button" class="pc-close" aria-label="Close">×</button>
+      <h4>${esc(p.name)}</h4>
+      <div class="pc-meta"><span class="pc-tag" style="background:${rgba(c, 0.15)};color:${c}"><b>${esc(p.level)}</b></span>
+        <span class="pc-tag">${p.year}</span>${p.agency ? `<span class="pc-tag">${esc(p.agency)}</span>` : ""}</div>
+      ${p.description ? `<div>${esc(p.description)}</div>` : ""}
+      <dl>${row("Sector", p.sector)}${row("Type", p.type)}${row("Instrument", p.instrument)}${row("Direction", p.direction)}${row("Outcome", p.outcome)}</dl>
+      <div class="pc-actions">
+        <a class="btn btn-success btn-sm py-0" href="${link.inApp}"><i class="bi bi-diagram-3"></i> ${link.profile ? "Open policy profile" : "Open the Policy Timeline"}</a>
+        <a class="small" href="${link.standalone}" target="_blank" rel="noopener" title="Open in a new tab"><i class="bi bi-box-arrow-up-right"></i> new tab</a>
+        <button type="button" class="btn btn-link btn-sm p-0 ms-auto" data-pin="${esc(p.key)}">${T.pins.has(p.key) ? "Remove line" : "Show on chart"}</button>
+      </div>
+      ${link.profile ? "" : `<div class="trend-hint mt-1">This policy has no profile of its own in the Policy Timeline; the link opens its timeline view.</div>`}`;
+  }
+  function showCard(key, xPx, sticky) {
+    const p = policyByKey(key);
+    if (!p) return;
+    const c = ensureCard();
+    clearTimeout(T.cardTimer);
+    if (T.cardKey !== key || c.hidden) {
+      c.innerHTML = policyCardHtml(p);
+      c.style.setProperty("--pc", POLICY_COLORS[p.level] || "#666");
+      placeCard(c, xPx);
+    }
+    const sameOpen = T.cardKey === key && !c.hidden;
+    delete c.dataset.list;
+    if (sticky) c.dataset.sticky = "1"; else if (!sameOpen) delete c.dataset.sticky;
+    T.cardKey = key; c.hidden = false;
+    T.gd.classList.add("tr-card-open");
+  }
+  /** Several policies share the clicked year: choose which to show as lines. */
+  function showList(keys, xPx, keepPos) {
+    const c = ensureCard();
+    clearTimeout(T.cardTimer);
+    const ps = keys.map(policyByKey).filter(Boolean);
+    c.innerHTML = `<button type="button" class="pc-close" aria-label="Close">×</button>
+      <h4>${ps.length} policies in ${ps[0].year}</h4>
+      <div class="trend-hint mb-1">Choose which to draw on the chart. Hover a line for its full description.</div>
+      <ul class="pc-list">${ps.map(p => `<li><span class="pc-dot" style="background:${POLICY_COLORS[p.level] || "#666"}"></span>
+        <span class="flex-fill">${esc(p.name)}</span>
+        <button type="button" class="btn btn-sm py-0 ${T.pins.has(p.key) ? "btn-success" : "btn-outline-secondary"}" data-pin="${esc(p.key)}">${T.pins.has(p.key) ? "Shown" : "Show"}</button></li>`).join("")}</ul>`;
+    c.style.setProperty("--pc", "#16324F");
+    if (!keepPos && xPx != null) placeCard(c, xPx);
+    c.dataset.list = keys.join("\n"); c.dataset.sticky = "1";
+    T.cardKey = null; c.hidden = false;
+    T.gd.classList.add("tr-card-open");
+  }
+  function hideCard(now) {
+    const c = T.card;
+    if (!c || c.hidden) return;
+    clearTimeout(T.cardTimer);
+    const go = () => { c.hidden = true; T.cardKey = null; delete c.dataset.sticky; delete c.dataset.list; T.gd.classList.remove("tr-card-open"); };
+    if (now) go(); else T.cardTimer = setTimeout(go, 350);
+  }
+
+  /** ▲ markers under the pointer (all policies of that year), or null. */
+  function policyMarkerHit(cx, cy) {
+    if (!T.opt.policies || !T.result || !T.result.x.length) return null;
+    const fl = T.gd._fullLayout, ya3 = fl && fl.yaxis3;
+    if (!ya3 || !ya3.c2p) return null;
+    const rect = T.gd.getBoundingClientRect(), xa = fl.xaxis;
+    const px = cx - rect.left, py = cy - rect.top;
+    const my = ya3._offset + ya3.c2p(POLICY_Y);
+    if (Math.abs(py - my) > 12) return null;
+    const R = T.result, ps = policies().filter(p => p.year >= R.x[0] && p.year <= R.x[R.x.length - 1]);
+    let best = null;
+    for (const p of ps) {
+      const d = Math.abs(xa._offset + xa.c2p(p.year) - px);
+      if (d <= 9 && (!best || d < best.d)) best = { d, year: p.year, x: xa._offset + xa.c2p(p.year) };
+    }
+    return best && { year: best.year, xPx: best.x, keys: ps.filter(p => p.year === best.year).map(p => p.key) };
+  }
+  /** Pinned policy line under the pointer, or null. */
+  function pinnedLineHit(cx, cy) {
+    if (!T.pins.size || !T.result) return null;
+    const g = plotGeom();
+    if (!g) return null;
+    const px = cx - g.rect.left, py = cy - g.rect.top;
+    if (py < g.top || py > g.bot) return null;
+    const R = T.result;
+    let best = null;
+    for (const { p, x } of pinnedInView(q => q.year >= R.x[0] && q.year <= R.x[R.x.length - 1])) {
+      const lx = g.xa._offset + g.xa.c2p(x), d = Math.abs(lx - px);
+      if (d <= 6 && (!best || d < best.d)) best = { d, key: p.key, xPx: lx };
+    }
+    return best;
   }
 
   // ------------------------------------------------------------------
@@ -558,6 +750,21 @@
 
     // Custom drags (capture phase, so Plotly's own drag never starts)
     const start = (cx, cy, e) => {
+      if (T.card && T.card.contains(e.target)) return;      // clicks inside the policy card
+      // ▲ policy marker: pin/unpin it (one policy) or list that year's policies
+      const pm = policyMarkerHit(cx, cy);
+      if (pm) {
+        e.stopPropagation(); e.preventDefault();
+        if (pm.keys.length === 1) {
+          const k = pm.keys[0], pinning = !T.pins.has(k);
+          togglePin(k);
+          if (pinning) showCard(k, pm.xPx, true); else hideCard(true);
+        } else showList(pm.keys, pm.xPx);
+        return;
+      }
+      // pinned policy line: keep its card open so the link can be clicked
+      const pl = pinnedLineHit(cx, cy);
+      if (pl && !hit(cx, cy)) { e.stopPropagation(); e.preventDefault(); showCard(pl.key, pl.xPx, true); return; }
       const h = hit(cx, cy);
       if (!h) return;
       e.stopPropagation(); e.preventDefault();
@@ -588,9 +795,16 @@
     window.addEventListener("mousemove", e => {
       if (T.drag) { move(e.clientX, e.clientY); return; }
       if (e.target instanceof Node && gd.contains(e.target)) {
+        if (T.card && T.card.contains(e.target)) return;
         const h = hit(e.clientX, e.clientY);
+        const pm = !h && policyMarkerHit(e.clientX, e.clientY);
         gd.classList.toggle("tr-hot-ew", !!h && h.kind !== "move");
         gd.classList.toggle("tr-hot-move", !!h && h.kind === "move");
+        gd.classList.toggle("tr-hot-click", !!pm);
+        // hovering a pinned policy line shows its full description
+        const pl = !h && pinnedLineHit(e.clientX, e.clientY);
+        if (pl) showCard(pl.key, pl.xPx, false);
+        else if (T.card && !T.card.hidden && !T.card.dataset.sticky) hideCard();
       }
     });
     window.addEventListener("touchmove", e => { if (T.drag && e.touches[0]) { move(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); } }, { passive: false });
@@ -641,6 +855,8 @@
       `<button type="button" class="tr-chip" data-bp="${b}" title="Remove breakpoint ${b}">${b}<i class="bi bi-x"></i></button>`).join("")
       || `<span class="trend-hint">None: one trend over the whole period.</span>`;
     $("trCsvBtn").disabled = $("trPngBtn").disabled = !R.x.length;
+    $("trPinnedBox").hidden = !T.pins.size;
+    $("trPinnedCount").textContent = T.pins.size;
 
     // KPI strip
     const n = R.x.length, last = R.pw && R.pw.segments[R.pw.segments.length - 1];
@@ -773,7 +989,7 @@
       yaxis: { title: { text: yt, font: { size: 11 } }, gridcolor: "#eef2f5", zeroline: true, zerolinecolor: "#9aa7b3" },
       paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "#fff", font: { size: 11 },
     });
-    const cfg = { displaylogo: false, responsive: true, modeBarButtonsToRemove: ["lasso2d", "select2d"] };
+    const cfg = { responsive: true, displayModeBar: false };
     const P = window.Plotly;
     P.react($("trResChart"), [{ x: xs, y: resid, type: "scatter", mode: "markers", marker: { color: colors, size: 7 }, hovertemplate: "%{x}: %{y:,.1f}<extra></extra>" }],
       { ...base("Residuals over time", "Year", "Residual"), xaxis: { ...base().xaxis, tickformat: "d", title: { text: "Year" } } }, cfg);
@@ -877,8 +1093,7 @@
   }
   async function copyLink() {
     clearTimeout(T.hashTimer);
-    const st = { g: T.gas, s: T.sector, m: T.method, c: T.conf, b: T.bps, r: T.ranges.map(r => [r.a, r.b]), o: T.opt };
-    const url = location.origin + location.pathname + "#trend/" + b64e(JSON.stringify(st));
+    const url = location.origin + location.pathname + "#trend/" + b64e(JSON.stringify(stateObj()));
     history.replaceState(null, "", url);
     try { await navigator.clipboard.writeText(url); flash($("trLinkBtn"), "Copied"); }
     catch (e) { flash($("trLinkBtn"), "Link in address bar"); }
