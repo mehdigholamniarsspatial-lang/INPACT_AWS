@@ -318,6 +318,9 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
   * **Policies** (toolbar button): hides or shows every policy line at once.
     The ticks in the Policy overlay panel are kept, and the button shows how
     many lines it affects. Its state is saved in the shareable link.
+  * **Clear policies** (next to it): removes every policy line from the
+    chart and unticks them in the panel. It is disabled when no policy is
+    ticked.
   * **Legend** (under the chart): an HTML legend in three columns (two on
     tablets, one on phones). Each entry has a swatch in the series' line
     style, and a second line with the slope, breakpoint years or policy

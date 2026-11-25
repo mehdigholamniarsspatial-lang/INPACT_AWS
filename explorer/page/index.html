@@ -3962,6 +3962,11 @@ a.ug-go.alt:hover{color:var(--navy)}
                   title="Hide or show the policy lines on the chart (the ticks in the Policy overlay panel are kept)">
             <i class="bi bi-eye"></i><span class="tr-tool-txt"><b>Policies</b><small>None ticked yet</small></span>
           </button>
+          <!-- Remove every policy line from the chart (also unticks them in the Policy overlay panel) -->
+          <button type="button" class="tr-tool tr-tool-clear" id="trPolClearChart" disabled
+                  title="Remove all policy lines from the chart">
+            <i class="bi bi-x-circle"></i><span class="tr-tool-txt"><b>Clear policies</b><small>Nothing to clear</small></span>
+          </button>
           <button type="button" class="tr-tool tr-tool-reset" id="trResetView">
             <i class="bi bi-arrows-fullscreen"></i><span class="tr-tool-txt"><b>Reset view</b><small>Show all years</small></span>
           </button>

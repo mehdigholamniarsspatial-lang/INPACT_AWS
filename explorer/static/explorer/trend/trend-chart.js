@@ -211,6 +211,11 @@
     $("trResetView").addEventListener("click", () => window.Plotly.relayout(T.gd, { "xaxis.autorange": true, "yaxis.autorange": true }));
     // "Policies" button: hide / show every policy line (the ticks in the panel are kept)
     $("trPolToggle").addEventListener("click", () => { T.opt.pol = !T.opt.pol; if (!T.opt.pol) hideCard(true); recompute(); });
+    // "Clear policies" button: remove every policy line (unticks them in the panel too)
+    $("trPolClearChart").addEventListener("click", () => {
+      if (!T.pins.size) return;
+      T.pins.clear(); hideCard(true); recompute();
+    });
     $("trLegend").addEventListener("click", e => {
       const b = e.target.closest("[data-lg]");
       if (!b || b.disabled) return;
@@ -472,6 +477,9 @@
     b.disabled = !n;
     b.querySelector(".bi").className = `bi ${on ? "bi-eye" : "bi-eye-slash"}`;
     b.querySelector("small").textContent = !n ? "None ticked yet" : on ? `Hide ${n} line${n > 1 ? "s" : ""}` : `Show ${n} line${n > 1 ? "s" : ""}`;
+    const c = $("trPolClearChart");
+    c.disabled = !n;
+    c.querySelector("small").textContent = n ? `Remove ${n} line${n > 1 ? "s" : ""}` : "Nothing to clear";
   }
 
   function render() {
