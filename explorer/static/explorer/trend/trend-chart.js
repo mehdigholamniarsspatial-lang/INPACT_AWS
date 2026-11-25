@@ -36,12 +36,13 @@
     inited: false, data: null, gd: null,
     gas: null, sector: null, method: "ols", conf: 0.95,
     bps: [2001],
-    opt: { band: true, pred: false, bp: true, yoy: true, log: false, mk: true, proj: 2030 },
+    opt: { band: true, pred: false, bp: true, log: false, mk: true, proj: 2030 },
     mode: "breakpoint", result: null, drag: null, raf: 0, hashTimer: 0,
     pins: new Set(),          // policies drawn on the chart: "c|<year>|<name>" or "s|<slug>"
     card: null, cardTimer: 0, cardKey: null,
     // policy panel: which list, sector override (null = follow the chart), filters
     polData: null, polTab: "core", polSector: null, polCross: false, polAllGases: false,
+    polOpen: new Set(), polSeen: new Set(), colors: {}, palette: null,   // open groups, group colour overrides
   };
   const $ = id => document.getElementById(id);
 
@@ -130,6 +131,7 @@
       if (["ols", "huber", "theilsen"].includes(st.m)) T.method = st.m;
       if (isNum(st.c) && st.c >= 0.8 && st.c <= 0.99) T.conf = Math.round(st.c * 100) / 100;
       if (Array.isArray(st.p)) st.p.forEach(k => { if (typeof k === "string") T.pins.add(k); });
+      if (st.k && typeof st.k === "object") for (const [g, c] of Object.entries(st.k)) if (/^#[0-9a-f]{6}$/i.test(c)) T.colors[g] = c;
       if (Array.isArray(st.b)) T.bps = st.b.filter(isNum).slice(0, MAX_BREAKS);
       if (st.o && typeof st.o === "object") for (const k of Object.keys(T.opt)) if (k in st.o) T.opt[k] = st.o[k];
     } catch (e) { /* ignore a malformed link and start from defaults */ }
@@ -141,7 +143,7 @@
       history.replaceState(null, "", location.pathname + location.search + "#trend/" + b64e(JSON.stringify(stateObj())));
     }, 250);
   }
-  const stateObj = () => ({ g: T.gas, s: T.sector, m: T.method, c: T.conf, b: T.bps, o: T.opt, p: [...T.pins] });
+  const stateObj = () => ({ g: T.gas, s: T.sector, m: T.method, c: T.conf, b: T.bps, o: T.opt, p: [...T.pins], k: T.colors });
 
   // ------------------------------------------------------------------
   // Controls
@@ -167,7 +169,7 @@
     // live while dragging: every step re-fits in the browser
     conf.addEventListener("input", () => { T.conf = parseInt(conf.value, 10) / 100; showConf(); scheduleRender(); });
     conf.addEventListener("dblclick", () => { conf.value = "95"; conf.dispatchEvent(new Event("input")); });
-    const toggles = { trShowBand: "band", trShowPred: "pred", trShowBp: "bp", trShowYoy: "yoy", trLogY: "log", trEnableMk: "mk" };
+    const toggles = { trShowBand: "band", trShowPred: "pred", trShowBp: "bp", trLogY: "log", trEnableMk: "mk" };
     for (const [id, key] of Object.entries(toggles)) {
       const el = $(id);
       el.checked = !!T.opt[key];
@@ -217,7 +219,7 @@
       if ((el && el.closest("input, select, textarea, [contenteditable]")) || e.ctrlKey || e.metaKey || e.altKey) return;
       const k = { b: "breakpoint", z: "zoom" }[e.key.toLowerCase()];
       if (k) { setMode(k); e.preventDefault(); }
-      if (e.key === "Escape") hideCard(true);
+      if (e.key === "Escape") { hideCard(true); closePalette(); }
     });
   }
 
@@ -316,8 +318,6 @@
 
   function buildFigure() {
     const R = T.result, traces = [], shapes = [], annotations = [];
-    const yoy = T.opt.yoy && R.x.length > 1;
-    const mainDomain = yoy ? [0.27, 1] : [0, 1];
 
     // Observations
     traces.push({
@@ -371,24 +371,6 @@
       });
     });
 
-    // Year-on-year change bars (not policies): % change in emissions from the year before
-    if (yoy) {
-      const xs = [], ys = [];
-      for (let i = 1; i < R.x.length; i++) if (R.x[i] - R.x[i - 1] === 1 && R.y[i - 1] !== 0) {
-        xs.push(R.x[i]); ys.push((R.y[i] / R.y[i - 1] - 1) * 100);
-      }
-      traces.push({
-        x: xs, y: ys, type: "bar", yaxis: "y2", name: "Change from previous year (%)",
-        marker: { color: ys.map(v => v <= 0 ? "rgba(0,132,61,.7)" : "rgba(192,57,43,.7)") },
-        hovertemplate: "%{y:+.1f}% vs previous year<extra></extra>",
-      });
-      annotations.push({
-        xref: "paper", yref: "y2 domain", x: 0.005, y: 1.12, xanchor: "left", yanchor: "bottom", showarrow: false,
-        text: "<b>Change from previous year (%)</b>: green = emissions fell, red = rose",
-        font: { size: 10, color: "#5f6b76" },
-      });
-    }
-
     const layout = {
       uirevision: T.gas + "|" + T.sector,
       margin: { l: 70, r: 18, t: 24, b: 70 },
@@ -400,16 +382,14 @@
       plot_bgcolor: "#fff", paper_bgcolor: "rgba(0,0,0,0)",
       font: { family: "inherit", color: "#2b3a48" },
       xaxis: {
-        anchor: yoy ? "y2" : "y", showspikes: true, spikemode: "across", spikesnap: "cursor",
+        showspikes: true, spikemode: "across", spikesnap: "cursor",
         spikecolor: "#8a99a8", spikethickness: 1, spikedash: "dot", gridcolor: "#eef2f5",
         tickformat: "d", hoverformat: "d", zeroline: false,
       },
       yaxis: {
-        domain: mainDomain, title: { text: UNITS, font: { size: 12 } }, gridcolor: "#eef2f5",
+        title: { text: UNITS, font: { size: 12 } }, gridcolor: "#eef2f5",
         type: T.opt.log ? "log" : "linear", tickformat: ",~r", zeroline: false,
       },
-      yaxis2: { domain: [0, 0.2], gridcolor: "#f2f5f7",
-        zeroline: true, zerolinecolor: "#9aa7b3", ticksuffix: "%", visible: yoy, fixedrange: true },
       shapes, annotations,
     };
     return { traces, layout };
@@ -430,12 +410,18 @@
   // Data: /api/trend/policies/ -> core milestones (data/policies.csv) and the
   // Policy Timeline's sector series. Keys: "c|<year>|<name>" or "s|<slug>".
   let POLICY_LIST = [];
+  // Each policy belongs to a group (core: its level; sector policy: its sector).
+  // The group's colour is used for its panel box, its dots and its chart lines;
+  // the user can change it from the colour swatch in the panel (T.colors).
+  let DEFAULT_GROUP_COLORS = { ...POLICY_COLORS };
+  const colorOf = g => T.colors[g] || DEFAULT_GROUP_COLORS[g] || "#666";
   function setPolicyData(d) {
     T.polData = d;
+    DEFAULT_GROUP_COLORS = { ...POLICY_COLORS, ...(d.sector_colors || {}) };
+    const withColor = o => Object.defineProperty(o, "color", { get() { return colorOf(this.group); }, enumerable: true });
     POLICY_LIST = [
-      ...(d.core || []).map(p => ({ ...p, kind: "core", key: `c|${p.year}|${p.name}`,
-        color: POLICY_COLORS[p.level] || "#666" })),
-      ...(d.sector || []).map(p => ({ ...p, kind: "sector", key: `s|${p.slug}`, year: p.start })),
+      ...(d.core || []).map(p => withColor({ ...p, kind: "core", key: `c|${p.year}|${p.name}`, group: p.level })),
+      ...(d.sector || []).map(p => withColor({ ...p, kind: "sector", key: `s|${p.slug}`, year: p.start, group: p.sector })),
     ];
     // links from before the panel existed stored core keys as "<year>|<name>"
     T.pins = new Set([...T.pins].map(k => /^[cs]\|/.test(k) ? k : `c|${k}`).filter(policyByKey));
@@ -511,8 +497,8 @@
     const tags = p.kind === "core"
       ? `<span class="pc-tag" style="background:${rgba(c, 0.15)};color:${c}"><b>${esc(p.level)}</b></span>
          <span class="pc-tag">${p.year}</span>${p.agency ? `<span class="pc-tag">${esc(p.agency)}</span>` : ""}`
-      : `<span class="pc-tag" style="background:${rgba(c, 0.15)};color:${c}"><b>${esc(p.mechanism)}</b></span>
-         <span class="pc-tag">${esc(p.sector)}</span><span class="pc-tag">${p.start}–${p.end || "ongoing"}</span>`;
+      : `<span class="pc-tag" style="background:${rgba(c, 0.15)};color:${c}"><b>${esc(p.sector)}</b></span>
+         <span class="pc-tag">${esc(p.mechanism)}</span><span class="pc-tag">${p.start}–${p.end || "ongoing"}</span>`;
     const details = p.kind === "core"
       ? row("Sector", p.sector) + row("Type", p.type) + row("Instrument", p.instrument) + row("Direction", p.direction) + row("Outcome", p.outcome)
       : row("Layer", p.layer) + row("Instrument", p.instrument) + row("Gases", (p.gases || []).map(g => GAS_LABEL[g] || g).join(", ")) +
@@ -568,6 +554,14 @@
   }
 
   // ---- right-hand panel ----
+  // Groups (International / EU / National / Targets, or a sector) are coloured
+  // boxes that open and close; core groups start closed, sector groups open.
+  // The swatch beside a group's name opens a palette to change its colour.
+  const PALETTE = ["#1f4e9e", "#00843D", "#5b6b7a", "#c0392b", "#8e44ad", "#d68910",
+    "#16a085", "#2c3e50", "#e67e22", "#b03a6f", "#0f6e8c", "#7a6a00"];
+  const HEX = /^#[0-9a-f]{6}$/i;
+  const GROUP_LABEL = { International: "International policies", EU: "EU policies", National: "National policies", Target: "Targets" };
+
   /** Does a sector series affect the gas being analysed? */
   function affectsGas(p) {
     const code = T.polData && T.polData.gas_codes[T.gas];
@@ -577,7 +571,7 @@
   function bindPolicyPanel() {
     const panel = $("trPolPanel");
     panel.querySelectorAll("[data-poltab]").forEach(b => b.addEventListener("click", () => {
-      T.polTab = b.dataset.poltab; renderPolicyPanel();
+      T.polTab = b.dataset.poltab; closePalette(); renderPolicyPanel();
     }));
     $("trPolSearch").addEventListener("input", renderPolicyPanel);
     $("trPolSector").addEventListener("change", e => { T.polSector = e.target.value || null; renderPolicyPanel(); });
@@ -589,24 +583,105 @@
       if (cb) togglePin(cb.dataset.polkey, cb.checked);
     });
     panel.addEventListener("click", e => {
+      const sw = e.target.closest("[data-colorgroup]");
+      if (sw) { e.preventDefault(); openPalette(sw.dataset.colorgroup, sw); return; }
+      const hd = e.target.closest("[data-togglegroup]");
+      if (hd) {
+        const g = hd.dataset.togglegroup;
+        if (T.polOpen.has(g)) T.polOpen.delete(g); else T.polOpen.add(g);
+        renderPolicyPanel();
+        return;
+      }
       const all = e.target.closest("[data-polall]");
-      if (!all) return;
-      const on = all.dataset.polall === "1";
-      panel.querySelectorAll("input[data-polkey]:not(:disabled)").forEach(cb => { if (on) T.pins.add(cb.dataset.polkey); else T.pins.delete(cb.dataset.polkey); });
-      recompute();
+      if (all) {
+        const on = all.dataset.polall === "1";
+        all.closest(".tp-group").querySelectorAll("input[data-polkey]:not(:disabled)").forEach(cb => {
+          if (on) T.pins.add(cb.dataset.polkey); else T.pins.delete(cb.dataset.polkey);
+        });
+        recompute();
+      }
     });
   }
+
+  // ---- colour palette ----
+  function setGroupColor(group, hex) {
+    if (hex && HEX.test(hex)) T.colors[group] = hex.toLowerCase(); else delete T.colors[group];
+    if (T.card && !T.card.hidden) hideCard(true);       // its colours would be stale
+    recompute();                                         // redraws lines, panel and the link
+  }
+  function closePalette() {
+    if (T.palette) { T.palette.remove(); T.palette = null; }
+  }
+  function openPalette(group, anchor) {
+    const wasOpen = T.palette && T.palette.dataset.group === group;
+    closePalette();
+    if (wasOpen) return;                                 // second click on the swatch closes it
+    const panel = $("trPolPanel"), cur = colorOf(group);
+    const pop = T.palette = document.createElement("div");
+    pop.className = "tp-palette"; pop.dataset.group = group;
+    pop.setAttribute("role", "dialog");
+    pop.setAttribute("aria-label", `Colour for ${GROUP_LABEL[group] || group}`);
+    pop.innerHTML = `<div class="tp-pal-title">Colour for ${esc(GROUP_LABEL[group] || group + " policies")}</div>
+      <div class="tp-pal-grid">${PALETTE.map(c => `<button type="button" class="tp-pal-sw${c === cur ? " on" : ""}" data-pick="${c}"
+        style="background:${c}" aria-label="Use colour ${c}" title="${c}"></button>`).join("")}</div>
+      <div class="tp-pal-foot">
+        <label class="tp-pal-custom">Custom <input type="color" value="${cur}" aria-label="Custom colour"></label>
+        <button type="button" class="btn btn-link btn-sm p-0" data-pick="">Reset</button>
+      </div>`;
+    pop.addEventListener("click", e => {
+      const b = e.target.closest("[data-pick]");
+      if (!b) return;
+      setGroupColor(group, b.dataset.pick || null);
+      closePalette();
+    });
+    pop.querySelector("input[type=color]").addEventListener("input", e => setGroupColor(group, e.target.value));
+    panel.appendChild(pop);
+    // place it under the swatch, inside the panel
+    const pr = panel.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+    pop.style.top = (ar.bottom - pr.top + 6) + "px";
+    pop.style.left = Math.max(8, Math.min(ar.left - pr.left - 6, pr.width - pop.offsetWidth - 8)) + "px";
+    pop.querySelector(".tp-pal-sw.on, .tp-pal-sw").focus();
+  }
+  document.addEventListener("mousedown", e => {
+    if (T.palette && !T.palette.contains(e.target) && !e.target.closest("[data-colorgroup]")) closePalette();
+  });
+
+  // ---- list rendering ----
   function polItem(p, inData, meta) {
     const checked = T.pins.has(p.key) ? "checked" : "";
     const dis = inData ? "" : "disabled";
     const title = inData ? "" : ` title="${p.year} is outside the years shown on the chart"`;
     return `<label class="tp-item${inData ? "" : " off"}"${title}>
       <input type="checkbox" class="form-check-input" data-polkey="${esc(p.key)}" ${checked} ${dis}>
-      <span class="tp-dot" style="background:${p.color}"></span>
       <span class="tp-yr">${p.year ?? "–"}</span>
       <span class="tp-txt"><span class="tp-nm">${esc(p.name)}</span>${meta ? `<small>${meta}</small>` : ""}</span>
     </label>`;
   }
+  /** One coloured, collapsible group box. `force` opens it while searching. */
+  function polGroup(group, label, items, opts) {
+    const c = colorOf(group);
+    const open = T.polOpen.has(group) || opts.force;
+    const on = items.filter(it => T.pins.has(it.p.key)).length;
+    const body = items.map(it => polItem(it.p, it.inData, it.meta)).join("") ||
+      `<div class="trend-hint py-1">${opts.empty || "Nothing to list."}</div>`;
+    return `<div class="tp-group${open ? " open" : ""}" style="--gc:${c};--gbg:${rgba(c, 0.07)};--gbd:${rgba(c, 0.35)}">
+      <div class="tp-gh">
+        <button type="button" class="tp-swatch" data-colorgroup="${esc(group)}" style="background:${c}"
+          title="Change colour" aria-label="Change the colour of ${esc(label)}" aria-haspopup="dialog"></button>
+        <button type="button" class="tp-ghbtn" data-togglegroup="${esc(group)}" aria-expanded="${open}">
+          <span class="tp-gname">${esc(label)}</span>
+          <span class="tp-n${on ? " has" : ""}" title="${on} of ${items.length} on the chart">${on ? `${on}/` : ""}${items.length}</span>
+          <i class="bi bi-chevron-down tp-chev"></i>
+        </button>
+      </div>
+      ${open ? `<div class="tp-gbody">
+        ${items.some(it => it.inData) ? `<div class="tp-bar"><button type="button" class="btn btn-link btn-sm p-0" data-polall="1">Show all</button>
+          <button type="button" class="btn btn-link btn-sm p-0" data-polall="0">Hide all</button></div>` : ""}
+        ${body}${opts.note ? `<div class="trend-hint mt-1">${opts.note}</div>` : ""}
+      </div>` : ""}
+    </div>`;
+  }
+
   function renderPolicyPanel() {
     const panel = $("trPolPanel");
     if (!panel || !T.result) return;
@@ -624,18 +699,14 @@
     const inData = p => isNum(p.year) && p.year >= lo && p.year <= hi;
     const q = $("trPolSearch").value.trim().toLowerCase();
     const match = p => !q || p.name.toLowerCase().includes(q);
-    const selectBar = `<div class="tp-bar"><button type="button" class="btn btn-link btn-sm p-0" data-polall="1">Show all listed</button>
-      <button type="button" class="btn btn-link btn-sm p-0" data-polall="0">Hide all listed</button></div>`;
 
     let html = "";
     if (T.polTab === "core") {
       const core = POLICY_LIST.filter(p => p.kind === "core" && match(p));
-      const levels = ["International", "EU", "National", "Target"];
-      html = selectBar + levels.map(lv => {
+      html = ["International", "EU", "National", "Target"].map(lv => {
         const ps = core.filter(p => p.level === lv);
         if (!ps.length) return "";
-        return `<div class="tp-group"><div class="tp-gh"><span class="tp-dot" style="background:${POLICY_COLORS[lv] || "#666"}"></span>${esc(lv === "Target" ? "Targets" : lv + " policies")} <span class="tp-n">${ps.length}</span></div>
-          ${ps.map(p => polItem(p, inData(p), esc(p.sector))).join("")}</div>`;
+        return polGroup(lv, GROUP_LABEL[lv], ps.map(p => ({ p, inData: inData(p), meta: esc(p.sector) })), { force: !!q });
       }).join("") || `<div class="trend-hint">No core policy matches “${esc(q)}”.</div>`;
     } else {
       // sector pane: the chart's sector decides, unless it has no match (or the user picked another)
@@ -659,15 +730,20 @@
       if (!sector) {
         html = `<div class="trend-hint">Choose a sector above to list its policies.</div>`;
       } else {
-        const pool = POLICY_LIST.filter(p => p.kind === "sector" && (p.sector === sector || (T.polCross && p.sector === "Cross-sectoral")) && match(p));
-        const shown = pool.filter(affectsGas), hidden = pool.length - shown.length;
-        const body = shown.map(p => polItem(p, inData(p),
-          `${esc(p.mechanism)}${p.sector === "Cross-sectoral" ? " · cross-sectoral" : ""} · ${(p.gases || []).map(g => GAS_LABEL[g] || g).join(", ")}`)).join("");
-        const sc = d.sector_colors[sector] || "#16324F";
-        html = (shown.length ? selectBar : "") +
-          `<div class="tp-group"><div class="tp-gh"><span class="tp-dot" style="background:${sc}"></span>${esc(sector)} policies <span class="tp-n">${shown.length}</span></div>${body ||
-            `<div class="trend-hint py-1">No ${esc(sector)} policies in the Policy Timeline${T.gas === "Total GHG" ? "" : ` affect ${esc(T.gas)}`}${q ? ` matching “${esc(q)}”` : ""}.</div>`}</div>` +
-          (hidden ? `<div class="trend-hint mt-1">${hidden} more ${esc(sector)} ${hidden === 1 ? "policy targets" : "policies target"} other gases.</div>` : "");
+        const groups = [sector, ...(T.polCross ? ["Cross-sectoral"] : [])];
+        html = groups.map(g => {
+          // sector boxes open the first time they are shown
+          if (!T.polSeen.has(g)) { T.polSeen.add(g); T.polOpen.add(g); }
+          const pool = POLICY_LIST.filter(p => p.kind === "sector" && p.sector === g && match(p));
+          const shown = pool.filter(affectsGas), hidden = pool.length - shown.length;
+          const items = shown.map(p => ({ p, inData: inData(p),
+            meta: `${esc(p.mechanism)} · ${(p.gases || []).map(x => GAS_LABEL[x] || x).join(", ")}` }));
+          return polGroup(g, g === "Cross-sectoral" ? "Cross-sectoral laws" : `${g} policies`, items, {
+            force: !!q,
+            empty: `No ${esc(g)} policies in the Policy Timeline${T.gas === "Total GHG" ? "" : ` affect ${esc(T.gas)}`}${q ? ` matching “${esc(q)}”` : ""}.`,
+            note: hidden ? `${hidden} more ${hidden === 1 ? "policy targets" : "policies target"} other gases.` : "",
+          });
+        }).join("");
       }
     }
     $("trPolBody").innerHTML = html;

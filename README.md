@@ -334,13 +334,18 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
       Only policies affecting the chart's gas are listed (any gas for Total
       GHG), with a switch to show the rest. Cross-sectoral laws can be added
       with another switch.
-    * The panel also has search, "Show / Hide all listed" and "Remove all
-      policy lines". Ticked policies are saved in the shareable link.
-  * The bars in the bottom panel are the **change from the previous year
-    (%)**: green when emissions fell, red when they rose.
-  * Display options: confidence band, prediction interval, the
-    year-on-year panel, log scale, and a projection of the last segment to a
-    target year with its prediction interval.
+    * Each group (International, EU, National, Targets, or a sector) is a
+      box in its own colour that opens and closes. Core groups start closed;
+      sector groups start open. The header shows how many of the group's
+      policies are on the chart. The swatch beside a group's name opens a
+      palette (12 presets, a custom colour, or reset). The chosen colour is
+      used for the box, its checkboxes and that group's lines on the chart.
+    * The panel also has search (which opens the matching groups), "Show
+      all / Hide all" per group, and "Remove all policy lines". Ticked
+      policies and custom colours are saved in the shareable link.
+  * Display options: confidence band, prediction interval, log scale, and a
+    projection of the last segment to a target year with its prediction
+    interval.
   * Advanced Statistics: a full segment table, Chow tests, BIC candidates,
     per-segment Mann–Kendall, and four residual plots (over time, histogram,
     Q–Q, ACF).
