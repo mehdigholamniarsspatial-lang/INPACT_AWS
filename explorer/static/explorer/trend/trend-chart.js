@@ -42,7 +42,8 @@
     card: null, cardTimer: 0, cardKey: null,
     // policy panel: which list, sector override (null = follow the chart), filters
     polData: null, polTab: "core", polSector: null, polCross: false, polAllGases: false,
-    polOpen: new Set(), polSeen: new Set(), colors: {}, palette: null,   // open groups, group colour overrides
+    polOpen: new Set(), polSeen: new Set(), colors: {}, palette: null,
+    polFilter: { on: false, a: null, b: null, lo: null, hi: null },   // period filter on the policy lists   // open groups, group colour overrides
   };
   const $ = id => document.getElementById(id);
 
@@ -131,6 +132,7 @@
       if (["ols", "huber", "theilsen"].includes(st.m)) T.method = st.m;
       if (isNum(st.c) && st.c >= 0.8 && st.c <= 0.99) T.conf = Math.round(st.c * 100) / 100;
       if (Array.isArray(st.p)) st.p.forEach(k => { if (typeof k === "string") T.pins.add(k); });
+      if (Array.isArray(st.f) && isNum(st.f[0]) && isNum(st.f[1])) Object.assign(T.polFilter, { on: true, a: st.f[0], b: st.f[1] });
       if (st.k && typeof st.k === "object") for (const [g, c] of Object.entries(st.k)) if (/^#[0-9a-f]{6}$/i.test(c)) T.colors[g] = c;
       if (Array.isArray(st.b)) T.bps = st.b.filter(isNum).slice(0, MAX_BREAKS);
       if (st.o && typeof st.o === "object") for (const k of Object.keys(T.opt)) if (k in st.o) T.opt[k] = st.o[k];
@@ -143,7 +145,8 @@
       history.replaceState(null, "", location.pathname + location.search + "#trend/" + b64e(JSON.stringify(stateObj())));
     }, 250);
   }
-  const stateObj = () => ({ g: T.gas, s: T.sector, m: T.method, c: T.conf, b: T.bps, o: T.opt, p: [...T.pins], k: T.colors });
+  const stateObj = () => ({ g: T.gas, s: T.sector, m: T.method, c: T.conf, b: T.bps, o: T.opt, p: [...T.pins], k: T.colors,
+    ...(T.polFilter.on ? { f: [T.polFilter.a, T.polFilter.b] } : {}) });
 
   // ------------------------------------------------------------------
   // Controls
@@ -423,6 +426,12 @@
       ...(d.core || []).map(p => withColor({ ...p, kind: "core", key: `c|${p.year}|${p.name}`, group: p.level })),
       ...(d.sector || []).map(p => withColor({ ...p, kind: "sector", key: `s|${p.slug}`, year: p.start, group: p.sector })),
     ];
+    // period-filter bounds: every policy start year
+    const yrs = POLICY_LIST.map(p => p.year).filter(isNum);
+    const F = T.polFilter;
+    F.lo = Math.min(...yrs); F.hi = Math.max(...yrs);
+    F.a = isNum(F.a) ? Math.max(F.lo, Math.min(F.a, F.hi)) : F.lo;
+    F.b = isNum(F.b) ? Math.max(F.a, Math.min(F.b, F.hi)) : F.hi;
     // links from before the panel existed stored core keys as "<year>|<name>"
     T.pins = new Set([...T.pins].map(k => /^[cs]\|/.test(k) ? k : `c|${k}`).filter(policyByKey));
   }
@@ -578,6 +587,7 @@
     $("trPolCross").addEventListener("change", e => { T.polCross = e.target.checked; renderPolicyPanel(); });
     $("trPolAllGases").addEventListener("change", e => { T.polAllGases = e.target.checked; renderPolicyPanel(); });
     $("trPolClear").addEventListener("click", () => { T.pins.clear(); hideCard(true); recompute(); });
+    bindPeriodFilter();
     panel.addEventListener("change", e => {
       const cb = e.target.closest("input[data-polkey]");
       if (cb) togglePin(cb.dataset.polkey, cb.checked);
@@ -602,6 +612,41 @@
       }
     });
   }
+
+  // ---- period filter (two-handle slider) ----
+  function bindPeriodFilter() {
+    const F = T.polFilter, on = $("trPolFilterOn"), box = $("trPolFilterBox");
+    const mn = $("trPolMin"), mx = $("trPolMax");
+    if (!isNum(F.lo)) { on.disabled = true; return; }      // no policy data
+    for (const el of [mn, mx]) { el.min = F.lo; el.max = F.hi; }
+    mn.value = F.a; mx.value = F.b;
+    $("trPolLo").textContent = F.lo; $("trPolHi").textContent = F.hi;
+    on.checked = F.on; box.hidden = !F.on;
+    on.addEventListener("change", () => { F.on = on.checked; box.hidden = !F.on; renderPolicyPanel(); writeHash(); });
+    // the handles cannot cross: each one stops at the other's year
+    const move = which => {
+      let a = +mn.value, b = +mx.value;
+      if (a > b) { if (which === "a") a = b; else b = a; }
+      mn.value = a; mx.value = b;
+      F.a = a; F.b = b;
+      renderPolicyPanel(); writeHash();
+    };
+    mn.addEventListener("input", () => move("a"));
+    mx.addEventListener("input", () => move("b"));
+    $("trPolRangeReset").addEventListener("click", () => { mn.value = F.lo; mx.value = F.hi; move("a"); });
+  }
+  function paintPeriodFilter() {
+    const F = T.polFilter;
+    if (!isNum(F.lo)) return;
+    $("trPolFrom").textContent = F.a; $("trPolTo").textContent = F.b;
+    const span = Math.max(1, F.hi - F.lo);
+    const fill = $("trPolFill");
+    fill.style.left = ((F.a - F.lo) / span * 100) + "%";
+    fill.style.width = ((F.b - F.a) / span * 100) + "%";
+    // keep the start handle reachable when both handles sit at the right end
+    $("trPolMin").style.zIndex = F.a > F.hi - span * 0.1 ? 5 : 3;
+  }
+  const inPeriod = p => !T.polFilter.on || (isNum(p.year) && p.year >= T.polFilter.a && p.year <= T.polFilter.b);
 
   // ---- colour palette ----
   function setGroupColor(group, hex) {
@@ -698,7 +743,10 @@
     const R = T.result, lo = R.x[0], hi = R.x[R.x.length - 1];
     const inData = p => isNum(p.year) && p.year >= lo && p.year <= hi;
     const q = $("trPolSearch").value.trim().toLowerCase();
-    const match = p => !q || p.name.toLowerCase().includes(q);
+    const match = p => (!q || p.name.toLowerCase().includes(q)) && inPeriod(p);
+    paintPeriodFilter();
+    const F = T.polFilter;
+    const periodTxt = F.on ? ` between ${F.a} and ${F.b}` : "";
 
     let html = "";
     if (T.polTab === "core") {
@@ -706,8 +754,8 @@
       html = ["International", "EU", "National", "Target"].map(lv => {
         const ps = core.filter(p => p.level === lv);
         if (!ps.length) return "";
-        return polGroup(lv, GROUP_LABEL[lv], ps.map(p => ({ p, inData: inData(p), meta: esc(p.sector) })), { force: !!q });
-      }).join("") || `<div class="trend-hint">No core policy matches “${esc(q)}”.</div>`;
+        return polGroup(lv, GROUP_LABEL[lv], ps.map(p => ({ p, inData: inData(p), meta: esc(p.sector) })), { force: !!q || F.on });
+      }).join("") || `<div class="trend-hint">No core policy${q ? ` matches “${esc(q)}”` : ""}${periodTxt ? ` started${periodTxt}` : ""}.</div>`;
     } else {
       // sector pane: the chart's sector decides, unless it has no match (or the user picked another)
       const auto = matchedSector();
@@ -739,14 +787,19 @@
           const items = shown.map(p => ({ p, inData: inData(p),
             meta: `${esc(p.mechanism)} · ${(p.gases || []).map(x => GAS_LABEL[x] || x).join(", ")}` }));
           return polGroup(g, g === "Cross-sectoral" ? "Cross-sectoral laws" : `${g} policies`, items, {
-            force: !!q,
-            empty: `No ${esc(g)} policies in the Policy Timeline${T.gas === "Total GHG" ? "" : ` affect ${esc(T.gas)}`}${q ? ` matching “${esc(q)}”` : ""}.`,
+            force: !!q || F.on,
+            empty: `No ${esc(g)} policies in the Policy Timeline${T.gas === "Total GHG" ? "" : ` affect ${esc(T.gas)}`}${q ? ` matching “${esc(q)}”` : ""}${periodTxt ? ` started${periodTxt}` : ""}.`,
             note: hidden ? `${hidden} more ${hidden === 1 ? "policy targets" : "policies target"} other gases.` : "",
           });
         }).join("");
       }
     }
     $("trPolBody").innerHTML = html;
+    if (F.on) {
+      // count what is actually listed below (after the sector, gas and search filters)
+      const n = $("trPolBody").querySelectorAll("input[data-polkey]").length;
+      $("trPolFilterNote").textContent = `${n} listed ${n === 1 ? "policy" : "policies"} started between ${F.a} and ${F.b}.`;
+    }
   }
 
   // ------------------------------------------------------------------

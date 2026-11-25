@@ -340,9 +340,16 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
       policies are on the chart. The swatch beside a group's name opens a
       palette (12 presets, a custom colour, or reset). The chosen colour is
       used for the box, its checkboxes and that group's lines on the chart.
+    * **Filter policies by period** (top of the panel, off by default):
+      switching it on shows a two-handle year slider covering every policy
+      start year. Drag the start and end handles; the handles cannot cross,
+      and "Full period" resets them. Both lists then show only policies that
+      started in that range, the matching groups open, and a note counts
+      what is listed. Lines already on the chart are not removed.
     * The panel also has search (which opens the matching groups), "Show
       all / Hide all" per group, and "Remove all policy lines". Ticked
-      policies and custom colours are saved in the shareable link.
+      policies, custom colours and the period filter are saved in the
+      shareable link.
   * Display options: confidence band, prediction interval, log scale, and a
     projection of the last segment to a target year with its prediction
     interval.

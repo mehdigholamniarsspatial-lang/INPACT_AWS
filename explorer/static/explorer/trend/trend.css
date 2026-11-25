@@ -163,3 +163,27 @@ body.tr-dragging,body.tr-dragging *{cursor:ew-resize!important;user-select:none}
 .tp-pal-foot{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;font-size:.72rem}
 .tp-pal-custom{display:flex;align-items:center;gap:.35rem;cursor:pointer}
 .tp-pal-custom input{width:1.8rem;height:1.4rem;border:0;padding:0;background:none;cursor:pointer}
+/* ---- Policy period filter: switch + two-handle slider ---- */
+.tp-filter{border:1px solid var(--grey-border);border-radius:9px;padding:.4rem .6rem;margin-bottom:.55rem;background:#fafbfc}
+.tp-range-box{padding-top:.35rem}
+.tp-range-box[hidden]{display:none}
+.tp-range-vals{display:flex;justify-content:space-between;font-size:.74rem;color:var(--text-muted)}
+.tp-range-vals output{font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;font-size:.85rem}
+.tp-range{position:relative;height:26px;margin:.15rem .45rem 0}
+.tp-range-track,.tp-range-fill{position:absolute;top:50%;height:5px;margin-top:-2.5px;border-radius:3px;pointer-events:none}
+.tp-range-track{left:0;right:0;background:#dde3e9}
+.tp-range-fill{background:var(--emerald)}
+.tp-range input[type=range]{position:absolute;left:-.45rem;width:calc(100% + .9rem);top:0;height:26px;margin:0;
+  background:none;-webkit-appearance:none;appearance:none;pointer-events:none;z-index:3}
+.tp-range input[type=range]:focus{outline:none}
+.tp-range input[type=range]::-webkit-slider-runnable-track{background:none;border:0;height:26px}
+.tp-range input[type=range]::-moz-range-track{background:none;border:0}
+.tp-range input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;pointer-events:auto;cursor:grab;
+  width:18px;height:18px;margin-top:4px;border-radius:50%;background:#fff;border:3px solid var(--emerald);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.tp-range input[type=range]::-moz-range-thumb{pointer-events:auto;cursor:grab;width:13px;height:13px;border-radius:50%;
+  background:#fff;border:3px solid var(--emerald);box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.tp-range input[type=range]:active::-webkit-slider-thumb{cursor:grabbing;transform:scale(1.12)}
+.tp-range input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(0,132,61,.3)}
+.tp-range input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 4px rgba(0,132,61,.3)}
+.tp-range-scale{display:flex;justify-content:space-between;align-items:center;font-size:.64rem;color:var(--text-muted)}
+.tp-range-scale .btn-link{font-size:.68rem}

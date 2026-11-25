@@ -4039,6 +4039,28 @@ a.ug-go.alt:hover{color:var(--navy)}
         Tick a policy to draw it as a vertical line at the year it started.
         Hover the line for its full description and a link to the Policy Timeline.
       </div>
+      <!-- Period filter: off by default; when on, two-handle slider limits both lists -->
+      <div class="tp-filter">
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" id="trPolFilterOn" aria-controls="trPolFilterBox">
+          <label class="form-check-label side-check" for="trPolFilterOn">Filter policies by period</label>
+        </div>
+        <div id="trPolFilterBox" class="tp-range-box" hidden>
+          <div class="tp-range-vals">
+            <span>From <output id="trPolFrom" for="trPolMin">–</output></span>
+            <span>to <output id="trPolTo" for="trPolMax">–</output></span>
+          </div>
+          <div class="tp-range" id="trPolRange">
+            <div class="tp-range-track"></div>
+            <div class="tp-range-fill" id="trPolFill"></div>
+            <input type="range" id="trPolMin" step="1" aria-label="Policy filter: start year">
+            <input type="range" id="trPolMax" step="1" aria-label="Policy filter: end year">
+          </div>
+          <div class="tp-range-scale"><span id="trPolLo"></span><button type="button" class="btn btn-link btn-sm p-0" id="trPolRangeReset">Full period</button><span id="trPolHi"></span></div>
+          <div class="trend-hint" id="trPolFilterNote"></div>
+        </div>
+      </div>
+
       <div class="tp-tabs" role="tablist" aria-label="Policy list">
         <button type="button" role="tab" class="tp-tab active" data-poltab="core" aria-selected="true">
           <i class="bi bi-bank"></i> Core policies
