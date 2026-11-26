@@ -21,7 +21,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <!-- Bootstrap Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<link href="/static/explorer/trend/trend.css?v=20261126c" rel="stylesheet">
+<link href="/static/explorer/trend/trend.css?v=20261127a" rel="stylesheet">
 <!-- Leaflet -->
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <!-- Google Fonts -->
@@ -1736,6 +1736,20 @@ html.map-standalone .ov-about{margin-top:auto;padding:.1rem .9rem .2rem;border-t
 .ov-cpop-reset{margin-left:auto;border:0;background:none;padding:0;font-size:.7rem;font-weight:700;color:var(--teal,#0E8C8A);cursor:pointer}
 .ov-cpop-reset:hover{text-decoration:underline}
 .ov-cpop-reset:disabled{color:var(--text-muted,#66747f);opacity:.5;cursor:default;text-decoration:none}
+/* "No colour": the class (or outline) is not drawn; shown as a crossed-out swatch */
+.ov-cpop-none{display:flex;align-items:center;gap:.4rem;width:100%;margin:0 0 .35rem;padding:.25rem .4rem;border:1px solid var(--grey-border,#d5dbe0);
+  border-radius:6px;background:#fff;font:inherit;font-weight:700;color:var(--text-main,#1e2b33);cursor:pointer;text-align:left}
+.ov-cpop-none:hover,.ov-cpop-none:focus-visible{border-color:var(--teal,#0E8C8A);outline:none}
+.ov-cpop-none.on{border-color:#1e2b33;box-shadow:0 0 0 1px #1e2b33 inset}
+.ov-cpop-none small{font-weight:400;color:var(--text-muted,#66747f);margin-left:auto}
+.ov-nocol-sw{display:inline-block;width:16px;height:16px;flex:0 0 16px;border:1px solid #9AA5AE;border-radius:3px;
+  background:#fff linear-gradient(to top right,transparent calc(50% - 1px),#c0392b calc(50% - 1px),#c0392b calc(50% + 1px),transparent calc(50% + 1px))}
+.ov-sw.none{background:#fff linear-gradient(to top right,transparent calc(50% - 1px),#c0392b calc(50% - 1px),#c0392b calc(50% + 1px),transparent calc(50% + 1px))!important;
+  border:1px solid #9AA5AE;height:8px}
+.ov-cat.nocol > span:not(.n){color:var(--text-muted,#66747f);text-decoration:line-through}
+.ov-nocol{display:inline-flex;align-items:center;gap:.3rem;border:1px solid var(--grey-border,#d5dbe0);background:#fff;border-radius:6px;
+  padding:.15rem .4rem;font:inherit;font-size:.68rem;font-weight:700;color:var(--text-main,#1e2b33);cursor:pointer;white-space:nowrap}
+.ov-nocol[aria-pressed="true"]{border-color:#1e2b33;box-shadow:0 0 0 1px #1e2b33 inset}
 .ov-map-legend li.nodata .ov-sw{background:repeating-linear-gradient(90deg,#9AA5AE 0 5px,transparent 5px 8px)}
 
 /* Side panel: a compact accordion stepper (1 dataset, 2 layer, 3 display) */
@@ -5574,7 +5588,10 @@ a.ug-go.alt:hover{color:var(--navy)}
                 <li><b>Colour ramp</b> and <b>Reverse</b>: the palette from low to high values.</li>
                 <li><b>Classes</b>: how many colour bands (3 to 9). The legend lists each band&rsquo;s range and how many roads fall in it.</li>
                 <li><b>Line width</b>, <b>Opacity</b>, and <b>Show roads with no data</b> (in grey) when you also want to see the roads that were not measured.</li>
+                <li><b>Class colours</b>: click a band&rsquo;s colour in the legend to pick another colour for it, or <b>No colour</b> to hide the roads in that band (also for the <em>No data</em> row).</li>
               </ul>
+              <div class="ug-note"><i class="bi bi-eye-slash"></i><span><b>No colour:</b> click a band&rsquo;s colour in the legend to open its colour palette, which starts with <b>No colour</b>. A class set to No colour is not drawn on the map and is left out of the map legend; in the class list it shows a crossed-out swatch and its name is struck through. Pick any colour, or <b>Reset</b>, to show it again. The choice is remembered with the layer&rsquo;s other settings.</span></div>
+
               <p>The <b>Method</b> decides where the class breaks fall. Tap a method to learn more:</p>
               <div class="ug-chips" role="group" aria-label="Classification methods">
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="Splits the range from the lowest to the highest value into classes of equal width. Easy to read, but a few very high roads can leave most roads in the lowest classes."><i class="bi bi-distribute-horizontal"></i>Equal Interval</button>
@@ -5604,10 +5621,13 @@ a.ug-go.alt:hover{color:var(--navy)}
               </div>
               <div class="ug-explain" aria-live="polite">Select an option above.</div>
               <ul class="ug-list">
-                <li><b>Point symbol</b>: shape (circle, square, triangle or diamond), size, outline colour and outline width.</li>
-                <li><b>Polygon symbol</b> (outlines): fill opacity, outline width, and an outline colour that you set or that follows a darker shade of the fill.</li>
+                <li><b>Class colours</b>: click a class symbol in the class list (or the Single Symbol colour) to open the colour palette: <b>No colour</b>, 70 preset colours, the scheme&rsquo;s colours, any colour or hex code, and <b>Reset</b>.</li>
+                <li><b>Point symbol</b>: shape (circle, square, triangle or diamond), size, outline colour and outline width. <b>No colour</b> beside the outline colour draws the points without an outline.</li>
+                <li><b>Polygon symbol</b> (outlines): fill opacity, outline width, and an outline colour that you set or that follows a darker shade of the fill. <b>No colour</b> beside the outline colour removes the outline (untick <em>Darker shade of the fill</em> first).</li>
                 <li><b>Layer opacity</b>: lets the map and other layers show through.</li>
               </ul>
+              <div class="ug-note"><i class="bi bi-eye-slash"></i><span><b>No colour:</b> click a class symbol in the legend to open its colour palette, which starts with <b>No colour</b>. A class set to No colour is not drawn on the map and is left out of the map legend; in the class list it shows a crossed-out swatch and its name is struck through. Pick any colour, or <b>Reset</b>, to show it again. The choice is remembered with the layer&rsquo;s other settings.</span></div>
+
               <div class="ug-actions">
                 <button type="button" class="ug-go" data-go="mapping" data-mode="AirQuality"><i class="bi bi-box-arrow-up-right"></i>Try it in Air Quality</button>
                 <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
@@ -5863,7 +5883,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <li><b>Filter policies by period</b>: switch it on to show a two-handle year slider. Only policies that started between the two years are listed, and a note counts them. <b>Full period</b> resets the slider. Lines already on the chart stay.</li>
               <li><b>Search policies</b>: type part of a name to filter every list; matching groups open.</li>
               <li><b>Group boxes</b>: click a box&rsquo;s name to open or close it. The number shows how many of its policies are on the chart. <b>Show all</b> and <b>Hide all</b> tick or untick the whole group.</li>
-              <li><b>Colours</b>: click the round swatch beside a group&rsquo;s name to choose one of 12 colours, a custom colour, or reset. The colour is used for the box and for that group&rsquo;s lines on the chart.</li>
+              <li><b>Colours</b>: click the round swatch beside a group&rsquo;s name to choose one of 12 colours, a custom colour, <b>No colour</b> (the group&rsquo;s lines are not drawn; its swatch is crossed out) or reset. The colour is used for the box and for that group&rsquo;s lines on the chart.</li>
               <li>A policy greyed out cannot be ticked because it started outside the years shown on the chart.</li>
               <li><b>Remove all policy lines</b> (bottom of the panel) unticks every policy.</li>
             </ul>
@@ -5953,6 +5973,7 @@ a.ug-go.alt:hover{color:var(--navy)}
             <ul class="ug-list">
               <li><b>Preset</b>: start from a ready-made style: <em>INPACT default</em>, <em>Scientific publication</em>, <em>MATLAB style</em>, <em>Minimal</em> or <em>High contrast</em>.</li>
               <li><b>Live preview</b>: when on, each change redraws the chart immediately; when off, make several changes and press <b>Apply</b>.</li>
+              <li><b>No colour</b>: every colour setting has a <b>No colour</b> button beside its picker. That element (for example the observed line, the markers, a band, the gridlines or the legend box) is then not drawn; press it again to return to the default colour.</li>
               <li><b>Reset to default</b> restores the normal look.</li>
               <li><b>Save</b> stores the current style under a name, <b>Load saved&hellip;</b> brings it back, and <i class="bi bi-trash"></i> deletes it. <b>Export</b> and <b>Import</b> save a style to a JSON file and load it again, for example to share a house style with colleagues.</li>
             </ul>
@@ -6189,8 +6210,8 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <!-- Trend Analysis tab (Plotly itself is loaded on first visit to the tab) -->
 <script src="/static/explorer/trend/stats.js"></script>
-<script src="/static/explorer/trend/plot-style.js"></script>
-<script src="/static/explorer/trend/trend-chart.js?v=20261126c"></script>
+<script src="/static/explorer/trend/plot-style.js?v=20261127a"></script>
+<script src="/static/explorer/trend/trend-chart.js?v=20261127a"></script>
 <script>
 /* =====================================================================
    Ireland Greenhouse Gas Policy Impact Explorer
@@ -11149,6 +11170,8 @@ if (MAP_STANDALONE) (function overlayLayers(){
   };
   const SHAPES = { circle: "Circle", square: "Square", triangle: "Triangle", diamond: "Diamond" };
   const HEX = /^#[0-9a-f]{6}$/i;
+  // "No colour": a class, symbol or outline set to it is not drawn (the class is hidden on the map)
+  const NONE = "NONE", isNone = c => String(c).toUpperCase() === NONE, okColour = c => HEX.test(c) || isNone(c);
   const clamp = (v, lo, hi, d) => { v = +v; return Number.isFinite(v) ? Math.min(Math.max(v, lo), hi) : d; };
   const OSM_ABOUT = (shown, fields, extraNote) => ({
     lead: "<b>OpenStreetMap healthcare features &ndash; Republic of Ireland</b>: 3,714 hospitals, clinics, doctors, dentists, " +
@@ -11305,7 +11328,7 @@ if (MAP_STANDALONE) (function overlayLayers(){
     out.opacity = Math.min(Math.max(+out.opacity || def.opacity, 10), 100);
     // Colours picked for single classes: { class index | "nodata": "#rrggbb" }
     out.custom = out.custom && typeof out.custom === "object"
-      ? Object.fromEntries(Object.entries(out.custom).filter(([k, v]) => /^(\d+|nodata)$/.test(k) && HEX.test(v))) : {};
+      ? Object.fromEntries(Object.entries(out.custom).filter(([k, v]) => /^(\d+|nodata)$/.test(k) && okColour(v))) : {};
     return out;
   }
   const isFeat = s => s.cfg.type === "features";
@@ -11673,7 +11696,9 @@ if (MAP_STANDALONE) (function overlayLayers(){
     const colours = classColours(s, s.cls.k), op = sym.opacity / 100, nd = noDataColour(s);
     const add = [], drop = [];
     s.lines.forEach((pl, i) => {
-      const v = vals[i], show = (v != null || sym.nodata) && (!cof || cof[i] === ci);
+      const v = vals[i];
+      let show = (v != null || sym.nodata) && (!cof || cof[i] === ci);
+      if (show && isNone(v == null ? nd : colours[classOf(s.cls.breaks, v)])) show = false;   // "No colour" class
       if (show) pl.setStyle(v == null
         ? { color: nd, weight: Math.max(1, sym.width * .6), opacity: op * .7 }
         : { color: colours[classOf(s.cls.breaks, v)], weight: sym.width, opacity: op });
@@ -11739,6 +11764,7 @@ if (MAP_STANDALONE) (function overlayLayers(){
 
   // ---- Legend: in the panel (with counts) and on the map ----
   const range = (br, i) => `${fmtVal(br[i])} – ${fmtVal(br[i + 1])}`;
+  const swLine = c => isNone(c) ? `<span class="ov-sw none" title="No colour: not shown"></span>` : `<span class="ov-sw" style="background:${c}"></span>`;
   function legendParts(s, colours){
     const f = s.data.fields[s.sym.field] || { label: s.sym.field, unit: "" };
     const c = s.cls, noData = areaCount(s) - c.n, excluded = s.data.errors[s.sym.field]?.size || 0;
@@ -11752,11 +11778,11 @@ if (MAP_STANDALONE) (function overlayLayers(){
     const el = s.symEl?.querySelector(".ov-legend");
     const pick = (key, label, sw) => `<button type="button" class="ov-swbtn ov-swbtn-line" data-catcol="${key}" title="Change the colour of ${esc(label)}"
       aria-label="Change the colour of ${esc(label)}" aria-haspopup="dialog">${sw}</button>`;
-    const nd = s.sym.custom.nodata ? ` style="background:${s.sym.custom.nodata}"` : "";
+    const ndc = s.sym.custom.nodata, nd = ndc ? (isNone(ndc) ? ` data-none` : ` style="background:${ndc}"`) : "";
     if (el){
       el.innerHTML = `<p class="ov-legend-h">${esc(f.label)} (${esc(f.unit)}) · ${esc(METHODS[s.sym.method])}</p>
-        <ul>${rows.map((r, i) => `<li>${pick(i, r.text, `<span class="ov-sw" style="background:${r.colour}"></span>`)}<span>${esc(r.text)}</span><span class="n">${r.n.toLocaleString("en-IE")}</span></li>`).join("")}
-        <li class="nodata">${pick("nodata", "No data", `<span class="ov-sw"${nd}></span>`)}<span>No data${s.sym.nodata ? "" : " (hidden)"}</span><span class="n">${noData.toLocaleString("en-IE")}</span></li></ul>
+        <ul>${rows.map((r, i) => `<li>${pick(i, r.text, swLine(r.colour))}<span>${esc(r.text)}</span><span class="n">${r.n.toLocaleString("en-IE")}</span></li>`).join("")}
+        <li class="nodata">${pick("nodata", "No data", `<span class="ov-sw${ndc && isNone(ndc) ? " none" : ""}"${nd}></span>`)}<span>No data${s.sym.nodata ? "" : " (hidden)"}</span><span class="n">${noData.toLocaleString("en-IE")}</span></li></ul>
         <p class="ov-note">Click a class symbol to change its colour.</p>
         ${rows.length < s.sym.classes && s.cls.n ? `<p class="ov-note">Only ${rows.length} distinct classes for this field (tied break values merged).</p>` : ""}
         ${excluded ? `<p class="ov-note">${excluded.toLocaleString("en-IE")} negative readings excluded as sensor errors (shown as no data).</p>` : ""}`;
@@ -11776,13 +11802,13 @@ if (MAP_STANDALONE) (function overlayLayers(){
       if (isFeat(st)){                                   // point / polygon layer: shown categories only
         div.innerHTML = `<p class="ov-legend-h">${esc(st.cfg.name)}${st.sym.mode === "unique" ? `: ${esc(f.label)}` : ""}${
             st.county ? ` · County ${esc(st.county.name)}` : ""}</p>
-          <ul>${rows.filter(r => r.on).slice(0, 8).map(r => `<li>${swatch(st, r.colour)}${esc(r.label)}</li>`).join("")}
-          ${rows.filter(r => r.on).length > 8 ? `<li>… ${rows.filter(r => r.on).length - 8} more (see Layer settings)</li>` : ""}</ul>`;
+          <ul>${rows.filter(r => r.on && !isNone(r.colour)).slice(0, 8).map(r => `<li>${swatch(st, r.colour)}${esc(r.label)}</li>`).join("")}
+          ${rows.filter(r => r.on && !isNone(r.colour)).length > 8 ? `<li>… ${rows.filter(r => r.on && !isNone(r.colour)).length - 8} more (see Layer settings)</li>` : ""}</ul>`;
         return;
       }
       div.innerHTML = `<p class="ov-legend-h">${esc(st.cfg.name)}: ${esc(f.label)} (${esc(f.unit)})</p>
-        <ul>${rows.map(r => `<li><span class="ov-sw" style="background:${r.colour}"></span>${esc(r.text)}</li>`).join("")}
-        ${st.sym.nodata ? `<li class="nodata"><span class="ov-sw"${st.sym.custom.nodata ? ` style="background:${st.sym.custom.nodata}"` : ""}></span>No data</li>` : ""}</ul>`;
+        <ul>${rows.filter(r => !isNone(r.colour)).map(r => `<li>${swLine(r.colour)}${esc(r.text)}</li>`).join("")}
+        ${st.sym.nodata && !isNone(st.sym.custom.nodata) ? `<li class="nodata"><span class="ov-sw"${st.sym.custom.nodata ? ` style="background:${st.sym.custom.nodata}"` : ""}></span>No data</li>` : ""}</ul>`;
     };
     ctrl.addTo(map);
     s.legendCtrl = ctrl;
@@ -11800,7 +11826,7 @@ if (MAP_STANDALONE) (function overlayLayers(){
     if (o.mode !== "single" && o.mode !== "unique") o.mode = def.mode;
     if (!QUAL[o.scheme]) o.scheme = def.scheme;
     if (!SHAPES[o.shape]) o.shape = def.shape;
-    ["colour", "outline", "polyOutline"].forEach(k => { if (!HEX.test(o[k])) o[k] = def[k]; });
+    ["colour", "outline", "polyOutline"].forEach(k => { if (!okColour(o[k])) o[k] = def[k]; });
     o.size = clamp(o.size, 3, 24, def.size);
     o.outlineWidth = clamp(o.outlineWidth, 0, 4, def.outlineWidth);
     o.fillOpacity = clamp(o.fillOpacity, 0, 100, def.fillOpacity);
@@ -11813,7 +11839,7 @@ if (MAP_STANDALONE) (function overlayLayers(){
     const cu = {};
     if (o.custom && typeof o.custom === "object") Object.entries(o.custom).forEach(([f, m]) => {
       if (!m || typeof m !== "object") return;
-      const ok = Object.entries(m).filter(([, v]) => HEX.test(v));
+      const ok = Object.entries(m).filter(([, v]) => okColour(v));
       if (ok.length) cu[f] = Object.fromEntries(ok);
     });
     o.custom = cu;
@@ -11844,13 +11870,14 @@ if (MAP_STANDALONE) (function overlayLayers(){
 
   // Symbol preview (legend rows): the point shape, or a filled square for outlines
   function swatch(s, colour){
+    if (isNone(colour)) return `<span class="ov-nocol-sw ov-swg" title="No colour: not shown"></span>`;
     const sym = s.sym, k = featKinds(s), op = sym.opacity / 100;
     if (!k.point){
-      const stroke = sym.polyOutlineFill ? shade(colour, -.25) : sym.polyOutline;
+      const stroke = sym.polyOutlineFill ? shade(colour, -.25) : isNone(sym.polyOutline) ? "none" : sym.polyOutline;
       return `<svg class="ov-swg" viewBox="0 0 18 18" aria-hidden="true"><rect x="2" y="2" width="14" height="14" rx="2" fill="${colour}"
         fill-opacity="${(sym.fillOpacity / 100) * op}" stroke="${stroke}" stroke-opacity="${op}" stroke-width="${Math.max(sym.polyWidth, .6)}"/></svg>`;
     }
-    const st = `fill="${colour}" fill-opacity="${op}" stroke="${sym.outlineWidth ? sym.outline : "none"}" stroke-width="${Math.min(sym.outlineWidth, 2.5)}"`;
+    const st = `fill="${colour}" fill-opacity="${op}" stroke="${sym.outlineWidth && !isNone(sym.outline) ? sym.outline : "none"}" stroke-width="${Math.min(sym.outlineWidth, 2.5)}"`;
     const shapes = { circle: `<circle cx="9" cy="9" r="6" ${st}/>`, square: `<rect x="3.5" y="3.5" width="11" height="11" ${st}/>`,
       triangle: `<path d="M9 2.5 15.5 14.5 2.5 14.5Z" ${st}/>`, diamond: `<path d="M9 1.5 16.5 9 9 16.5 1.5 9Z" ${st}/>` };
     return `<svg class="ov-swg" viewBox="0 0 18 18" aria-hidden="true">${shapes[sym.shape]}</svg>`;
@@ -11868,6 +11895,7 @@ if (MAP_STANDALONE) (function overlayLayers(){
     el.className = "ov-cpop"; el.hidden = true;
     el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Class colour");
     el.innerHTML = `<p class="ov-cpop-h"><span></span><button type="button" data-x aria-label="Close">&times;</button></p>
+      <button type="button" class="ov-cpop-none" data-c="${NONE}" title="Do not draw this class"><span class="ov-nocol-sw"></span>No colour<small>not shown</small></button>
       <div class="ov-cpop-sub">Colour palette</div><div class="ov-cpop-grid">${PAL.map(cell).join("")}</div>
       <div class="ov-cpop-sub" data-sch-h>Scheme colours</div><div class="ov-cpop-grid" data-sch></div>
       <div class="ov-cpop-row"><input type="color" aria-label="More colours" title="More colours">
@@ -11878,7 +11906,7 @@ if (MAP_STANDALONE) (function overlayLayers(){
     const nat = el.querySelector("input[type=color]"), hex = el.querySelector("input[type=text]"), reset = el.querySelector(".ov-cpop-reset");
     const P = { s: null, key: null, anchor: null, a: null };
     const toHex = c => {                                   // ramp colours come as "rgb(r,g,b)"
-      if (HEX.test(c)) return c.toUpperCase();
+      if (HEX.test(c) || isNone(c)) return c.toUpperCase();
       const m = String(c).match(/\d+(\.\d+)?/g);
       return m && m.length >= 3 ? "#" + m.slice(0, 3).map(v => Math.round(+v).toString(16).padStart(2, "0")).join("").toUpperCase() : NODATA;
     };
@@ -11899,8 +11927,10 @@ if (MAP_STANDALONE) (function overlayLayers(){
         label: "Symbol colour", scheme: null,
         get: () => s.sym.colour, base: () => (s.cfg.defaults && s.cfg.defaults.colour) || FEAT_DEFAULTS.colour,
         set(c){
-          s.sym.colour = c.toLowerCase();
-          const inp = s.symEl && s.symEl.querySelector('[data-k="colour"]'); if (inp) inp.value = s.sym.colour;
+          s.sym.colour = isNone(c) ? NONE : c.toLowerCase();
+          const inp = s.symEl && s.symEl.querySelector('[data-k="colour"]');
+          if (inp){ inp.disabled = isNone(c); if (!isNone(c)) inp.value = s.sym.colour; }
+          const nb = s.symEl && s.symEl.querySelector('[data-nocol="colour"]'); if (nb) nb.setAttribute("aria-pressed", String(isNone(c)));
         },
         redraw: true,
       };
@@ -11923,12 +11953,12 @@ if (MAP_STANDALONE) (function overlayLayers(){
     function sync(){
       const cur = current().toUpperCase();
       el.querySelectorAll("[data-c]").forEach(b => b.classList.toggle("on", b.dataset.c.toUpperCase() === cur));
-      nat.value = cur.toLowerCase();
-      if (document.activeElement !== hex){ hex.value = cur; hex.classList.remove("bad"); }
+      if (!isNone(cur)) nat.value = cur.toLowerCase();
+      if (document.activeElement !== hex){ hex.value = isNone(cur) ? "" : cur; hex.classList.remove("bad"); }
       reset.disabled = cur === baseOf().toUpperCase();
     }
     function set(c){
-      const s = P.s; if (!s || !HEX.test(c)) return;
+      const s = P.s; if (!s || !okColour(c)) return;
       P.a.set(c);
       save(); schedule(s, P.a.redraw); sync();
     }
@@ -12008,6 +12038,9 @@ if (MAP_STANDALONE) (function overlayLayers(){
     if (!catFields.some(f => f.key === sym.field)) sym.field = (catFields.find(f => f.key === m.default_field) || catFields[0] || {}).key || "";
     if (!catFields.length) sym.mode = "single";
     const opt = (v, t, on) => `<option value="${esc(v)}"${on ? " selected" : ""}>${esc(t)}</option>`;
+    // "No colour" toggle beside a colour picker: the symbol (or outline) is then not drawn
+    const noBtn = key => `<button type="button" class="ov-nocol" data-nocol="${key}" aria-pressed="${isNone(sym[key])}"
+      title="${key === "colour" ? "Do not draw the features" : "No outline"}"><span class="ov-nocol-sw"></span>No colour</button>`;
     const range = (key, label, min, max, step, unit) => `<div class="ov-f"><label for="${uid(key)}">${label} <span data-out="${key}" data-unit="${unit}"></span></label>
       <input type="range" id="${uid(key)}" data-k="${key}" min="${min}" max="${max}" step="${step}" value="${sym[key]}"></div>`;
     li.innerHTML = `
@@ -12025,7 +12058,7 @@ if (MAP_STANDALONE) (function overlayLayers(){
             <select class="form-select form-select-sm" id="${uid("scheme")}" data-k="scheme">${Object.entries(QUAL).map(([q, d]) => opt(q, d.name, q === sym.scheme)).join("")}</select></div>
         </div>
         <div class="ov-f" data-show="single"><label for="${uid("colour")}">Colour</label>
-          <div class="ov-colour"><input type="color" id="${uid("colour")}" data-k="colour" value="${esc(sym.colour)}"></div></div>
+          <div class="ov-colour"><input type="color" id="${uid("colour")}" data-k="colour" value="${esc(isNone(sym.colour) ? "#3388ff" : sym.colour)}"${isNone(sym.colour) ? " disabled" : ""}>${noBtn("colour")}</div></div>
         <div class="ov-legend" aria-live="polite"></div>
         ${k.point ? `<p class="ov-sec"><i class="bi bi-geo-alt-fill" aria-hidden="true"></i>Point symbol</p>
         <div class="ov-2">
@@ -12035,7 +12068,7 @@ if (MAP_STANDALONE) (function overlayLayers(){
         </div>
         <div class="ov-2">
           <div class="ov-f"><label for="${uid("outline")}">Outline colour</label>
-            <div class="ov-colour"><input type="color" id="${uid("outline")}" data-k="outline" value="${esc(sym.outline)}"></div></div>
+            <div class="ov-colour"><input type="color" id="${uid("outline")}" data-k="outline" value="${esc(isNone(sym.outline) ? "#ffffff" : sym.outline)}"${isNone(sym.outline) ? " disabled" : ""}>${noBtn("outline")}</div></div>
           ${range("outlineWidth", "Outline width", 0, 4, .5, " px")}
         </div>` : ""}
         ${k.poly || k.line ? `<p class="ov-sec"><i class="bi bi-pentagon-fill" aria-hidden="true"></i>${k.poly ? "Polygon symbol" : "Line symbol"}</p>
@@ -12044,7 +12077,7 @@ if (MAP_STANDALONE) (function overlayLayers(){
           ${range("polyWidth", k.poly ? "Outline width" : "Line width", 0, 5, .5, " px")}
         </div>
         ${k.poly ? `<div class="ov-f"><span class="ov-lbl">Outline colour</span>
-          <div class="ov-colour"><input type="color" data-k="polyOutline" value="${esc(sym.polyOutline)}" aria-label="Outline colour"${sym.polyOutlineFill ? " disabled" : ""}>
+          <div class="ov-colour"><input type="color" data-k="polyOutline" value="${esc(isNone(sym.polyOutline) ? "#333333" : sym.polyOutline)}" aria-label="Outline colour"${sym.polyOutlineFill || isNone(sym.polyOutline) ? " disabled" : ""}>${noBtn("polyOutline")}
             <label class="ov-check"><input type="checkbox" data-k="polyOutlineFill"${sym.polyOutlineFill ? " checked" : ""}>Darker shade of the fill</label></div></div>` : ""}` : ""}
         <p class="ov-sec"><i class="bi bi-layers-half" aria-hidden="true"></i>Layer</p>
         ${range("opacity", "Layer opacity", 10, 100, 5, "%")}
@@ -12076,6 +12109,15 @@ if (MAP_STANDALONE) (function overlayLayers(){
     };
     s.symEl.addEventListener("input", onInput);
     s.symEl.addEventListener("change", e => { if (e.target.type !== "range" && e.target.type !== "color") onInput(e); });
+    s.symEl.addEventListener("click", e => {             // "No colour" beside a colour picker
+      const b = e.target.closest("[data-nocol]"); if (!b) return;
+      const k = b.dataset.nocol, inp = s.symEl.querySelector(`input[type=color][data-k="${k}"]`);
+      const none = !isNone(s.sym[k]);
+      s.sym[k] = none ? NONE : (inp ? inp.value : FEAT_DEFAULTS[k]);
+      b.setAttribute("aria-pressed", String(none));
+      if (inp) inp.disabled = none || (k === "polyOutline" && s.sym.polyOutlineFill);
+      save(); schedule(s, true);
+    });
     s.symEl.addEventListener("click", e => {             // a class symbol: open the colour palette
       const sw = e.target.closest("[data-catcol]"); if (!sw) return;
       e.preventDefault(); e.stopPropagation();             // not a tick of the class's checkbox
@@ -12094,7 +12136,8 @@ if (MAP_STANDALONE) (function overlayLayers(){
     const el = s.symEl; if (!el) return;
     el.querySelectorAll("[data-out]").forEach(o => { o.textContent = `${s.sym[o.dataset.out]}${o.dataset.unit || ""}`; });
     el.querySelectorAll("[data-show]").forEach(x => { x.hidden = x.dataset.show !== s.sym.mode; });
-    const po = el.querySelector('[data-k="polyOutline"]'); if (po) po.disabled = s.sym.polyOutlineFill;
+    const po = el.querySelector('[data-k="polyOutline"]'); if (po) po.disabled = s.sym.polyOutlineFill || isNone(s.sym.polyOutline);
+    const pn = el.querySelector('[data-nocol="polyOutline"]'); if (pn) pn.disabled = s.sym.polyOutlineFill;   // the fill's shade is used
   }
 
   function decodeFeatures(raw){
@@ -12165,12 +12208,14 @@ if (MAP_STANDALONE) (function overlayLayers(){
         const c = byIdx.get(col[i]); colour = c ? c.colour : NODATA;
         show = !hidden.has(c ? c.key : "");
       }
+      if (show && isNone(colour)) show = false;                       // "No colour": the class is not drawn
       if (show){
+        const ptStroke = sym.outlineWidth > 0 && !isNone(sym.outline), polyStroke = sym.polyWidth > 0 && (sym.polyOutlineFill || !isNone(sym.polyOutline));
         if (ly._ovT === 1) ly.setStyle({ shape: sym.shape, radius: sym.size / 2, fillColor: colour, fillOpacity: op,
-          stroke: sym.outlineWidth > 0, color: sym.outline, weight: sym.outlineWidth, opacity: op });
+          stroke: ptStroke, color: ptStroke ? sym.outline : "#000", weight: sym.outlineWidth, opacity: op });
         else if (ly._ovT === 2) ly.setStyle({ color: colour, weight: Math.max(sym.polyWidth, 1) + 1, opacity: op });
-        else ly.setStyle({ fillColor: colour, fillOpacity: (sym.fillOpacity / 100) * op, stroke: sym.polyWidth > 0,
-          color: sym.polyOutlineFill ? shade(colour, -.25) : sym.polyOutline, weight: sym.polyWidth, opacity: op });
+        else ly.setStyle({ fillColor: colour, fillOpacity: (sym.fillOpacity / 100) * op, stroke: polyStroke,
+          color: sym.polyOutlineFill ? shade(colour, -.25) : polyStroke ? sym.polyOutline : "#000", weight: sym.polyWidth, opacity: op });
       }
       if (show !== ly._ovIn){ (show ? add : drop).push(ly); ly._ovIn = show; }
     });
@@ -12191,11 +12236,11 @@ if (MAP_STANDALONE) (function overlayLayers(){
       : [{ key: "*", label: `All features${where}`, n: total, colour: sym.colour, on: true }];
     const el = s.symEl?.querySelector(".ov-legend");
     if (el){
-      const shown = rows.filter(r => r.on).reduce((a, r) => a + r.n, 0);
+      const shown = rows.filter(r => r.on && !isNone(r.colour)).reduce((a, r) => a + r.n, 0);
       const fmt = x => x.toLocaleString("en-IE");
       el.innerHTML = `<div class="ov-cats-tools"><p class="ov-legend-h">${unique ? `Classes · ${esc(f.label)}` : "Symbol"}</p>
           ${unique ? `<span><button type="button" data-act="all">All</button><button type="button" data-act="none">None</button></span>` : ""}</div>
-        <ul class="ov-cats">${rows.map(r => `<li><label class="ov-cat${r.on ? "" : " off"}">${unique
+        <ul class="ov-cats">${rows.map(r => `<li><label class="ov-cat${r.on ? "" : " off"}${isNone(r.colour) ? " nocol" : ""}">${unique
             ? `<input type="checkbox" data-cat="${esc(r.key)}"${r.on ? " checked" : ""} aria-label="Show ${esc(r.label)}">` : "<span></span>"}
           <button type="button" class="ov-swbtn" data-catcol="${esc(r.key)}" title="Change the colour of ${esc(r.label)}"
             aria-label="Change the colour of ${esc(r.label)}" aria-haspopup="dialog">${swatch(s, r.colour)}</button><span>${esc(r.label)}</span><span class="n">${r.n.toLocaleString("en-IE")}</span></label></li>`).join("")}</ul>

@@ -78,6 +78,9 @@
   };
 
   const clone = o => JSON.parse(JSON.stringify(o));
+  // "No colour": the element is not drawn (stored as "transparent", which Plotly and CSS accept)
+  const NONE = "transparent";
+  const noneBtn = (path, on) => `<button type="button" class="ps-auto ps-none${on ? " on" : ""}" data-none="${path}" title="No colour: do not draw it">No colour</button>`;
   // deep merge that keeps only known keys with matching types (open maps allowed where noted)
   const OPEN_MAPS = new Set(["pol.per", "legend.labels"]);
   function merge(base, src, path = "") {
@@ -364,12 +367,15 @@
       case "selectOpt":
         return `<div class="ps-f">${lab}<select class="form-select form-select-sm" id="${id}" data-opt="${fd.path}" data-t="bool">${fd.options.map(([o, t]) =>
           `<option value="${o}"${String(!!ctx.getOpt(fd.path)) === o ? " selected" : ""}>${esc(t)}</option>`).join("")}</select></div>`;
-      case "color":
-        return `<div class="ps-f">${lab}<span class="ps-color"><input type="color" id="${id}" data-ps="${fd.path}" data-t="color" value="${esc(v || "#000000")}"><code>${esc(v)}</code></span>${hint}</div>`;
+      case "color": {
+        const none = v === NONE;
+        return `<div class="ps-f">${lab}<span class="ps-color"><input type="color" id="${id}" data-ps="${fd.path}" data-t="color" value="${esc(none ? getPath(DEFAULTS, fd.path) || "#000000" : v || "#000000")}"${none ? ' class="is-auto"' : ""}><code>${esc(none ? "none" : v)}</code>
+          ${noneBtn(fd.path, none)}</span>${hint}</div>`;
+      }
       case "colorAuto": {
-        const auto = !v;
-        return `<div class="ps-f">${lab}<span class="ps-color"><input type="color" id="${id}" data-ps="${fd.path}" data-t="color" value="${esc(v || "#2b3a48")}"${auto ? ' class="is-auto"' : ""}>
-          <button type="button" class="ps-auto${auto ? " on" : ""}" data-auto="${fd.path}" title="Use the automatic colour">${esc(fd.autoLabel || "Auto")}</button></span></div>`;
+        const none = v === NONE, auto = !v;
+        return `<div class="ps-f">${lab}<span class="ps-color"><input type="color" id="${id}" data-ps="${fd.path}" data-t="color" value="${esc(v && !none ? v : "#2b3a48")}"${auto || none ? ' class="is-auto"' : ""}>
+          <button type="button" class="ps-auto${auto ? " on" : ""}" data-auto="${fd.path}" title="Use the automatic colour">${esc(fd.autoLabel || "Auto")}</button>${noneBtn(fd.path, none)}</span></div>`;
       }
       case "num":
         return `<div class="ps-f">${lab}<span class="ps-num"><input type="number" class="form-control form-control-sm" id="${id}" data-ps="${fd.path}"
@@ -537,7 +543,7 @@
       case "num": v = parseFloat(el.value); if (!Number.isFinite(v)) return; break;
       case "numNull": v = el.value.trim() === "" ? null : parseFloat(el.value); if (v !== null && !Number.isFinite(v)) return; break;
       case "color": v = el.value; el.classList.remove("is-auto");
-        { const b = el.parentElement.querySelector(".ps-auto"); if (b) b.classList.remove("on"); const c = el.parentElement.querySelector("code"); if (c) c.textContent = v; } break;
+        { el.parentElement.querySelectorAll(".ps-auto").forEach(b => b.classList.remove("on")); const c = el.parentElement.querySelector("code"); if (c) c.textContent = v; } break;
       default: v = el.value;
     }
     if (el.type === "range") {
@@ -549,7 +555,7 @@
     changed();
   }
   function onClick(e) {
-    const t = e.target.closest("[data-pstab],[data-act],[data-auto],[data-perauto]");
+    const t = e.target.closest("[data-pstab],[data-act],[data-auto],[data-perauto],[data-none]");
     if (!t) return;
     if (t.dataset.pstab) {
       activeTab = t.dataset.pstab;
@@ -558,8 +564,18 @@
       refresh();
       return;
     }
+    if (t.dataset.none) {                               // "No colour" on / off (off: back to the default colour)
+      const p = t.dataset.none, on = getPath(style, p) !== NONE;
+      const inp = t.parentElement.querySelector("input[type=color]"), code = t.parentElement.querySelector("code");
+      const back = getPath(DEFAULTS, p);
+      setPath(style, p, on ? NONE : back);
+      t.parentElement.querySelectorAll(".ps-auto").forEach(b => b.classList.toggle("on", b === t ? on : !on && !back));
+      if (inp) { inp.classList.toggle("is-auto", on || !back); if (!on && back) inp.value = back; }
+      if (code) code.textContent = on ? "none" : back;
+      markCustom(); return changed();
+    }
     if (t.dataset.auto) {
-      setPath(style, t.dataset.auto, ""); t.classList.add("on");
+      setPath(style, t.dataset.auto, ""); t.parentElement.querySelectorAll(".ps-auto").forEach(b => b.classList.toggle("on", b === t));
       const c = t.parentElement.querySelector("input[type=color]"); if (c) c.classList.add("is-auto");
       markCustom(); return changed();
     }

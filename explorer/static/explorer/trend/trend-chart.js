@@ -146,7 +146,7 @@
       if (["relevant", "sector", "core"].includes(st.t)) T.polTab = st.t;
       if (["strength", "new", "old"].includes(st.r)) T.polSort = st.r;
       if (Array.isArray(st.f) && isNum(st.f[0]) && isNum(st.f[1])) Object.assign(T.polFilter, { on: true, a: st.f[0], b: st.f[1] });
-      if (st.k && typeof st.k === "object") for (const [g, c] of Object.entries(st.k)) if (/^#[0-9a-f]{6}$/i.test(c)) T.colors[g] = c;
+      if (st.k && typeof st.k === "object") for (const [g, c] of Object.entries(st.k)) if (/^#[0-9a-f]{6}$/i.test(c) || c === "transparent") T.colors[g] = c;
       if (Array.isArray(st.b)) T.bps = st.b.filter(isNum).slice(0, MAX_BREAKS);
       if (st.o && typeof st.o === "object") for (const k of Object.keys(T.opt)) if (k in st.o) T.opt[k] = st.o[k];
     } catch (e) { /* ignore a malformed link and start from defaults */ }
@@ -367,7 +367,9 @@
   // ------------------------------------------------------------------
   // Chart
   // ------------------------------------------------------------------
+  // "No colour" is stored as "transparent": whatever uses it is not drawn
   const rgba = (hex, a) => {
+    if (!/^#[0-9a-f]{6}$/i.test(String(hex))) return "rgba(0,0,0,0)";
     const n = parseInt(hex.slice(1), 16);
     return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
   };
@@ -883,7 +885,7 @@
 
   // ---- colour palette ----
   function setGroupColor(group, hex) {
-    if (hex && HEX.test(hex)) T.colors[group] = hex.toLowerCase(); else delete T.colors[group];
+    if (hex && (HEX.test(hex) || hex === "transparent")) T.colors[group] = hex.toLowerCase(); else delete T.colors[group];
     if (T.card && !T.card.hidden) hideCard(true);       // its colours would be stale
     recompute();                                         // redraws lines, panel and the link
   }
@@ -903,7 +905,8 @@
       <div class="tp-pal-grid">${PALETTE.map(c => `<button type="button" class="tp-pal-sw${c === cur ? " on" : ""}" data-pick="${c}"
         style="background:${c}" aria-label="Use colour ${c}" title="${c}"></button>`).join("")}</div>
       <div class="tp-pal-foot">
-        <label class="tp-pal-custom">Custom <input type="color" value="${cur}" aria-label="Custom colour"></label>
+        <label class="tp-pal-custom">Custom <input type="color" value="${HEX.test(cur) ? cur : "#666666"}" aria-label="Custom colour"></label>
+        <button type="button" class="tp-pal-none${cur === "transparent" ? " on" : ""}" data-pick="transparent" title="Hide this group's lines on the chart">No colour</button>
         <button type="button" class="btn btn-link btn-sm p-0" data-pick="">Reset</button>
       </div>`;
     pop.addEventListener("click", e => {
@@ -996,7 +999,7 @@
           <button type="button" class="btn btn-link btn-sm p-0" data-polall="0">Hide all</button></div>` : "";
     return `<div class="tp-group open tp-rel" style="--gc:${c};--gbg:${rgba(c, 0.07)};--gbd:${rgba(c, 0.35)}">
       <div class="tp-gh">
-        <button type="button" class="tp-swatch" data-colorgroup="${esc(sector)}" style="background:${c}"
+        <button type="button" class="tp-swatch${c === "transparent" ? " none" : ""}" data-colorgroup="${esc(sector)}" style="background:${c}"
           title="Change colour" aria-label="Change the colour of ${esc(sector)} policies" aria-haspopup="dialog"></button>
         <span class="tp-ghbtn" style="cursor:default"><span class="tp-gname">${esc(opts.label)}</span>
           <span class="tp-n${on ? " has" : ""}" title="${on} of ${items.length} on the chart">${on ? `${on}/` : ""}${items.length}</span></span>
@@ -1025,7 +1028,7 @@
       `<div class="trend-hint py-1">${opts.empty || "Nothing to list."}</div>`;
     return `<div class="tp-group${open ? " open" : ""}" style="--gc:${c};--gbg:${rgba(c, 0.07)};--gbd:${rgba(c, 0.35)}">
       <div class="tp-gh">
-        <button type="button" class="tp-swatch" data-colorgroup="${esc(group)}" style="background:${c}"
+        <button type="button" class="tp-swatch${c === "transparent" ? " none" : ""}" data-colorgroup="${esc(group)}" style="background:${c}"
           title="Change colour" aria-label="Change the colour of ${esc(label)}" aria-haspopup="dialog"></button>
         <button type="button" class="tp-ghbtn" data-togglegroup="${esc(group)}" aria-expanded="${open}">
           <span class="tp-gname">${esc(label)}</span>

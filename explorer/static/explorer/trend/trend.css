@@ -272,6 +272,11 @@ body.tr-dragging,body.tr-dragging *{cursor:ew-resize!important;user-select:none}
 .ps-color code{font-size:.68rem;color:var(--text-muted)}
 .ps-auto{border:1px solid var(--grey-border);background:#fff;border-radius:999px;font-size:.66rem;padding:.05rem .5rem;color:var(--text-muted)}
 .ps-auto.on{background:var(--emerald-light);border-color:var(--emerald);color:var(--emerald-dark);font-weight:700}
+/* "No colour": the element is not drawn */
+.ps-none.on{background:#fdecea;border-color:#c0392b;color:#a93226}
+.tp-swatch.none,.tp-pal-none{background:#fff linear-gradient(to top right,transparent calc(50% - 1px),#c0392b calc(50% - 1px),#c0392b calc(50% + 1px),transparent calc(50% + 1px))!important}
+.tp-pal-none{border:1px solid var(--grey-border);border-radius:6px;font-size:.68rem;font-weight:700;padding:.1rem .45rem;color:var(--navy)}
+.tp-pal-none.on{border-color:#111;box-shadow:0 0 0 1px #111 inset}
 .ps-num{display:flex;align-items:center;gap:.35rem}
 .ps-num input{max-width:6.5rem}
 .ps-num small{color:var(--text-muted);font-size:.66rem}
