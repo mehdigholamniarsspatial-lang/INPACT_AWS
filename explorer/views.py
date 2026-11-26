@@ -361,7 +361,9 @@ _EXPORT_KEYS = ("dataset", "compare", "mode", *_LAYER_KEYS, *(f"b_{k}" for k in 
                 # own colour range and its boundary
                 "region", "county", "poly", "s", "w", "n", "e",
                 # the time series grid (fmt="grid"): one map per time step in rows × cols panels
-                "rows", "cols")
+                "rows", "cols",
+                # ... plus a last panel with each map's statistics (year, max, mean, min, median, std)
+                "stats")
 
 
 def map_export(request, fmt):
@@ -389,7 +391,7 @@ def map_export(request, fmt):
                     rows, cols = int(q["rows"]), int(q["cols"])
                 except ValueError:
                     raise map_export_mod.SelectionError("Choose the number of rows and columns.")
-                body, filename = map_export_mod.grid_jpeg(q, rows, cols, q["region"] == "1")
+                body, filename = map_export_mod.grid_jpeg(q, rows, cols, q["region"] == "1", q["stats"] == "1")
                 resp = HttpResponse(body, content_type="image/jpeg")
                 resp["Content-Disposition"] = f'attachment; filename="{filename}"'
                 resp["Cache-Control"] = "public, max-age=3600"

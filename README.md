@@ -541,7 +541,8 @@ python manage.py load_policy_data --data-dir /path/to/ireland_core_policy_releas
 | `GET /api/mapeire/layer/?year=&sector=&pollutant=` | Stored cell integers of one layer with its scale / offset, unit, total and colour scale |
 | `GET /api/edgar/`, `/api/edgar/layer/`, `/api/inverse/`, `/api/inverse/layer/` | The EDGAR and inverse-model layers |
 | `GET /api/map/timeseries/?dataset=mapeire\|edgar\|inverse&…` | Time series of a pixel, region, county or the whole grid |
-| `GET /api/map/export/<geotiff\|jpeg\|zip\|grid>/?dataset=…` | Downloads of the map layer (or B − A) |
+| `GET /api/map/export/<geotiff\|jpeg\|zip\|grid>/?dataset=…` | Downloads of the map layer (or B − A). `grid`: one map per time step in `rows` × `cols` panels; with `stats=1` one more panel after the last map holds a table of each map's year, max, mean, min, median and std (`map_export.map_stats`, over the map's cells with a value, or the region's), values scaled by one power of ten (multiple of 3) stated with the unit under the table. The Time series "Include map" → Time Series Grid builds this from the plot layer chosen in **Map series** (default: the one matching the map) |
+| `GET /api/map/export/steps/?dataset=…` | The time steps of a grid (count, labels), for the panel-layout choices |
 | `GET /api/trend/catalog/` | Gases, sectors and year axis for Trend Analysis |
 | `GET /api/trend/series/?gas=&sector=` | Raw series |
 | `GET /api/trend/bundle/` | Every gas and sector series in one response (used by the in-browser engine) |

@@ -2279,6 +2279,8 @@ html.map-standalone.ms-ts.ms-side-hidden #mapPanel{grid-template-columns:0 minma
 .ts-layout select{height:27px;border:1px solid var(--teal);border-radius:7px;background:#fff;color:var(--navy);font-family:inherit;font-size:.72rem;font-weight:700;padding:0 .35rem;cursor:pointer}
 .ts-layout select:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
 .ts-layout-msg{font-size:.7rem;color:var(--text-muted);flex-basis:100%;text-align:right}
+.ts-layout select#tsMapSrc{max-width:16rem}
+.ts-statsbox input{accent-color:var(--teal);width:14px;height:14px;margin:0;cursor:pointer}
 .ts-layout-msg:empty{display:none}
 .ts-layout-msg.warn{color:#9A5B00}
 @keyframes ddin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
@@ -3614,6 +3616,11 @@ a.ug-go.alt:hover{color:var(--navy)}
                     <button type="button" role="radio" aria-checked="true" data-mode="current" title="The map shown on the left, as it is now"><i class="bi bi-map"></i> Current Map</button>
                     <button type="button" role="radio" aria-checked="false" data-mode="grid" title="One map per time step, in a grid with one shared legend"><i class="bi bi-grid-3x3-gap"></i> Time Series Grid</button>
                   </div>
+                  <label class="ts-layout" id="tsMapSrcBox" hidden title="The layer of the plot whose maps fill the grid">Map series
+                    <select id="tsMapSrc" aria-describedby="tsLayoutMsg"></select></label>
+                  <label class="ts-layout ts-statsbox" id="tsStatsBox" hidden
+                    title="Add a last panel with each map's year, maximum, mean, minimum, median and standard deviation">
+                    <input type="checkbox" id="tsGridStats" checked>Statistics table</label>
                   <label class="ts-layout" id="tsLayoutBox" hidden>Panel layout
                     <select id="tsLayout" aria-describedby="tsLayoutMsg"></select></label>
                   <span class="ts-layout-msg" id="tsLayoutMsg" aria-live="polite"></span>
@@ -5169,7 +5176,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               </ul>
               <div class="ug-chips" role="group" aria-label="Include map options">
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="The map shown on the left, exactly as it is now (layer, style and area), next to the graph."><i class="bi bi-map"></i>Current Map</button>
-                <button type="button" class="ug-chip" aria-pressed="false" data-explain="One map per time step of the layer on the map (every year, or every month for EDGAR monthly), arranged in a grid with one shared colour scale. Use <b>Panel layout</b> to choose the number of rows and columns."><i class="bi bi-grid-3x3-gap"></i>Time Series Grid</button>
+                <button type="button" class="ug-chip" aria-pressed="false" data-explain="One map per time step (every year, or every month for EDGAR monthly), arranged in a grid with one shared colour scale. When the plot has more than one layer, <b>Map series</b> chooses which layer&rsquo;s maps fill the grid. <b>Statistics table</b> (on by default) adds a last panel with one row per map: year, maximum, mean, minimum, median and standard deviation over the map&rsquo;s cells; values share one power of ten, written with the unit under the table (for example &lsquo;Values &times;10&#8315;&sup3; kg CH&#8324; km&#8315;&sup2; yr&#8315;&sup1;&rsquo;). Use <b>Panel layout</b> to choose the number of rows and columns; the table fills the panels after the last map."><i class="bi bi-grid-3x3-gap"></i>Time Series Grid</button>
               </div>
               <div class="ug-explain" aria-live="polite">Select an option above.</div>
               <div class="ug-actions">
@@ -10124,12 +10131,15 @@ if (MAP_STANDALONE) (function mapWindow(){
     // and no row or column left empty. The same rule is checked on the server.
     const mapOpts = $("tsMapOpts"), mapModeSeg = $("tsMapMode"), layoutBox = $("tsLayoutBox");
     const layoutSel = $("tsLayout"), layoutMsg = $("tsLayoutMsg");
+    const srcBox = $("tsMapSrcBox"), srcSel = $("tsMapSrc"), statsBox = $("tsStatsBox"), statsCb = $("tsGridStats");
     const gridModeBtn = mapModeSeg.querySelector('[data-mode="grid"]');
     const mapMode = { value: "current", steps: null, stepsKey: "", stepsReq: null, layout: "" };
     try {
       mapMode.value = localStorage.getItem("inpact.tsMapMode") === "grid" ? "grid" : "current";
       mapMode.layout = localStorage.getItem("inpact.tsGridLayout") || "";
+      statsCb.checked = localStorage.getItem("inpact.tsGridStats") !== "0";
     } catch (e) {}
+    const statsOn = () => statsCb.checked;
     function gridLayouts(n){
       const out = [];
       if (n === 2) return [[1, 2], [2, 1]];
@@ -10138,7 +10148,49 @@ if (MAP_STANDALONE) (function mapWindow(){
       // squarest first, then wider than tall (landscape suits the 4:3 image)
       return out.sort((a, b) => Math.abs(a[0] - a[1]) - Math.abs(b[0] - b[1]) || a[0] - b[0]);
     }
-    const stepsQuery = () => { const q = exportQuery(); ["palette", "div_palette", "reverse", "rlo", "rhi", "rinv", "conf", "bg"].forEach(k => q.delete(k)); return q; };
+    // ---- Map series of the grid: one of the layers in the plot (several can be overlaid on the graph) ----
+    const SRC_KEYS = { edgar: ["gas", "sector"], inverse: ["model", "transport", "gas", "estimate"], mapeire: ["sector", "parameter"] };
+    const lastYear = l => { const t = (l.data?.t || []).filter(Number.isFinite); return t.length ? String(Math.floor(Math.max(...t))) : ""; };
+    // The map query of a plot layer (the grid replaces the year or month with each time step)
+    function layerQuery(l){
+      const d = l.def, q = new URLSearchParams({ dataset: d.dataset });
+      if (d.dataset === "edgar") {
+        const yr = ds() === "edgar" && val("edgarYear") ? val("edgarYear") : lastYear(l);
+        q.set("gas", d.gas); q.set("sector", d.sector); q.set("year", yr); q.set("month", d.step === "monthly" ? "1" : "annual");
+      } else if (d.dataset === "inverse") {
+        ["model", "transport", "gas", "estimate"].forEach(k => q.set(k, d[k])); q.set("year", lastYear(l));
+      } else {
+        q.set("sector", d.sector); q.set("parameter", d.gas); q.set("year", lastYear(l));
+      }
+      return q;
+    }
+    const srcLayers = () => st.layers.filter(l => l.data);
+    function sameAsMap(l){
+      const left = exportQuery(), q = layerQuery(l);
+      return !cmp.result && left.get("dataset") === q.get("dataset") && SRC_KEYS[q.get("dataset")].every(k => left.get(k) === q.get(k));
+    }
+    function gridLayer(){
+      const ls = srcLayers();
+      return ls.find(l => String(l.id) === srcSel.value) || ls.find(sameAsMap) || ls[0] || null;
+    }
+    // The grid's query: the chosen layer, with the colours of step 3 "Map style"; the value-range filter
+    // only when the layer is the one on the map (the slider's values belong to that layer)
+    function gridQuery(){
+      const l = gridLayer(), left = exportQuery();
+      if (!l || cmp.result) return left;
+      const q = layerQuery(l);
+      const keep = ["palette", "div_palette", "reverse", "bg", ...(sameAsMap(l) ? ["rlo", "rhi", "rinv", "conf"] : [])];
+      keep.forEach(k => { if (left.has(k)) q.set(k, left.get(k)); });
+      if (sameAsMap(l) && left.get("dataset") === "edgar" && q.get("month") === left.get("month")) q.set("year", left.get("year"));
+      return q;
+    }
+    function renderSrc(){
+      const ls = srcLayers(), cur = gridLayer();
+      srcBox.hidden = mapMode.value !== "grid" || ls.length < 2;      // one layer: nothing to choose
+      srcSel.innerHTML = ls.map(l => `<option value="${l.id}">${esc(l.short)} — ${esc(DS_LABEL[l.def.dataset])}${sameAsMap(l) ? " (on the map)" : ""}</option>`).join("");
+      if (cur) srcSel.value = String(cur.id);
+    }
+    const stepsQuery = () => { const q = gridQuery(); ["palette", "div_palette", "reverse", "rlo", "rhi", "rinv", "conf", "bg"].forEach(k => q.delete(k)); return q; };
     function loadSteps(){
       const q = stepsQuery(), key = q.toString();
       if (key === mapMode.stepsKey && (mapMode.steps || mapMode.stepsReq)) return mapMode.stepsReq || Promise.resolve(mapMode.steps);
@@ -10155,8 +10207,8 @@ if (MAP_STANDALONE) (function mapWindow(){
     const gridOn = () => withMap() && mapMode.value === "grid" && !gridModeBtn.disabled && /^\d+x\d+$/.test(layoutSel.value);
     function gridInfo(){
       const j = mapMode.steps, [r, c] = layoutSel.value.split("x");
-      return j?.ok ? `${j.n} ${j.what}, ${j.labels[0]} – ${j.labels[j.labels.length - 1]} · ${r} × ${c} panels · one colour scale for all maps`
-                   : `${r} × ${c} panels, one map per time step`;
+      return (j?.ok ? `${j.n} ${j.what}, ${j.labels[0]} – ${j.labels[j.labels.length - 1]} · ${r} × ${c} panels · one colour scale for all maps`
+                    : `${r} × ${c} panels, one map per time step`) + (statsOn() ? " · last panel: statistics of each map" : "");
     }
     function setMapMode(mode, focus){
       mapMode.value = mode === "grid" && !gridModeBtn.disabled ? "grid" : "current";
@@ -10171,7 +10223,7 @@ if (MAP_STANDALONE) (function mapWindow(){
     function renderLayouts(){
       const j = mapMode.steps;
       if (!j) { layoutMsg.textContent = "Finding the time steps of this layer…"; layoutMsg.classList.remove("warn"); return; }
-      const n = j.ok ? j.n : 0, opts = j.ok ? gridLayouts(n) : [];
+      const n = j.ok ? j.n : 0, panels = n + (statsOn() ? 1 : 0), opts = j.ok && n > 1 ? gridLayouts(panels) : [];
       gridModeBtn.disabled = !opts.length;
       gridModeBtn.title = opts.length ? "One map per time step, in a grid with one shared legend"
         : j.ok ? "This layer has a single time step: use Current Map" : (j.detail || "Not available for this map");
@@ -10179,25 +10231,31 @@ if (MAP_STANDALONE) (function mapWindow(){
       if (mapMode.value !== "grid") return;
       const cur = layoutSel.value || mapMode.layout;
       layoutSel.innerHTML = opts.map(([r, c]) => {
-        const empty = r * c - n;
-        return `<option value="${r}x${c}">${r} rows × ${c} columns${empty ? ` (${empty} empty)` : ""}</option>`;
+        // with the statistics table, the cells after the last map hold the table (none stay empty)
+        const empty = r * c - panels, tableCells = r * c - n;
+        const note = statsOn() ? (tableCells > 1 ? ` (table across ${tableCells} panels)` : "") : empty ? ` (${empty} empty)` : "";
+        return `<option value="${r}x${c}">${r} rows × ${c} columns${note}</option>`;
       }).join("");
       layoutSel.value = opts.some(([r, c]) => `${r}x${c}` === cur) ? cur : `${opts[0][0]}x${opts[0][1]}`;
       const [r, c] = layoutSel.value.split("x").map(Number);
       const range = `${j.labels[0]} – ${j.labels[j.labels.length - 1]}`;
-      layoutMsg.textContent = `${n} ${j.what} (${range}) → ${r} × ${c} grid, ${r * c} panels${r * c > n ? `, ${r * c - n} left empty` : ""} · one shared colour scale`;
+      const tableCells = r * c - n;
+      layoutMsg.textContent = `${gridLayer() ? `${gridLayer().short}: ` : ""}${n} ${j.what} (${range}) → ${r} × ${c} grid, ${r * c} panels` +
+        (statsOn() ? ` · statistics table in the last ${tableCells > 1 ? `${tableCells} panels` : "panel"}`
+                   : r * c > n ? `, ${r * c - n} left empty` : "") + " · one shared colour scale";
       layoutMsg.classList.remove("warn");
     }
     function syncMapOpts(){
       const show = withMap();
       mapOpts.hidden = !show;
       if (!show) return;
-      layoutBox.hidden = mapMode.value !== "grid";
+      layoutBox.hidden = statsBox.hidden = mapMode.value !== "grid";
+      renderSrc();
       if (mapMode.value !== "grid" && mapMode.steps) { layoutMsg.textContent = ""; }
       const q = stepsQuery().toString();
       if (q !== mapMode.stepsKey || (!mapMode.steps && !mapMode.stepsReq)) {
         renderLayouts();                     // "finding…" while the steps load
-        loadSteps().then(() => { if (withMap()) { layoutBox.hidden = mapMode.value !== "grid"; renderLayouts(); } });
+        loadSteps().then(() => { if (withMap()) { layoutBox.hidden = statsBox.hidden = mapMode.value !== "grid"; renderLayouts(); } });
       } else renderLayouts();
       if (mapMode.value !== "grid") layoutMsg.textContent = "";
     }
@@ -10211,6 +10269,11 @@ if (MAP_STANDALONE) (function mapWindow(){
       const next = mapMode.value === "grid" ? "current" : "grid";
       if (next === "grid" && gridModeBtn.disabled) return;
       setMapMode(next, true);
+    });
+    srcSel.addEventListener("change", () => { mapMode.layout = layoutSel.value; syncMapOpts(); });
+    statsCb.addEventListener("change", () => {
+      try { localStorage.setItem("inpact.tsGridStats", statsCb.checked ? "1" : "0"); } catch (e) {}
+      renderLayouts();
     });
     layoutSel.addEventListener("change", () => {
       mapMode.layout = layoutSel.value;
@@ -10266,7 +10329,8 @@ if (MAP_STANDALONE) (function mapWindow(){
         st.where === "pixel" ? "EDGAR (0.1°) and inverse-model (≈ 25 km) cells differ in size." : "",
       ].filter(Boolean).join(" ");
       return [
-        ["Map", mapTxt || "Layer shown on the map"],
+        ["Map", gridOn() && gridLayer() ? `${gridLayer().short} — ${DS_LABEL[gridLayer().def.dataset]} (map series of the grid)`
+                : mapTxt || "Layer shown on the map"],
         ["Graph", vis.map(l => ({ colour: l.colour, dashed: isScaled(l),
           text: `${l.short} — ${DS_LABEL[l.def.dataset]}` })), true],
         ["Area", locationText()],
@@ -10322,7 +10386,8 @@ if (MAP_STANDALONE) (function mapWindow(){
       const GX = MW + 14, GY = 14, GW = CW - MW - 28, GH = 410;
       // A region (box, polygon or county): the map shows only its cells (the ones in the series), its own
       // colour range and its boundary
-      const mq = exportQuery(), L0 = st.loc;
+      const grid = gridOn();
+      const mq = grid ? gridQuery() : exportQuery(), L0 = st.loc;
       if (st.where === "region" && L0) {
         mq.set("region", "1");
         if (L0.type === "county") mq.set("county", L0.name);
@@ -10330,8 +10395,7 @@ if (MAP_STANDALONE) (function mapWindow(){
         else mq.set("poly", L0.pts.map(([a, b]) => `${a.toFixed(4)},${b.toFixed(4)}`).join(";"));
       }
       // Time Series Grid: one map per time step in the chosen rows × columns, one shared legend
-      const grid = gridOn();
-      if (grid) { const [r, c] = layoutSel.value.split("x"); mq.set("rows", r); mq.set("cols", c); }
+      if (grid) { const [r, c] = layoutSel.value.split("x"); mq.set("rows", r); mq.set("cols", c); if (statsOn()) mq.set("stats", "1"); }
       const file = await fetchFile(grid ? "grid" : "jpeg", mq);
       const mapImg = await createImageBitmap(file.blob);
       const box = document.createElement("div");

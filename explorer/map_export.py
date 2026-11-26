@@ -1242,14 +1242,146 @@ def _grid_view(layers: List[Layer]) -> Tuple[float, float, float, float]:
     return cx - hw, cy - hh, cx + hw, cy + hh
 
 
-def grid_jpeg(q: dict, rows: int, cols: int, region: bool) -> Tuple[bytes, str]:
+# ---------------------------------------------------------------------------
+# Statistics panel of the time series grid: one row per map (year, max, mean, min, median, std)
+# ---------------------------------------------------------------------------
+_SUP = str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def map_stats(layer: Layer) -> Optional[dict]:
+    """Statistics of every cell with a value in the map (zero cells included); the region's cells
+    only when the layer was clipped to a region. None when the map has no values."""
+    if layer.tif_values is None:
+        return None
+    v = np.asarray(layer.tif_values, dtype=np.float64).ravel()
+    v = v[np.isfinite(v) & (v != NODATA)]
+    if not v.size:
+        return None
+    return {"n": int(v.size), "max": float(v.max()), "mean": float(v.mean()), "min": float(v.min()),
+            "median": float(np.median(v)), "std": float(v.std())}
+
+
+def stats_exponent(rows: List[Optional[dict]]) -> int:
+    """A common power of ten, a multiple of 3, that brings the largest value into 1 – 999."""
+    big = max((abs(r[k]) for r in rows if r for k in ("max", "mean", "min", "median", "std")), default=0.0)
+    if not big or not math.isfinite(big):
+        return 0
+    return 3 * math.floor(math.log10(big) / 3)
+
+
+def stats_cell(v: float) -> str:
+    """A scaled value with about three significant digits, never in E notation above 1e-6."""
+    a = abs(v)
+    if a == 0:
+        return "0"
+    if a >= 100:
+        return f"{v:,.0f}"
+    if a >= 10:
+        return f"{v:.1f}"
+    if a >= 1:
+        return f"{v:.2f}"
+    if a < 1e-6:
+        return f"{v:.1e}"
+    return f"{v:.{min(6, 2 - math.floor(math.log10(a)))}f}"
+
+
+def _draw_stats_panel(d: ImageDraw.ImageDraw, font, P, box: Tuple[float, float, float, float],
+                      labels: List[str], stats: List[Optional[dict]], unit: str, monthly: bool,
+                      region: bool) -> None:
+    """The statistics table in ``box`` (design units: x0, y0, x1, y1), split into side-by-side parts
+    when the rows do not fit one column at a readable size. The power of ten and the unit are written
+    under the table, so the cells stay short."""
+    x0, y0, x1, y1 = box
+    e = stats_exponent(stats)
+    cols = ("max", "mean", "min", "median", "std")
+    head = ("Month" if monthly else "Year", "Max", "Mean", "Min", "Median", "Std")
+    body = [(lab, *(stats_cell(s[k] / 10 ** e) if s else "–" for k in cols)) for lab, s in zip(labels, stats)]
+    scale = f"×10{str(e).translate(_SUP)} " if e else ""
+    ns = {s["n"] for s in stats if s}
+    cells_txt = (f"the {next(iter(ns)):,} cells" if len(ns) == 1 else "the cells") + (" of the region" if region else " of each map")
+    caption = [f"Values {scale}{unit}".replace("  ", " "),
+               f"Over {cells_txt} with a value (zero cells included). Std: standard deviation."]
+    pad = 12
+    bw, bh = x1 - x0 - 2 * pad, y1 - y0 - 2 * pad
+    cap_size = lambda fs: max(8.0, fs * 0.95)                       # noqa: E731
+    gap_of = lambda fs: fs * 0.7                                    # noqa: E731
+
+    def caption_h(fs: float) -> float:
+        cf = font(cap_size(fs))
+        return sum(len(_wrap(d, c, cf, P(bw))) for c in caption) * cap_size(fs) * 1.3
+
+    best = None
+    for parts in range(1, 5):
+        per = math.ceil(len(body) / parts)
+        sub_w = (bw - (parts - 1) * 18) / parts
+        for fs in [x / 2 for x in range(48, 13, -1)]:            # 24 … 7 design units
+            f, fb = font(fs), font(fs, True)
+            widths = [max(d.textlength(r[j], font=fb if j == 0 else f) for r in body + [head]) / _GU
+                      for j in range(len(head))]
+            need_w = sum(widths) + gap_of(fs) * (len(head) - 1)
+            need_h = fs * 1.6 + (per + 1) * fs * 1.45 + 8 + caption_h(fs)
+            if need_w <= sub_w and need_h <= bh:
+                if not best or fs > best[1]:
+                    best = (parts, fs, per, sub_w, widths)
+                break
+    if not best:                                                   # tiny panel: smallest size, one part
+        best = (1, 7.0, len(body), bw, [bw / len(head)] * len(head))
+    parts, fs, per, sub_w, widths = best
+    gap_col = gap_of(fs)
+    f, fb, cap_f = font(fs), font(fs, True), font(cap_size(fs))
+    # rows spread over the panel's height (up to twice the text size) when there is room
+    lh = max(fs * 1.45, min(fs * 2.1, (bh - fs * 1.6 - 8 - caption_h(fs)) / (per + 1)))
+
+    d.rounded_rectangle([P(x0), P(y0), P(x1), P(y1)], radius=P(8), fill=(250, 252, 253),
+                        outline=(120, 128, 138), width=max(1, round(_GU)))
+    ty = y0 + pad
+    d.text((P(x0 + pad), P(ty)), "Statistics of each map", font=font(fs * 1.1, True), fill=NAVY)
+    ty += fs * 1.6
+    # columns: the time label left-aligned, the numbers right-aligned; spare width spread between columns
+    for p in range(parts):
+        rows = body[p * per:(p + 1) * per]
+        if not rows:
+            continue
+        px = x0 + pad + p * (sub_w + 18)
+        spare = (sub_w - sum(widths) - gap_col * (len(head) - 1)) / max(1, len(head) - 1)
+        xs, cx = [], px
+        for w in widths:
+            xs.append((cx, cx + w))
+            cx += w + gap_col + min(spare, fs * 2)
+        right = xs[-1][1]
+        y = ty
+        d.rectangle([P(px - 4), P(y - 2), P(right + 4), P(y + lh - 3)], fill=(232, 238, 244))
+        for j, h in enumerate(head):
+            a, b = xs[j]
+            d.text((P(a) if j == 0 else P(b), P(y + lh / 2 - 2)), h, font=fb, fill=NAVY, anchor="lm" if j == 0 else "rm")
+        y += lh
+        for i, r in enumerate(rows):
+            if i % 2:
+                d.rectangle([P(px - 4), P(y - 2), P(right + 4), P(y + lh - 3)], fill=(242, 245, 248))
+            for j, txt in enumerate(r):
+                a, b = xs[j]
+                d.text((P(a) if j == 0 else P(b), P(y + lh / 2 - 2)), txt, font=fb if j == 0 else f, fill=TEXT,
+                       anchor="lm" if j == 0 else "rm")
+            y += lh
+        d.line([P(px - 4), P(ty + lh - 2), P(right + 4), P(ty + lh - 2)], fill=(150, 160, 172), width=max(1, round(_GU / 2)))
+    # caption: the power of ten and the unit, then what the statistics cover
+    cy = ty + (per + 1) * lh + 8
+    for k, c in enumerate(caption):
+        for ln in _wrap(d, c, cap_f, P(bw)):
+            d.text((P(x0 + pad), P(cy)), ln, font=font(cap_size(fs), k == 0), fill=NAVY if k == 0 else MUTED)
+            cy += cap_size(fs) * 1.3
+
+
+def grid_jpeg(q: dict, rows: int, cols: int, region: bool, stats: bool = False) -> Tuple[bytes, str]:
     """A JPEG of one map per time step in a rows × cols grid, with one shared legend.
-    No coordinate labels on the panels; each panel is titled with its time step."""
+    No coordinate labels on the panels; each panel is titled with its time step.
+    ``stats``: one more panel, after the last map, with a table of each map's statistics."""
     steps, info = grid_steps(q)
     n = len(steps)
-    if not grid_layout_ok(rows, cols, n):
-        raise SelectionError(f"{n} maps: choose rows × columns with at least {n} cells, at least 2 rows and "
-                             "2 columns, and no empty row or column.")
+    need = n + (1 if stats else 0)
+    if not grid_layout_ok(rows, cols, need):
+        raise SelectionError(f"{n} maps{' and the statistics table' if stats else ''}: choose rows × columns "
+                             f"with at least {need} cells, at least 2 rows and 2 columns, and no empty row or column.")
     layers, labels = [], []
     for sq, label in steps:
         L = build_layer(sq)
@@ -1258,6 +1390,7 @@ def grid_jpeg(q: dict, rows: int, cols: int, region: bool) -> Tuple[bytes, str]:
         layers.append(L)
         labels.append(label)
     first = layers[0]
+    table = [map_stats(L) for L in layers] if stats else None
     legend = _shared_scale(layers) if region else None
     if legend is None:                     # Ireland: the dataset's fixed scale, already the same for every step
         legend = first.legend
@@ -1337,6 +1470,13 @@ def grid_jpeg(q: dict, rows: int, cols: int, region: bool) -> Tuple[bytes, str]:
         d.rectangle([P(fl), P(ft), P(fl) + pw, P(ft) + ph], outline=(120, 128, 138), width=max(1, round(u)))
         d.text((P(fl), P(ft - 6)), label, font=lab_f, fill=TEXT, anchor="ls")
 
+    if table is not None:
+        r_last, c0 = rows - 1, n % cols
+        tx0 = ox + c0 * (cell_w + gap)
+        ty0 = oy + r_last * (label_h + cell_h + gap)
+        _draw_stats_panel(d, font, P, (tx0, ty0, ox + cols * (cell_w + gap) - gap, ty0 + label_h + cell_h),
+                          labels, table, first.legend.unit, info["what"].startswith("monthly"), region)
+
     # Shared legend (right)
     lg = legend
     px0, py0, pwid, pad = 1600, 200, 360, 22
@@ -1390,6 +1530,7 @@ def grid_jpeg(q: dict, rows: int, cols: int, region: bool) -> Tuple[bytes, str]:
             "Coastline: Natural Earth" + (f" · {first.clip_credit}" if first.clip_credit else "")
             + (" · Black line: the time series region" if region else "")
             + f" · {rows} × {cols} grid, one colour scale for all maps"
+            + (" · last panel: statistics of each map" if table is not None else "")
             + f" · INPACT Ireland Greenhouse Gas Policy Impact Explorer · generated {date.today():%d %b %Y}"]
     yy = 1408
     for text in foot:
