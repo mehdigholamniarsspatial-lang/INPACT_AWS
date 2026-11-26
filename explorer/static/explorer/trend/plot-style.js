@@ -47,39 +47,43 @@
   const PALETTE_NAMES = [["inpact", "INPACT (default)"], ["matlab", "MATLAB"], ["okabe", "Okabe–Ito (colour-blind safe)"],
     ["tableau", "Tableau 10"], ["gray", "Greyscale"], ["contrast", "High contrast"]];
 
-  const axisDefaults = (title, grid) => ({
-    title: { text: title, family: "", size: 12, weight: "normal", style: "normal", color: "" },
-    tick: { family: "", size: 11, weight: "normal", color: "", angle: "auto", dir: "", len: 5, dtick: null, vals: "", minor: false },
+  // o: title / tick font size, tick length and gridline width of the axis
+  const axisDefaults = (title, grid, o) => ({
+    title: { text: title, family: "", size: o.titleSize, weight: "bold", style: "normal", color: "" },
+    tick: { family: "", size: o.tickSize, weight: "bold", color: "", angle: "auto", dir: "", len: o.tickLen, dtick: null, vals: "", minor: false },
     range: { min: null, max: null },
     line: { show: false, color: "#2b3a48", width: 1 },
-    grid: { show: grid, color: "#eef2f5", width: 1, dash: "solid", minor: false, minorColor: "#f4f6f8" },
+    grid: { show: grid, color: "#eef2f5", width: o.gridWidth, dash: "solid", minor: false, minorColor: "#f4f6f8" },
     zeroline: false,
   });
 
+  // The default look (set 26 Nov 2026 from the project's exported plot-style file). Only the look
+  // is taken from it: texts (titles, labels), per-policy choices and hidden legend entries depend on
+  // the series shown, so they keep their automatic defaults.
   const DEFAULTS = {
-    font: { family: "", size: 12, color: "#2b3a48" },
+    font: { family: "Segoe UI, Helvetica, Arial, sans-serif", size: 14, color: "#2b3a48" },
     figure: { plot: "#ffffff", paper: "#ffffff", paperTransparent: true, height: 540,
-      margin: { l: 70, r: 18, t: 24, b: 44 }, box: false, boxColor: "#2b3a48", boxWidth: 1,
-      title: { show: false, text: "", size: 15, weight: "bold" } },
+      margin: { l: 70, r: 18, t: 24, b: 44 }, box: true, boxColor: "#2b3a48", boxWidth: 1.5,
+      title: { show: true, text: "", size: 15, weight: "bold" } },   // "" = gas and sector of the chart
     obs: {
-      line: { show: true, color: "#3c3c3c", width: 1.2, dash: "solid", opacity: 0.45 },
-      marker: { show: true, symbol: "circle", size: 6, color: "#3c3c3c", opacity: 1, edge: "#ffffff", edgeWidth: 0 },
+      line: { show: true, color: "#121111", width: 4, dash: "solid", opacity: 0.45 },
+      marker: { show: true, symbol: "square", size: 6, color: "#f20d0d", opacity: 1, edge: "#ffffff", edgeWidth: 0 },
     },
-    trend: { palette: PALETTES.inpact.slice(), paletteName: "inpact", width: 2.6, dash: "solid", opacity: 1 },
+    trend: { palette: PALETTES.matlab.slice(), paletteName: "matlab", width: 2.6, dash: "dash", opacity: 1 },
     band: { color: "", opacity: 0.18 },          // "" = segment colour
     pred: { color: "", opacity: 0.08 },
     proj: { color: "#16324F", width: 2, dash: "dash", opacity: 1, bandColor: "#16324F", bandOpacity: 0.10 },
-    bp: { color: "#16324F", width: 2, dash: "dash", opacity: 0.75,
-      label: { show: true, family: "", size: 10, weight: "normal", color: "#16324F", position: "start", angle: 0 },
+    bp: { color: "#1a33ea", width: 2, dash: "dash", opacity: 0.4,
+      label: { show: true, family: "", size: 14, weight: "bold", color: "#16324F", position: "end", angle: -90 },
       hidden: [], hiddenLabel: [] },
-    pol: { width: 2, coreDash: "dot", sectorDash: "dashdot", opacity: 1,
-      label: { show: true, family: "", size: 10, weight: "normal", style: "normal", color: "", angle: -90,
-        position: "end", anchor: "right", padding: 4, maxChars: 34 },
+    pol: { width: 2, coreDash: "dashdot", sectorDash: "dot", opacity: 0.7,
+      label: { show: true, family: "", size: 15, weight: "normal", style: "normal", color: "#1b3498", angle: -90,
+        position: "middle", anchor: "right", padding: 4, maxChars: 25 },
       per: {} },                                 // key -> {show, label, color, text}
-    xaxis: axisDefaults("", true),
-    yaxis: axisDefaults("kt CO₂-eq", true),
+    xaxis: axisDefaults("", true, { titleSize: 16, tickSize: 15, tickLen: 8, gridWidth: 1 }),
+    yaxis: axisDefaults("kt CO₂-eq", true, { titleSize: 14, tickSize: 14, tickLen: 5, gridWidth: 0.5 }),
     legend: { show: true, position: "bottom", columns: 3, size: 12, color: "", bg: "#fafbfc", bgOpacity: 1,
-      border: true, borderColor: "#d9e0e6", borderWidth: 1, gap: 0.9, labels: {}, omit: [] },
+      border: true, borderColor: "#d9e0e6", borderWidth: 1, gap: 0.8, labels: {}, omit: [] },
   };
 
   const clone = o => JSON.parse(JSON.stringify(o));
@@ -158,6 +162,18 @@
       legend: { size: 14, color: "#000000", bg: "#ffffff", border: true, borderColor: "#000000", borderWidth: 2 },
     } },
   };
+
+  // The other presets start from a plain look (the chart's original style), so they keep their own
+  // character rather than inheriting the INPACT default's thick line, red markers and bold text
+  const axPlain = { title: { size: 12, weight: "normal" }, tick: { size: 11, weight: "normal", len: 5 }, grid: { width: 1 } };
+  const PRESET_BASE = merge(DEFAULTS, {
+    font: { family: "", size: 12 }, figure: { box: false, boxWidth: 1, title: { show: false } },
+    obs: { line: { color: "#3c3c3c", width: 1.2 }, marker: { symbol: "circle", color: "#3c3c3c" } },
+    trend: { palette: PALETTES.inpact.slice(), paletteName: "inpact", dash: "solid" },
+    bp: { color: "#16324F", opacity: 0.75, label: { size: 10, weight: "normal", position: "start", angle: 0 } },
+    pol: { coreDash: "dot", sectorDash: "dashdot", opacity: 1, label: { size: 10, color: "", position: "end", maxChars: 34 } },
+    xaxis: axPlain, yaxis: axPlain, legend: { gap: 0.9 },
+  });
 
   // ------------------------------------------------------------------
   // State and persistence (browser only; every access guarded)
@@ -813,7 +829,7 @@
     if (el.dataset.preset) {
       if (!el.value) return;
       // a preset changes the overall look; choices made for individual items are kept
-      const next = merge(DEFAULTS, PRESETS[el.value].style);
+      const next = el.value === "default" ? clone(DEFAULTS) : merge(PRESET_BASE, PRESETS[el.value].style);
       next.pol.per = clone(style.pol.per);
       next.legend.labels = clone(style.legend.labels); next.legend.omit = style.legend.omit.slice();
       next.bp.hidden = style.bp.hidden.slice(); next.bp.hiddenLabel = style.bp.hiddenLabel.slice();

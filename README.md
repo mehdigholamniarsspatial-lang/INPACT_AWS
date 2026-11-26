@@ -74,6 +74,45 @@ A tab bar sits directly under the INPACT / EPA header:
 | **About INPACT** | Mission, approach, data sources and team | `explorer/page/index.html`, `explorer/static/img/` |
 | **Feedback** | Public-participation form saved to an Excel workbook | `explorer/feedback_store.py` |
 
+### My settings (export / import / reset)
+
+**My settings**, at the right end of the tab bar, opens a dialog for the
+settings the dashboard keeps in the viewer's browser (`localStorage`). It is
+front end only (`explorer/static/explorer/settings-io.js`): nothing is sent
+to or stored on the server.
+
+* **What it covers.** The settings are grouped as follows:
+  * Trend Analysis plot style, its preset, and saved styles.
+  * The Spatial Mapping colour palette.
+  * Air Quality symbology.
+  * Map display: text size, panel widths, legend open, pixel values and
+    download format.
+  * Time-series map options: include map, map image, grid layout and
+    statistics table.
+  * The Datasets view.
+
+  User Guide progress and every Feedback/survey key are never read or
+  written.
+* **Export** downloads `inpact-dashboard-settings-<date>.json`. The file
+  looks like
+  `{ app, kind: "dashboard-settings", version: 1, exported, settings: { key: value } }`.
+* **Import** reads such a file, or a Trend `plot-style` file from Advanced
+  Plot Settings › Export.
+  * Only the listed keys are used, and each value is type-checked.
+  * A full settings file replaces all listed settings; keys missing from
+    the file go back to the default.
+  * The page then reloads, so each section reads its settings again through
+    its own loader, which drops anything it does not recognise.
+  * Values that were rejected are reported in a notice after the reload.
+* **Reset all** clears the listed keys.
+* **New dashboard defaults.** To make someone's settings the defaults for
+  everyone, take their exported file and copy its values into the defaults
+  in the code. For example, `DEFAULTS` in `trend/plot-style.js`,
+  `PAL_DEFAULT` for the map palette, and each overlay's `defaults` for Air
+  Quality.
+* **New settings.** Any new setting kept in `localStorage` should be added
+  to `GROUPS` in `settings-io.js`, with its check.
+
 ---
 
 ## Project layout
@@ -399,6 +438,19 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
     visual options only, in `explorer/static/explorer/trend/plot-style.js`.
     The module holds one style object; `trend-chart.js` reads it when it
     draws the figure and legend. The data, fits and tests are never changed.
+    * Defaults (`DEFAULTS`, set 26 Nov 2026 from the project's exported
+      plot-style file):
+      * Look: Segoe UI 14 px, plot box, chart title shown, a thick dark
+        observed line with red square markers, dashed MATLAB-palette trend
+        lines, a blue breakpoint line with vertical bold years, dash-dot and
+        dotted policy lines with blue labels, and bold axis titles and ticks.
+      * Not taken from that file: texts (titles, labels), per-policy
+        overrides and hidden legend entries. These depend on the series
+        shown, so the title stays automatic (gas: sector).
+      * Presets other than "INPACT default" start from the original plain
+        look (`PRESET_BASE`).
+      * Viewers who already have a saved style keep it until they press
+        "Reset to default".
     * Sections: Observed data (line and markers: show, colour, width,
       style, opacity, symbol, size, edge) · Trends & intervals (segment
       palette, width, style, opacity; band, prediction interval and

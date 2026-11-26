@@ -677,6 +677,37 @@ html.hdr-slim .tab-nav{
 .tab-nav .tab-btn:hover{color:var(--navy);background:var(--grey-panel)}
 .tab-nav .tab-btn.active{color:var(--emerald-dark);border-bottom-color:var(--emerald)}
 .tab-nav .tab-btn i{font-size:1rem}
+/* "My settings": export / import / reset the viewer's settings (static/explorer/settings-io.js) */
+.tab-nav .tab-tool{margin-left:auto;border:0;background:transparent;font-family:inherit;font-size:.8rem;font-weight:700;color:var(--text-muted);
+  padding:.95rem 1rem .85rem;border-bottom:3px solid transparent;cursor:pointer;display:flex;align-items:center;gap:.45rem}
+.tab-nav .tab-tool:hover{color:var(--navy);background:var(--grey-panel)}
+.tab-nav .tab-tool:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+@media (max-width:575px){ .tab-nav .tab-tool{padding:.8rem .7rem;font-size:.76rem} }
+.ms-dlg{border:0;padding:0;border-radius:16px;width:min(560px,calc(100vw - 2rem));box-shadow:0 20px 50px rgba(16,40,64,.28)}
+.ms-dlg::backdrop{background:rgba(16,32,48,.55)}
+.ms-dlg-in{padding:1.3rem 1.4rem 1.1rem;display:grid;gap:.8rem}
+.ms-dlg h2{font-size:1.05rem;font-weight:800;color:var(--navy);margin:0;display:flex;align-items:center;gap:.5rem}
+.ms-dlg h2 button{margin-left:auto;border:0;background:none;color:var(--text-muted);border-radius:6px;padding:.1rem .4rem}
+.ms-dlg h2 button:hover{background:var(--grey-panel);color:var(--navy)}
+.ms-dlg p{margin:0;font-size:.82rem;color:#3d4b59}
+.ms-safe{display:flex;gap:.55rem;align-items:flex-start;background:#eef7f1;border:1px solid #cfe7d8;border-radius:10px;padding:.55rem .7rem;font-size:.78rem;color:#1f5f3a}
+.ms-list{list-style:none;margin:0;padding:0;border:1px solid var(--grey-border);border-radius:10px}
+.ms-list li{display:grid;grid-template-columns:1.2rem minmax(0,1fr) auto;gap:.55rem;align-items:center;padding:.45rem .7rem;font-size:.78rem;border-top:1px solid #f0f3f6}
+.ms-list li:first-child{border-top:0}
+.ms-list li i{color:var(--navy)}
+.ms-list li small{color:var(--text-muted)}
+.ms-list li b{font-size:.66rem;font-weight:700;color:var(--text-muted);background:#f1f4f7;border-radius:999px;padding:.1rem .5rem;white-space:nowrap}
+.ms-list li b.mine{color:#0B5563;background:#e3f3f2}
+.ms-acts{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.ms-acts .btn{font-size:.8rem}
+.ms-acts .ms-reset{margin-left:auto;color:#b03a2e;border:1px solid #e3b5b0;background:#fff;text-decoration:none}
+.ms-acts .ms-reset:hover{background:#fdecea;color:#922b21}
+.ms-msg{font-size:.76rem;color:var(--emerald-dark);min-height:1.1em}
+.ms-msg.bad{color:#b03a2e}
+.ms-not{font-size:.7rem;color:var(--text-muted)}
+.ms-toast{position:fixed;left:50%;bottom:1.2rem;transform:translateX(-50%);z-index:2000;background:var(--navy);color:#fff;font-size:.82rem;
+  padding:.55rem .9rem;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);transition:opacity .6s;max-width:calc(100vw - 2rem)}
+.ms-toast.out{opacity:0}
 .tab-pane{display:none}
 .tab-pane.active{display:block;animation:tabfade .35s ease}
 @keyframes tabfade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -2967,6 +2998,11 @@ a.ug-go.alt:hover{color:var(--navy)}
   <button class="tab-btn" role="tab" aria-selected="false" data-tab="feedback">
     <i class="bi bi-chat-square-text"></i><span>Feedback</span>
   </button>
+  <!-- Not a tab: export / import / reset this browser's dashboard settings (settings-io.js) -->
+  <button type="button" class="tab-tool" id="mySettingsBtn" role="button" aria-haspopup="dialog" aria-controls="mySettings"
+          title="Export, import or reset your dashboard settings">
+    <i class="bi bi-sliders"></i><span>My settings</span>
+  </button>
 </nav>
 <!-- Policy Timeline only: its sections as a horizontal sub-menu (filled by script) -->
 <div class="pt-subnav" id="ptSections" role="tablist" aria-label="Policy Timeline sections"></div>
@@ -4622,6 +4658,14 @@ a.ug-go.alt:hover{color:var(--navy)}
               <button type="button" class="ug-chip" data-go="about"><i class="bi bi-info-circle"></i>About INPACT</button>
               <button type="button" class="ug-chip" data-go="feedback"><i class="bi bi-chat-square-text"></i>Feedback</button>
             </div>
+            <p><b>My settings</b> (right end of the menu) keeps your preferences: the Trend Analysis chart style, map colour palettes, Air Quality symbology and display options are remembered in this browser.</p>
+            <ol class="ug-list">
+              <li>Set the dashboard up the way you like it.</li>
+              <li>Open <b>My settings</b> and press <b>Export settings</b>: a small JSON file is saved on your computer.</li>
+              <li>Later, or on another computer, press <b>Import settings</b> and choose that file. The page reloads with your settings. You can also share the file with colleagues.</li>
+              <li><b>Reset all</b> returns every setting to the default.</li>
+            </ol>
+            <p>Nothing is sent to the server: the file holds settings only, no personal data, and is read in your browser. User Guide progress and the Feedback section are not included.</p>
             <div class="ug-actions"><label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label></div>
           </div>
         </div>
@@ -6212,6 +6256,25 @@ a.ug-go.alt:hover{color:var(--navy)}
       </div>
     </dialog>
 
+<!-- "My settings": export / import / reset (static/explorer/settings-io.js) -->
+<dialog class="ms-dlg" id="mySettings" aria-labelledby="mySettingsH">
+  <div class="ms-dlg-in">
+    <h2 id="mySettingsH"><i class="bi bi-sliders" aria-hidden="true"></i>My dashboard settings
+      <button type="button" data-ms-act="close" aria-label="Close"><i class="bi bi-x-lg"></i></button></h2>
+    <p>The dashboard remembers your choices (chart style, colour palettes, symbology and display options) in this browser. Export them to a file to keep them, use them on another computer or share them; import the file later to get them back.</p>
+    <div class="ms-safe"><i class="bi bi-shield-check" aria-hidden="true"></i><span>Nothing is sent to the server: the file is saved on your computer and read in your browser. It holds settings only, no personal data.</span></div>
+    <ul class="ms-list" data-ms-list aria-label="Settings in this browser"></ul>
+    <div class="ms-acts">
+      <button type="button" class="btn btn-success btn-sm" data-ms-act="export"><i class="bi bi-download"></i> Export settings</button>
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-ms-act="import"><i class="bi bi-upload"></i> Import settings</button>
+      <button type="button" class="btn btn-outline-danger btn-sm ms-reset" data-ms-act="reset"><i class="bi bi-arrow-counterclockwise"></i> Reset all</button>
+      <input type="file" accept="application/json,.json" hidden aria-label="Settings file to import">
+    </div>
+    <div class="ms-msg" data-ms-msg role="status" aria-live="polite"></div>
+    <div class="ms-not">Not included: User Guide progress and anything from the Feedback section. Importing replaces your current settings and reloads the page.</div>
+  </div>
+</dialog>
+
 <!-- ================= FOOTER ================= -->
 <footer class="app-footer">
   <div class="footer-notices">
@@ -6238,8 +6301,9 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <!-- Trend Analysis tab (Plotly itself is loaded on first visit to the tab) -->
 <script src="/static/explorer/trend/stats.js"></script>
-<script src="/static/explorer/trend/plot-style.js?v=20261128c"></script>
+<script src="/static/explorer/trend/plot-style.js?v=20261128d"></script>
 <script src="/static/explorer/trend/trend-chart.js?v=20261128c"></script>
+<script src="/static/explorer/settings-io.js?v=20261128a"></script>
 <script>
 /* =====================================================================
    Ireland Greenhouse Gas Policy Impact Explorer
