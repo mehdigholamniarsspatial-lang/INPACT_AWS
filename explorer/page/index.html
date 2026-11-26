@@ -4038,7 +4038,7 @@ a.ug-go.alt:hover{color:var(--navy)}
                   <li>Click it: a small box opens with only that part's settings.</li>
                   <li>Changes show at once. <b>Reset this part</b> undoes them; <b>All settings</b> opens Advanced Plot Settings.</li>
                 </ol>
-                <span class="tr-guide-tip">Press <b>B</b> or <b>Z</b> to go back to splitting or zooming.</span>
+                <span class="tr-guide-tip">Press <b>Edit plot</b> (or <b>E</b>) again to finish.</span>
               </div>
             </div>
           </div>
@@ -5995,7 +5995,8 @@ a.ug-go.alt:hover{color:var(--navy)}
           <div class="ug-step-body" id="ugT7">
             <p><b>Chart toolbar.</b> Hover over a tool for a short how-to.</p>
             <ul class="ug-list">
-              <li><b>Split the trend</b> (<kbd>B</kbd>): clicking the chart adds a breakpoint (step 3).</li>
+              <li>The three tools below work like switches: click one to turn it on (it is highlighted), click it again to turn it off. Only one is on at a time; with none on, the chart just shows the values as you hover.</li>
+              <li><b>Split the trend</b> (<kbd>B</kbd>, on when the page opens): clicking the chart adds a breakpoint (step 3).</li>
               <li><b>Zoom in</b> (<kbd>Z</kbd>): drag a box around the years and values to enlarge them.</li>
               <li><b>Edit plot</b> (<kbd>E</kbd>): click any part of the chart to change its look in a small settings box (step 8).</li>
               <li><b>Reset view</b>, or a double-click on the chart, shows all years again.</li>
@@ -6039,7 +6040,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <li>Click the part. A small box opens beside it with only that part&rsquo;s settings: for example the colour, width, style and opacity of a line, the text and font of a title, or the limits and tick labels of an axis. A breakpoint, policy line or legend entry also has its own settings first (show or hide it, its colour, its label text).</li>
               <li>Change a setting: the chart updates at once. Drag the box by its header if it covers what you are editing.</li>
               <li><b>Reset this part</b> puts that part back to its default look. <b>All settings</b> opens Advanced Plot Settings at the matching section. Close the box with &times; or <kbd>Esc</kbd>.</li>
-              <li>Press <b>Split the trend</b> (<kbd>B</kbd>) or <b>Zoom in</b> (<kbd>Z</kbd>) to leave Edit plot.</li>
+              <li>Press <b>Edit plot</b> (<kbd>E</kbd>) again to leave it, or choose <b>Split the trend</b> (<kbd>B</kbd>) or <b>Zoom in</b> (<kbd>Z</kbd>).</li>
             </ol>
             <p><b>Full panel: Advanced Plot Settings.</b> Click <b>Advanced Plot Settings</b> below the chart to open every setting, grouped in sections, plus presets and saved styles. Changes made in Edit plot appear here too. The bar at the top of the panel:</p>
             <ul class="ug-list">
@@ -6302,7 +6303,7 @@ a.ug-go.alt:hover{color:var(--navy)}
 <!-- Trend Analysis tab (Plotly itself is loaded on first visit to the tab) -->
 <script src="/static/explorer/trend/stats.js"></script>
 <script src="/static/explorer/trend/plot-style.js?v=20261128d"></script>
-<script src="/static/explorer/trend/trend-chart.js?v=20261128c"></script>
+<script src="/static/explorer/trend/trend-chart.js?v=20261128d"></script>
 <script src="/static/explorer/settings-io.js?v=20261128a"></script>
 <script>
 /* =====================================================================

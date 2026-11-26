@@ -347,7 +347,11 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
     first visit to the tab, and falls back to `policies/vendor/plotly.min.js`.
   * `explorer/static/explorer/trend/trend.css`: styles for the tab.
 * What users can do:
-  * **Split the trend (B, the default tool):** click a year to add a
+  * The three chart tools (Split the trend, Zoom in, Edit plot) are
+    toggles: clicking a tool, or pressing its key, turns it on; doing it
+    again turns it off, leaving the chart with no tool (hover values only).
+    Only one tool is on at a time.
+  * **Split the trend (B, on when the page opens):** click a year to add a
     breakpoint. Drag any dashed breakpoint line to move it, with the piecewise
     fit updating as you drag. **Auto-detect** chooses up to 3 breaks by
     minimum BIC.

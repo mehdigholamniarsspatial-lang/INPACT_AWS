@@ -29,8 +29,9 @@
   const POLICY_COLORS = { International: "#5b6b7a", EU: "#1f4e9e", National: "#00843D", Target: "#c0392b" };
   const MAX_BREAKS = 10;
   const HANDLE_PX = 8;
-  // Plotly drag behaviour per tool (Breakpoint mode only reacts to clicks)
-  const DRAGMODE = { breakpoint: false, zoom: "zoom", edit: false };
+  // Plotly drag behaviour per tool (Breakpoint mode only reacts to clicks). The tools are toggles:
+  // pressing the active one again leaves the chart with no tool ("none": it only shows hover values).
+  const DRAGMODE = { breakpoint: false, zoom: "zoom", edit: false, none: false };
 
   const T = {
     inited: false, data: null, gd: null,
@@ -221,7 +222,7 @@
     });
 
     document.querySelectorAll("#trModes [data-mode]").forEach(b =>
-      b.addEventListener("click", () => setMode(b.dataset.mode)));
+      b.addEventListener("click", () => toggleMode(b.dataset.mode)));
     $("trResetView").addEventListener("click", () => window.Plotly.relayout(T.gd, { "xaxis.autorange": true, "yaxis.autorange": true }));
     // "Policies" button: hide / show every policy line (the ticks in the panel are kept)
     $("trPolToggle").addEventListener("click", () => { T.opt.pol = !T.opt.pol; if (!T.opt.pol) hideCard(true); recompute(); });
@@ -259,7 +260,7 @@
       const el = e.target instanceof Element ? e.target : null;
       if ((el && el.closest("input, select, textarea, [contenteditable]")) || e.ctrlKey || e.metaKey || e.altKey) return;
       const k = { b: "breakpoint", z: "zoom", e: "edit" }[e.key.toLowerCase()];
-      if (k) { setMode(k); e.preventDefault(); }
+      if (k) { toggleMode(k); e.preventDefault(); }
       if (e.key === "Escape") { hideCard(true); closePalette(); if (window.TrendPlotStyle) window.TrendPlotStyle.closeEdit(); }
     });
   }
@@ -297,6 +298,8 @@
     if (el.type === "checkbox") el.checked = !!T.opt[el.dataset.opt]; else el.value = String(!!T.opt[el.dataset.opt]);
   });
 
+  // a tool button (or its key) turns that tool on, or off when it is already on
+  const toggleMode = mode => setMode(T.mode === mode ? "none" : mode);
   function setMode(mode) {
     T.mode = mode;
     document.querySelectorAll("#trModes [data-mode]").forEach(b => {
@@ -310,7 +313,8 @@
     $("trModeHint").innerHTML = {
       breakpoint: '<i class="bi bi-hand-index"></i> <b>Split the trend:</b> click a year to add a breakpoint, or drag a dashed line to move it. Tick policies in the <b>Policy overlay</b> panel to draw them on the chart.',
       zoom: '<i class="bi bi-hand-index"></i> <b>Zoom in:</b> drag a box. Double-click the chart or press Reset view to zoom out.',
-      edit: '<i class="bi bi-hand-index"></i> <b>Edit plot:</b> click any part of the chart (title, axes, a line, the background, the legend) to change its look. Esc closes the box.',
+      edit: '<i class="bi bi-hand-index"></i> <b>Edit plot:</b> click any part of the chart (title, axes, a line, the background, the legend) to change its look. Esc closes the box. Press <b>Edit plot</b> again to finish.',
+      none: '<i class="bi bi-info-circle"></i> No tool selected: hover the chart to read the values. Press <b>Split the trend</b>, <b>Zoom in</b> or <b>Edit plot</b> to use a tool; press it again to turn it off.',
     }[mode];
   }
 
