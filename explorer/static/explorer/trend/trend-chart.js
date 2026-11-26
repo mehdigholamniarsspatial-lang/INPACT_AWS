@@ -651,7 +651,7 @@
     const F = T.polFilter;
     F.lo = Math.min(...yrs); F.hi = Math.max(...yrs);
     F.a = isNum(F.a) ? Math.max(F.lo, Math.min(F.a, F.hi)) : F.lo;
-    F.b = isNum(F.b) ? Math.max(F.a, Math.min(F.b, F.hi)) : F.hi;
+    F.b = F.hi;                                            // no end year: up to the latest policy
     // links from before the panel existed stored core keys as "<year>|<name>"
     T.pins = new Set([...T.pins].map(k => /^[cs]\|/.test(k) ? k : `c|${k}`).filter(policyByKey));
   }
@@ -848,38 +848,46 @@
     });
   }
 
-  // ---- period filter (two-handle slider) ----
+  // ---- start-year filter: a slider and a year box that follow each other ----
   function bindPeriodFilter() {
     const F = T.polFilter, on = $("trPolFilterOn"), box = $("trPolFilterBox");
-    const mn = $("trPolMin"), mx = $("trPolMax");
+    const sl = $("trPolMin"), inp = $("trPolFromIn");
     if (!isNum(F.lo)) { on.disabled = true; return; }      // no policy data
-    for (const el of [mn, mx]) { el.min = F.lo; el.max = F.hi; }
-    mn.value = F.a; mx.value = F.b;
+    for (const el of [sl, inp]) { el.min = F.lo; el.max = F.hi; el.value = F.a; }
     $("trPolLo").textContent = F.lo; $("trPolHi").textContent = F.hi;
     on.checked = F.on; box.hidden = !F.on;
     on.addEventListener("change", () => { F.on = on.checked; box.hidden = !F.on; renderPolicyPanel(); writeHash(); });
-    // the handles cannot cross: each one stops at the other's year
-    const move = which => {
-      let a = +mn.value, b = +mx.value;
-      if (a > b) { if (which === "a") a = b; else b = a; }
-      mn.value = a; mx.value = b;
-      F.a = a; F.b = b;
+    const set = (y, from) => {
+      y = Math.max(F.lo, Math.min(F.hi, Math.round(y)));
+      if (from !== sl) sl.value = y;
+      if (from !== inp || +inp.value !== y) inp.value = y;
+      inp.classList.remove("is-invalid");
+      if (y === F.a) return paintPeriodFilter();
+      F.a = y; F.b = F.hi;
       renderPolicyPanel(); writeHash();
     };
-    mn.addEventListener("input", () => move("a"));
-    mx.addEventListener("input", () => move("b"));
-    $("trPolRangeReset").addEventListener("click", () => { mn.value = F.lo; mx.value = F.hi; move("a"); });
+    sl.addEventListener("input", () => set(+sl.value, sl));
+    // typing: applied as soon as a full year in range is entered; out-of-range values are corrected on leaving the box
+    inp.addEventListener("input", () => {
+      const v = inp.value.trim(), y = +v;
+      const ok = /^\d{4}$/.test(v) && y >= F.lo && y <= F.hi;
+      inp.classList.toggle("is-invalid", /^\d{4,}$/.test(v) && !ok);
+      if (ok) { sl.value = y; if (y !== F.a) { F.a = y; renderPolicyPanel(); writeHash(); } }
+    });
+    inp.addEventListener("change", () => set(inp.value.trim() === "" ? F.a : +inp.value));
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+    $("trPolRangeReset").addEventListener("click", () => set(F.lo));
   }
   function paintPeriodFilter() {
     const F = T.polFilter;
     if (!isNum(F.lo)) return;
-    $("trPolFrom").textContent = F.a; $("trPolTo").textContent = F.b;
+    const sl = $("trPolMin"), inp = $("trPolFromIn");
+    if (+sl.value !== F.a) sl.value = F.a;
+    if (document.activeElement !== inp && +inp.value !== F.a) inp.value = F.a;
     const span = Math.max(1, F.hi - F.lo);
     const fill = $("trPolFill");
     fill.style.left = ((F.a - F.lo) / span * 100) + "%";
-    fill.style.width = ((F.b - F.a) / span * 100) + "%";
-    // keep the start handle reachable when both handles sit at the right end
-    $("trPolMin").style.zIndex = F.a > F.hi - span * 0.1 ? 5 : 3;
+    fill.style.width = ((F.hi - F.a) / span * 100) + "%";
   }
   const inPeriod = p => !T.polFilter.on || (isNum(p.year) && p.year >= T.polFilter.a && p.year <= T.polFilter.b);
 
@@ -1143,7 +1151,7 @@
     if (F.on) {
       // count what is actually listed below (after the sector, gas and search filters)
       const n = $("trPolBody").querySelectorAll("input[data-polkey]").length;
-      $("trPolFilterNote").textContent = `${n} listed ${n === 1 ? "policy" : "policies"} started between ${F.a} and ${F.b}.`;
+      $("trPolFilterNote").textContent = `${n} listed ${n === 1 ? "policy" : "policies"} started in ${F.a} or later.`;
     }
   }
 

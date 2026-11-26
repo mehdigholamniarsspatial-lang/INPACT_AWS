@@ -187,6 +187,11 @@ body.tr-dragging,body.tr-dragging *{cursor:ew-resize!important;user-select:none}
 .tp-range input[type=range]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 4px rgba(0,132,61,.3)}
 .tp-range-scale{display:flex;justify-content:space-between;align-items:center;font-size:.64rem;color:var(--text-muted)}
 .tp-range-scale .btn-link{font-size:.68rem}
+/* start-year filter: one handle (the whole track can be clicked) and a year box */
+.tp-range-one input[type=range]{pointer-events:auto;cursor:pointer}
+.tp-start-row{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;font-size:.76rem;color:var(--text-muted)}
+.tp-start-row label{margin:0}
+.tp-start-in{width:5.2rem;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;text-align:center;padding:.15rem .3rem}
 
 /* ---- Policies show/hide button ---- */
 .tr-tool-pol:disabled{opacity:.5;cursor:not-allowed}
