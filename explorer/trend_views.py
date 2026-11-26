@@ -232,6 +232,10 @@ def trend_policies(request):
             "mechanism": mech[1], "color": mech[0], "layer": layer[0],
             "instrument": s.instrument_type or "",
             "effect_kt": s.reported_effect_kt, "effect_year": s.effect_reference_year,
+            # strength / importance, used to rank the "Most relevant" list
+            "peak": s.peak_intensity, "i2023": s.intensity_2023,
+            "binding": s.bindingness, "coverage": s.coverage_share,
+            "major": bool(s.anchor_flag or s.materiality_group_flag),
             "description": (s.description or "")[:700],
         })
 

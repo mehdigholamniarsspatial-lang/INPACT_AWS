@@ -105,8 +105,8 @@ body.tr-dragging,body.tr-dragging *{cursor:ew-resize!important;user-select:none}
 .trend-pol .tp-list{overflow:auto;flex:1 1 auto;min-height:120px;margin:0 -.25rem;padding:0 .25rem}
 .tp-count{margin-left:auto;font-size:.7rem;color:var(--text-muted);background:#eef2f5;border-radius:999px;padding:.1rem .55rem;white-space:nowrap}
 .tp-count b{color:var(--navy)}
-.tp-tabs{display:grid;grid-template-columns:1fr 1fr;gap:.3rem;margin-bottom:.5rem}
-.tp-tab{border:1.5px solid var(--grey-border);background:#fff;color:var(--navy);border-radius:8px;padding:.35rem .4rem;font-size:.76rem;font-weight:700}
+.tp-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem;margin-bottom:.5rem}
+.tp-tab{border:1.5px solid var(--grey-border);background:#fff;color:var(--navy);border-radius:8px;padding:.35rem .3rem;font-size:.72rem;font-weight:700;line-height:1.2}
 .tp-tab:hover{border-color:var(--emerald)}
 .tp-tab.active{background:var(--navy);border-color:var(--navy);color:#fff}
 .tp-pane[hidden]{display:none}
@@ -293,3 +293,18 @@ body.tr-dragging,body.tr-dragging *{cursor:ew-resize!important;user-select:none}
   .ps-tab{white-space:nowrap}
   .ps-pane{grid-template-columns:1fr}
 }
+/* ---- "Most relevant" list: policies ranked for the chart's gas and sector ---- */
+.tp-sort{display:flex;align-items:center;gap:.4rem;margin-top:.4rem}
+.tp-sort .form-select{flex:1;min-width:0}
+.tp-rel-note{font-size:.72rem;color:var(--navy);background:#eef6f1;border:1px solid #cfe6d8;border-radius:8px;padding:.3rem .5rem;margin:.35rem 0 .1rem}
+.tp-rel-note.pulse{animation:tpPulse 1.2s ease-out}
+@keyframes tpPulse{0%{background:#c9ecd6;box-shadow:0 0 0 3px rgba(0,132,61,.25)}100%{background:#eef6f1;box-shadow:none}}
+.tp-rel .tp-item{align-items:center}
+.tp-rk{flex:none;width:1.25rem;height:1.25rem;border-radius:50%;background:var(--gc,#16324f);color:#fff;
+  font-size:.62rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+.tp-rel .form-check-input:checked{background-color:var(--gc);border-color:var(--gc)}
+.tp-str{display:flex;align-items:center;gap:.3rem;margin-top:.15rem}
+.tp-str-bar{flex:1;max-width:6rem;height:.3rem;border-radius:999px;background:#e8edf2;overflow:hidden}
+.tp-str-bar span{display:block;height:100%;background:var(--gc,#00843D);border-radius:999px}
+.tp-str small{font-variant-numeric:tabular-nums}
+.tp-more{display:block;width:100%;text-align:center;font-size:.72rem;margin-top:.2rem}

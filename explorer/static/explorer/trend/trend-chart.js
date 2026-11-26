@@ -42,7 +42,10 @@
     pins: new Set(),          // policies drawn on the chart: "c|<year>|<name>" or "s|<slug>"
     card: null, cardTimer: 0, cardKey: null,
     // policy panel: which list, sector override (null = follow the chart), filters
-    polData: null, polTab: "core", polSector: null, polCross: false, polAllGases: false,
+    // polTab: "relevant" (ranked for the chart's gas + sector, the default), "sector" or "core"
+    // polSort: "strength" (importance and strength, the default), "new" or "old" (by start year)
+    polData: null, polTab: "relevant", polSector: null, polCross: false, polAllGases: false,
+    polSort: "strength", polRelAll: false, polPulse: false,
     polOpen: new Set(), polSeen: new Set(), colors: {}, palette: null,
     polFilter: { on: false, a: null, b: null, lo: null, hi: null },   // period filter on the policy lists   // open groups, group colour overrides
   };
@@ -108,6 +111,12 @@
     }
   }
 
+  function seriesChanged() {
+    T.polSector = null; T.polRelAll = false; T.polPulse = true;
+    if (T.polTab === "core") T.polTab = "relevant";      // core milestones do not depend on the series
+    hideCard(true); recompute();
+  }
+
   function series() {
     const vals = (T.data.gases[T.gas] || {})[T.sector] || [];
     const x = [], y = [];
@@ -134,6 +143,8 @@
       if (["ols", "huber", "theilsen"].includes(st.m)) T.method = st.m;
       if (isNum(st.c) && st.c >= 0.8 && st.c <= 0.99) T.conf = Math.round(st.c * 100) / 100;
       if (Array.isArray(st.p)) st.p.forEach(k => { if (typeof k === "string") T.pins.add(k); });
+      if (["relevant", "sector", "core"].includes(st.t)) T.polTab = st.t;
+      if (["strength", "new", "old"].includes(st.r)) T.polSort = st.r;
       if (Array.isArray(st.f) && isNum(st.f[0]) && isNum(st.f[1])) Object.assign(T.polFilter, { on: true, a: st.f[0], b: st.f[1] });
       if (st.k && typeof st.k === "object") for (const [g, c] of Object.entries(st.k)) if (/^#[0-9a-f]{6}$/i.test(c)) T.colors[g] = c;
       if (Array.isArray(st.b)) T.bps = st.b.filter(isNum).slice(0, MAX_BREAKS);
@@ -148,6 +159,7 @@
     }, 250);
   }
   const stateObj = () => ({ g: T.gas, s: T.sector, m: T.method, c: T.conf, b: T.bps, o: T.opt, p: [...T.pins], k: T.colors,
+    ...(T.polTab !== "relevant" ? { t: T.polTab } : {}), ...(T.polSort !== "strength" ? { r: T.polSort } : {}),
     ...(T.polFilter.on ? { f: [T.polFilter.a, T.polFilter.b] } : {}) });
 
   // ------------------------------------------------------------------
@@ -182,9 +194,10 @@
     }
     $("trProjYear").value = T.opt.proj || "";
 
-    // a new gas or sector re-targets the sector policy list (back to "same as the chart")
-    gasSel.addEventListener("change", () => { T.gas = gasSel.value; fillSectors(); T.polSector = null; hideCard(true); recompute(); });
-    $("trSector").addEventListener("change", e => { T.sector = e.target.value; T.polSector = null; hideCard(true); recompute(); });
+    // a new gas or sector re-targets the policy panel: the sector list goes back to
+    // "same as the chart" and the panel shows the policies ranked for the new series
+    gasSel.addEventListener("change", () => { T.gas = gasSel.value; fillSectors(); seriesChanged(); });
+    $("trSector").addEventListener("change", e => { T.sector = e.target.value; seriesChanged(); });
     $("trMethod").addEventListener("change", e => { T.method = e.target.value; recompute(); });
     $("trProjYear").addEventListener("input", e => {
       const v = parseInt(e.target.value, 10);
@@ -716,6 +729,8 @@
     const details = p.kind === "core"
       ? row("Sector", p.sector) + row("Type", p.type) + row("Instrument", p.instrument) + row("Direction", p.direction) + row("Outcome", p.outcome)
       : row("Layer", p.layer) + row("Instrument", p.instrument) + row("Gases", (p.gases || []).map(g => GAS_LABEL[g] || g).join(", ")) +
+        (isNum(p.peak) ? row("Policy strength", `peak intensity ${fmt(p.peak, 2)} of 1${isNum(p.i2023) ? ` · ${fmt(p.i2023, 2)} in 2023` : ""}`) : "") +
+        (p.major ? row("Importance", "Key policy for its sector (anchor or material effect)") : "") +
         (isNum(p.effect_kt) ? row("Reported effect", `${fmt(p.effect_kt, 1)} kt CO₂-eq/yr${p.effect_year ? ` (${p.effect_year})` : ""}`) : "");
     return `<button type="button" class="pc-close" aria-label="Close">×</button>
       <h4>${esc(p.name)}</h4>
@@ -786,10 +801,13 @@
   function bindPolicyPanel() {
     const panel = $("trPolPanel");
     panel.querySelectorAll("[data-poltab]").forEach(b => b.addEventListener("click", () => {
-      T.polTab = b.dataset.poltab; closePalette(); renderPolicyPanel();
+      T.polTab = b.dataset.poltab; closePalette(); renderPolicyPanel(); writeHash();
     }));
+    const sortSel = $("trPolSort");
+    sortSel.value = T.polSort;
+    sortSel.addEventListener("change", () => { T.polSort = sortSel.value; renderPolicyPanel(); writeHash(); });
     $("trPolSearch").addEventListener("input", renderPolicyPanel);
-    $("trPolSector").addEventListener("change", e => { T.polSector = e.target.value || null; renderPolicyPanel(); });
+    $("trPolSector").addEventListener("change", e => { T.polSector = e.target.value || null; T.polRelAll = false; renderPolicyPanel(); });
     $("trPolCross").addEventListener("change", e => { T.polCross = e.target.checked; renderPolicyPanel(); });
     $("trPolAllGases").addEventListener("change", e => { T.polAllGases = e.target.checked; renderPolicyPanel(); });
     $("trPolClear").addEventListener("click", () => { T.pins.clear(); hideCard(true); recompute(); });
@@ -806,6 +824,15 @@
         const g = hd.dataset.togglegroup;
         if (T.polOpen.has(g)) T.polOpen.delete(g); else T.polOpen.add(g);
         renderPolicyPanel();
+        return;
+      }
+      if (e.target.closest("[data-relmore]")) { T.polRelAll = !T.polRelAll; renderPolicyPanel(); return; }
+      const top = e.target.closest("[data-reltop]");
+      if (top) {
+        // "Top 5 on chart": draw the first five listed (in the current order)
+        [...$("trPolBody").querySelectorAll(".tp-rel input[data-polkey]:not(:disabled)")].slice(0, 5)
+          .forEach(cb => T.pins.add(cb.dataset.polkey));
+        recompute();
         return;
       }
       const all = e.target.closest("[data-polall]");
@@ -897,6 +924,87 @@
     if (T.palette && !T.palette.contains(e.target) && !e.target.closest("[data-colorgroup]")) closePalette();
   });
 
+  // ---- ranking: importance and strength ----
+  // A policy's relevance to the chart's series, on [0, 1]:
+  //   55% strength   peak policy intensity (implementation x coverage x bindingness)
+  //   30% importance reported effect (kt CO2-eq/yr, log scale)
+  //   15% key policy anchor policy or material effect for its sector
+  // each scaled to the best in its policy sector, then x0.85 when the policy only covers
+  // the gas through "All gases" and x0.6 for a cross-sectoral law.
+  function scorePolicies(list, opts = {}) {
+    // scaled within each policy sector, so framework laws (intensity 1) do not set the scale for sector measures
+    const eff = p => isNum(p.effect_kt) && p.effect_kt > 0 ? Math.log1p(p.effect_kt) : 0;
+    const maxPeak = {}, maxEff = {};
+    for (const p of list) {
+      maxPeak[p.sector] = Math.max(maxPeak[p.sector] || 1e-9, isNum(p.peak) ? p.peak : 0);
+      maxEff[p.sector] = Math.max(maxEff[p.sector] || 1e-9, eff(p));
+    }
+    const code = T.polData && T.polData.gas_codes[T.gas];
+    const out = new Map();
+    for (const p of list) {
+      let v = 0.55 * (isNum(p.peak) ? p.peak / maxPeak[p.sector] : 0)
+        + 0.30 * eff(p) / maxEff[p.sector]
+        + 0.15 * (p.major ? 1 : 0);
+      if (code && !(p.gases || []).includes(code)) v *= 0.85;
+      // cross-sectoral laws frame every sector but act on none directly: ranked below the sector's own measures
+      if (opts.cross && p.sector === "Cross-sectoral") v *= 0.6;
+      out.set(p.key, v);
+    }
+    return out;
+  }
+  /** Sort in place by the panel's "Sort by" choice; `score` is a Map from scorePolicies. */
+  function sortPolicies(list, score) {
+    const yr = p => isNum(p.year) ? p.year : -Infinity;
+    const sc = p => score.get(p.key) || 0;
+    const byName = (a, b) => a.name.localeCompare(b.name);
+    const cmp = {
+      strength: (a, b) => sc(b) - sc(a) || yr(b) - yr(a) || byName(a, b),
+      new: (a, b) => yr(b) - yr(a) || sc(b) - sc(a) || byName(a, b),
+      old: (a, b) => yr(a) - yr(b) || sc(b) - sc(a) || byName(a, b),
+    }[T.polSort] || (() => 0);
+    return list.sort(cmp);
+  }
+  const REL_TOP = 10;
+  function relevantItem(it, i, score, best) {
+    const p = it.p, rel = Math.round((score.get(p.key) || 0) / best * 100);
+    const title = it.inData ? "" : ` title="${p.year} is outside the years shown on the chart"`;
+    const rank = T.polSort === "strength" ? `<span class="tp-rk" title="Rank ${i + 1}">${i + 1}</span>` : "";
+    const meta = (p.sector === "Cross-sectoral" ? "Cross-sectoral · " : "") + esc(p.mechanism) +
+      (isNum(p.effect_kt) && p.effect_kt > 0 ? ` · ${fmt(p.effect_kt, 0)} kt/yr` : "");
+    const str = isNum(p.peak) ? `strength ${fmt(p.peak, 2)}` : "no strength data";
+    return `<label class="tp-item${it.inData ? "" : " off"}"${title} style="--gc:${p.color}">
+      <input type="checkbox" class="form-check-input" data-polkey="${esc(p.key)}" ${T.pins.has(p.key) ? "checked" : ""} ${it.inData ? "" : "disabled"}>
+      ${rank}<span class="tp-yr">${p.year ?? "–"}</span>
+      <span class="tp-txt"><span class="tp-nm">${esc(p.name)}</span><small>${meta}</small>
+        <span class="tp-str" title="Relevance ${rel} of 100 · peak intensity ${isNum(p.peak) ? fmt(p.peak, 2) : "–"}">
+          <span class="tp-str-bar"><span style="width:${rel}%"></span></span><small>${str}</small>
+        </span>
+      </span>
+    </label>`;
+  }
+  function relevantBox(sector, items, score, opts) {
+    const c = colorOf(sector);
+    const best = Math.max(1e-9, ...items.map(it => score.get(it.p.key) || 0));
+    const on = items.filter(it => T.pins.has(it.p.key)).length;
+    const shown = T.polRelAll || opts.force ? items : items.slice(0, REL_TOP);
+    const rows = shown.map((it, i) => relevantItem(it, i, score, best)).join("") ||
+      `<div class="trend-hint py-1">${opts.empty}</div>`;
+    const more = items.length > REL_TOP && !opts.force
+      ? `<button type="button" class="btn btn-link btn-sm p-0 tp-more" data-relmore="1">${T.polRelAll ? `Show the top ${REL_TOP} only` : `Show all ${items.length}`}</button>` : "";
+    const bar = items.some(it => it.inData)
+      ? `<div class="tp-bar"><button type="button" class="btn btn-link btn-sm p-0" data-reltop="1">Top 5 on chart</button>
+          <button type="button" class="btn btn-link btn-sm p-0" data-polall="0">Hide all</button></div>` : "";
+    return `<div class="tp-group open tp-rel" style="--gc:${c};--gbg:${rgba(c, 0.07)};--gbd:${rgba(c, 0.35)}">
+      <div class="tp-gh">
+        <button type="button" class="tp-swatch" data-colorgroup="${esc(sector)}" style="background:${c}"
+          title="Change colour" aria-label="Change the colour of ${esc(sector)} policies" aria-haspopup="dialog"></button>
+        <span class="tp-ghbtn" style="cursor:default"><span class="tp-gname">${esc(opts.label)}</span>
+          <span class="tp-n${on ? " has" : ""}" title="${on} of ${items.length} on the chart">${on ? `${on}/` : ""}${items.length}</span></span>
+      </div>
+      <div class="tp-gbody">${bar}${opts.note ? `<div class="trend-hint mb-1">${opts.note}</div>` : ""}${rows}${more}</div>
+    </div>`;
+  }
+
   // ---- list rendering ----
   function polItem(p, inData, meta) {
     const checked = T.pins.has(p.key) ? "checked" : "";
@@ -945,7 +1053,10 @@
       b.classList.toggle("active", on); b.setAttribute("aria-selected", on ? "true" : "false");
     });
     $("trPolCorePane").hidden = T.polTab !== "core";
-    $("trPolSectorPane").hidden = T.polTab !== "sector";
+    $("trPolSectorPane").hidden = T.polTab === "core";          // shared by "sector" and "relevant"
+    const rel = T.polTab === "relevant";
+    $("trPolCrossWrap").hidden = rel;                         // the ranking always weighs cross-sectoral laws in
+    $("trPolRelNote").hidden = !rel;
     const R = T.result, lo = R.x[0], hi = R.x[R.x.length - 1];
     const inData = p => isNum(p.year) && p.year >= lo && p.year <= hi;
     const q = $("trPolSearch").value.trim().toLowerCase();
@@ -979,10 +1090,34 @@
       $("trPolSectorNote").innerHTML = auto
         ? `The chart shows <b>${esc(T.sector)}</b>, matched to the <b>${esc(auto)}</b> sector.`
         : `<b>${esc(T.sector)}</b> has no single matching policy sector: choose one.`;
-      $("trPolGasNote").textContent = `Listing policies that affect ${gasName}.`;
-      $("trPolAllGasesWrap").hidden = T.gas === "Total GHG";
+      $("trPolGasNote").textContent = `${rel ? "Ranking" : "Listing"} policies that affect ${gasName}.`;
+      $("trPolAllGasesWrap").hidden = rel || T.gas === "Total GHG";
+      const note = $("trPolRelNote");
+      if (rel) {
+        note.innerHTML = sector
+          ? `<i class="bi bi-star-fill"></i> Strongest policies for <b>${esc(T.gas)}</b> · <b>${esc(T.sector)}</b>${T.polSector ? ` (using ${esc(sector)})` : ""}.
+             Ranked by strength (peak policy intensity), reported effect and key-policy status.`
+          : `<i class="bi bi-star"></i> Choose a policy sector above to rank its policies for <b>${esc(T.gas)}</b>.`;
+        // a short highlight tells the user the list followed the new series
+        if (T.polPulse) { note.classList.remove("pulse"); void note.offsetWidth; note.classList.add("pulse"); }
+      }
+      T.polPulse = false;
       if (!sector) {
         html = `<div class="trend-hint">Choose a sector above to list its policies.</div>`;
+      } else if (rel) {
+        // the chart's sector plus cross-sectoral laws, only those affecting the chart's gas
+        const code = d.gas_codes[T.gas];
+        const pool = POLICY_LIST.filter(p => p.kind === "sector" && (p.sector === sector || p.sector === "Cross-sectoral") &&
+          match(p) && (!code || (p.gases || []).some(g => g === code || g === "All")));
+        const score = scorePolicies(pool, { cross: true });
+        const items = sortPolicies(pool, score).map(p => ({ p, inData: inData(p) }));
+        html = relevantBox(sector, items, score, {
+          label: `Most relevant: ${sector}`,
+          force: !!q || F.on,
+          note: items.length && !items.some(it => it.p.sector === sector)
+            ? `No ${esc(sector)} policy in the Policy Timeline targets ${esc(T.gas)} directly; the cross-sectoral climate laws below frame it.` : "",
+          empty: `No ${esc(sector)} or cross-sectoral policy in the Policy Timeline affects ${esc(T.gas)}${q ? ` matching “${esc(q)}”` : ""}${periodTxt ? ` started${periodTxt}` : ""}.`,
+        });
       } else {
         const groups = [sector, ...(T.polCross ? ["Cross-sectoral"] : [])];
         html = groups.map(g => {
@@ -990,6 +1125,7 @@
           if (!T.polSeen.has(g)) { T.polSeen.add(g); T.polOpen.add(g); }
           const pool = POLICY_LIST.filter(p => p.kind === "sector" && p.sector === g && match(p));
           const shown = pool.filter(affectsGas), hidden = pool.length - shown.length;
+          sortPolicies(shown, scorePolicies(shown));
           const items = shown.map(p => ({ p, inData: inData(p),
             meta: `${esc(p.mechanism)} · ${(p.gases || []).map(x => GAS_LABEL[x] || x).join(", ")}` }));
           return polGroup(g, g === "Cross-sectoral" ? "Cross-sectoral laws" : `${g} policies`, items, {

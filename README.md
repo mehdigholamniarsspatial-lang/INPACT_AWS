@@ -332,7 +332,22 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
     narrower screens). Tick a policy to draw it as a labelled vertical line
     at its start year: dotted for core policies, dash-dot for sector
     policies. Hover the line for a card with the full description and a link
-    to its profile in the Policy Timeline tab. The panel has two tabs:
+    to its profile in the Policy Timeline tab. The panel has three tabs:
+    * **Most relevant** (the default): the policies for the chart's gas and
+      sector, ranked by importance and strength. The pool is the matched
+      policy sector plus cross-sectoral laws, keeping only series that affect
+      the chart's gas. Score (`scorePolicies` in `trend-chart.js`) = 55% peak
+      policy intensity + 30% reported effect (log kt) + 15% key policy
+      (anchor or material), each scaled to the best in its policy sector;
+      ×0.85 when the gas is covered only through "All", ×0.6 for a
+      cross-sectoral law. The top 10 show with a rank, a relevance bar and
+      the peak intensity ("Show all" lists the rest); "Top 5 on chart" draws
+      the first five. **Changing the gas or sector updates the panel
+      automatically**: the sector list returns to "same as the chart", a Core
+      tab switches to Most relevant, and the note above the list flashes.
+    * **Sort by** (Most relevant and Sector policies tabs): importance and
+      strength (default), year newest first, or year oldest first. The tab
+      and sort are saved in the shareable link (`t`, `r`) when not default.
     * **Core policies:** the main laws, plans and agreements from
       `data/policies.csv`, grouped as International, EU, National and
       Targets. 6 of them have a Policy Timeline profile, matched in
@@ -522,7 +537,7 @@ python manage.py load_policy_data --data-dir /path/to/ireland_core_policy_releas
 | `GET /api/trend/catalog/` | Gases, sectors and year axis for Trend Analysis |
 | `GET /api/trend/series/?gas=&sector=` | Raw series |
 | `GET /api/trend/bundle/` | Every gas and sector series in one response (used by the in-browser engine) |
-| `GET /api/trend/policies/` | Core and sector policies for the overlay panel, with the inventory-sector → policy-sector map |
+| `GET /api/trend/policies/` | Core and sector policies for the overlay panel (sector series carry `peak`, `i2023`, `binding`, `coverage`, `major` for the Most relevant ranking), with the inventory-sector → policy-sector map |
 | `POST /api/trend/fit/` | Fit, statistics and diagnostics. Optional `start` / `end` years restrict the fit to a window. At most 10 breakpoints. |
 | `POST /api/feedback/` | Record a feedback submission |
 | `GET /api/feedback/download/` | Download the feedback workbook |
