@@ -17,6 +17,11 @@
  *      }
  *   TrendPlotStyle.refresh()    re-draws the lists that depend on the chart
  *                               (segments, breakpoints, policies, legend entries)
+ *   TrendPlotStyle.editPart(part, info, x, y)   Edit plot: a small box with one
+ *                               part's settings (PARTS), opened at client x, y;
+ *                               ctx.openSettings() opens the full panel and
+ *                               ctx.onEditClose() runs when the box closes
+ *   TrendPlotStyle.closeEdit() / partName(part, info)
  *
  * The current style is kept in the viewer's browser (localStorage) so it
  * survives a reload; named configurations can be saved there too, and any
@@ -171,9 +176,11 @@
     const t = ks.reduce((a, k) => (a[k] = a[k] && typeof a[k] === "object" ? a[k] : {}), o);
     t[last] = v;
   }
+  let popEvt = false;                                  // true while an Edit-plot box handles an event
   function changed() {
     lsSet(LS_CURRENT, style); lsSet(LS_PRESET, presetName);
-    if (live) { ctx && ctx.onChange(); dirty = false; }
+    if (popEvt) staleMain();                           // the full panel is redrawn from the new style
+    if (live || popEvt) { ctx && ctx.onChange(); dirty = false; }   // Edit plot always applies at once
     else dirty = true;
     syncButtons();
   }
@@ -353,9 +360,9 @@
   // Rendering helpers
   // ------------------------------------------------------------------
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  let uid = 0;
+  let uid = 0, idPre = "ps";
   function fieldHtml(fd) {
-    const id = `ps_${++uid}`;
+    const id = `${idPre}_${++uid}`;
     const lab = `<label for="${id}">${esc(fd.label)}</label>`;
     const hint = fd.hint ? `<small class="ps-hint">${esc(fd.hint)}</small>` : "";
     const v = getPath(style, fd.path);
@@ -398,6 +405,10 @@
             `<option value="${k}"${style.trend.paletteName === k ? " selected" : ""}>${esc(t)}</option>`).join("")}<option value="custom"${style.trend.paletteName === "custom" ? " selected" : ""}>Custom</option></select>
           <span class="ps-swatches">${style.trend.palette.slice(0, 8).map((c, i) =>
             `<input type="color" value="${esc(c)}" data-pal="${i}" title="Segment ${i + 1}" aria-label="Colour of trend segment ${i + 1}">`).join("")}</span></div></div>`;
+      case "segColor": {                               // one trend segment's colour (Edit plot)
+        const c = style.trend.palette[+fd.path] || "#000000";
+        return `<div class="ps-f">${lab}<span class="ps-color"><input type="color" id="${id}" value="${esc(c)}" data-pal="${fd.path}"><code>${esc(c)}</code></span></div>`;
+      }
       default: return "";
     }
   }
@@ -501,6 +512,195 @@
   };
 
   // ------------------------------------------------------------------
+  // Edit plot: click one part of the chart and change only its settings in a
+  // small box beside it. The box is built from the same fields as the full
+  // panel (and the same event handlers), so both always agree.
+  // ------------------------------------------------------------------
+  const grp = (tab, title, rename) => {
+    const g = TABS.find(t => t.id === tab).groups.find(x => x.title === title);
+    return rename ? { ...g, title: rename } : g;
+  };
+  // part -> name, icon, the full panel's tab ("All settings") and the groups shown
+  const PARTS = {
+    title: { name: () => "Chart title", icon: "bi-type-h1", tab: "figure", groups: () => [grp("figure", "Title")] },
+    xtitle: { name: () => "X-axis title", icon: "bi-fonts", tab: "xaxis", groups: () => [grp("xaxis", "Title"), grp("xaxis", "Title font")] },
+    ytitle: { name: () => "Y-axis title", icon: "bi-fonts", tab: "yaxis", groups: () => [grp("yaxis", "Title"), grp("yaxis", "Title font")] },
+    xaxis: { name: () => "X axis (years)", icon: "bi-arrows", tab: "xaxis",
+      groups: () => [grp("xaxis", "Tick labels"), grp("xaxis", "Ticks"), grp("xaxis", "Limits and scale"), grp("xaxis", "Axis line"), grp("xaxis", "Title", "Axis title")] },
+    yaxis: { name: () => "Y axis (emissions)", icon: "bi-arrows-vertical", tab: "yaxis",
+      groups: () => [grp("yaxis", "Tick labels"), grp("yaxis", "Ticks"), grp("yaxis", "Limits and scale"), grp("yaxis", "Axis line"), grp("yaxis", "Title", "Axis title")] },
+    plot: { name: () => "Plot area", icon: "bi-grid-3x3", tab: "figure", groups: () => [
+      { title: "Background", fields: [f("color", "figure.plot", "Plot background")] },
+      grp("xaxis", "Gridlines", "Vertical gridlines"), grp("yaxis", "Gridlines", "Horizontal gridlines"), grp("figure", "Plot border")] },
+    figure: { name: () => "Figure", icon: "bi-aspect-ratio", tab: "figure",
+      groups: () => [grp("figure", "Colours"), grp("figure", "Title", "Chart title"), grp("figure", "Size and margins"), grp("figure", "Fonts")] },
+    obs: { name: () => "Observed emissions", icon: "bi-graph-up", tab: "series", groups: () => [grp("series", "Line"), grp("series", "Markers")] },
+    trend: { name: x => x.label || "Trend line", icon: "bi-bezier2", tab: "trend", groups: x => [
+      { title: "This segment", fields: [f("segColor", String(x.pal | 0), "Colour")] }, grp("trend", "Trend lines", "All trend lines"),
+      grp("trend", "Confidence band (mean)"), grp("trend", "Prediction interval")] },
+    band: { name: () => "Confidence band", icon: "bi-bezier2", tab: "trend", groups: () => [grp("trend", "Confidence band (mean)")] },
+    pred: { name: () => "Prediction interval", icon: "bi-bezier2", tab: "trend", groups: () => [grp("trend", "Prediction interval")] },
+    proj: { name: () => "Projection", icon: "bi-graph-up-arrow", tab: "trend", groups: () => [grp("trend", "Projection")] },
+    bp: { name: x => `Breakpoint ${x.year}`, icon: "bi-signpost-split", tab: "bp", groups: () => [
+      { title: "This breakpoint", custom: "bp" }, grp("bp", "Lines", "All breakpoint lines"), grp("bp", "Year labels", "All year labels")] },
+    pol: { name: x => x.name || "Policy line", icon: "bi-flag", tab: "pol", groups: () => [
+      { title: "This policy", custom: "pol" }, grp("pol", "All policy lines"), grp("pol", "Annotations", "All policy labels")] },
+    legend: { name: () => "Legend", icon: "bi-list-ul", tab: "legend", groups: () => [grp("legend", "Layout"), grp("legend", "Text"), grp("legend", "Box")] },
+    legendEntry: { name: x => `Legend entry: ${x.label || ""}`, icon: "bi-list-ul", tab: "legend", groups: () => [
+      { title: "This entry", custom: "lg" }, grp("legend", "Text", "All legend text"), grp("legend", "Layout", "Legend layout")] },
+  };
+  const partName = (part, info) => (PARTS[part] ? PARTS[part].name(info || {}) : "");
+
+  // the "This breakpoint / policy / entry" boxes reuse the full panel's per-item controls
+  function customHtml(kind, x) {
+    if (kind === "bp") return `<div class="ps-grid">
+      <div class="ps-f ps-check"><input type="checkbox" class="form-check-input" id="pe_bpl" data-bpline="${x.year}" ${style.bp.hidden.includes(x.year) ? "" : "checked"}><label for="pe_bpl">Show this line</label></div>
+      <div class="ps-f ps-check"><input type="checkbox" class="form-check-input" id="pe_bpt" data-bplabel="${x.year}" ${style.bp.hiddenLabel.includes(x.year) ? "" : "checked"}><label for="pe_bpt">Show its year label</label></div></div>`;
+    if (kind === "pol") {
+      const o = style.pol.per[x.key] || {}, k = esc(x.key);
+      return `<div class="ps-grid">
+        <div class="ps-f ps-check"><input type="checkbox" class="form-check-input" id="pe_pls" data-per="${k}" data-prop="show" ${o.show === false ? "" : "checked"}><label for="pe_pls">Show this line</label></div>
+        <div class="ps-f ps-check"><input type="checkbox" class="form-check-input" id="pe_pll" data-per="${k}" data-prop="label" ${o.label === false ? "" : "checked"}><label for="pe_pll">Show its label</label></div>
+        <div class="ps-f"><label for="pe_plc">Colour</label><span class="ps-color"><input type="color" id="pe_plc" data-per="${k}" data-prop="color" value="${esc(o.color || x.color || "#666666")}">
+          <button type="button" class="ps-auto${o.color ? "" : " on"}" data-perauto="${k}" title="Use the group colour">Group colour</button></span></div>
+        <div class="ps-f ps-wide"><label for="pe_plt">Label text</label><input type="text" class="form-control form-control-sm" id="pe_plt" data-per="${k}" data-prop="text"
+          value="${esc(o.text || "")}" placeholder="${esc(String(x.name || "").slice(0, 40))}"></div></div>`;
+    }
+    if (kind === "lg") return `<div class="ps-grid">
+      <div class="ps-f ps-check"><input type="checkbox" class="form-check-input" id="pe_lgs" data-lgomit="${esc(x.key)}" ${style.legend.omit.includes(x.key) ? "" : "checked"}><label for="pe_lgs">Show in the legend</label></div>
+      <div class="ps-f ps-wide"><label for="pe_lgl">Label</label><input type="text" class="form-control form-control-sm" id="pe_lgl" data-lglabel="${esc(x.key)}"
+        value="${esc(style.legend.labels[x.key] || "")}" placeholder="${esc(x.label || "")}"></div></div>`;
+    return "";
+  }
+
+  let pop = null, popPart = null, popInfo = null, mainTimer = 0;
+  // the full panel is redrawn (shortly after) so it shows what was changed in the box
+  function staleMain() { clearTimeout(mainTimer); mainTimer = setTimeout(() => { if (ctx) renderPanel(); }, 350); }
+  function popEl() {
+    if (pop) return pop;
+    pop = document.createElement("div");
+    pop.className = "ps-pop"; pop.hidden = true;
+    pop.setAttribute("role", "dialog");
+    document.body.appendChild(pop);
+    const wrap = fn => e => { popEvt = true; try { fn(e); } finally { popEvt = false; } };
+    pop.addEventListener("input", wrap(e => {
+      const t = e.target;
+      if (t.dataset.palette) return;
+      onInput(e);
+    }));
+    pop.addEventListener("change", wrap(e => {
+      const t = e.target;
+      if (t.type === "text" || t.type === "number" || t.type === "range" || t.type === "color") return;
+      onChangeEvt(e);
+      if (t.dataset.palette) renderPop();               // a new palette: redraw the segment colour
+    }));
+    pop.addEventListener("click", wrap(e => {
+      const a = e.target.closest("[data-popact]");
+      if (!a) return onClick(e);
+      const act = a.dataset.popact;
+      if (act === "close") closeEdit();
+      if (act === "reset") resetPart();
+      if (act === "all") {
+        const tab = PARTS[popPart].tab;
+        closeEdit();
+        activeTab = tab; renderPanel();
+        ctx.openSettings && ctx.openSettings();
+      }
+    }));
+    pop.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); closeEdit(); } });
+    // drag the box by its header
+    pop.addEventListener("pointerdown", e => {
+      const h = e.target.closest(".ps-pop-head");
+      if (!h || e.target.closest("button")) return;
+      const r = pop.getBoundingClientRect(), dx = e.clientX - r.left, dy = e.clientY - r.top;
+      const mv = ev => { pop.style.left = `${Math.max(0, Math.min(innerWidth - 60, ev.clientX - dx))}px`; pop.style.top = `${Math.max(0, Math.min(innerHeight - 40, ev.clientY - dy))}px`; };
+      const up = () => { removeEventListener("pointermove", mv); removeEventListener("pointerup", up); };
+      addEventListener("pointermove", mv); addEventListener("pointerup", up);
+      e.preventDefault();
+    });
+    return pop;
+  }
+  function renderPop() {
+    const P = PARTS[popPart];
+    if (!P || !pop) return;
+    const keep = pop.querySelector(".ps-pop-body") ? pop.querySelector(".ps-pop-body").scrollTop : 0;
+    const save = [uid, idPre]; uid = 0; idPre = "pe";
+    const name = P.name(popInfo);
+    pop.setAttribute("aria-label", `Edit: ${name}`);
+    pop.innerHTML = `
+      <div class="ps-pop-head" title="Drag to move">
+        <i class="bi ${P.icon}" aria-hidden="true"></i><b>${esc(name)}</b>
+        <button type="button" class="ps-pop-x" data-popact="close" aria-label="Close" title="Close (Esc)"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="ps-pop-body">${P.groups(popInfo).map(g => `<fieldset class="ps-group"><legend>${esc(g.title)}</legend>
+        ${g.custom ? customHtml(g.custom, popInfo) : `<div class="ps-grid">${g.fields.map(fieldHtml).join("")}</div>`}</fieldset>`).join("")}</div>
+      <div class="ps-pop-foot">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-popact="reset" title="Put this part back to its default look"><i class="bi bi-arrow-counterclockwise"></i> Reset this part</button>
+        <button type="button" class="btn btn-link btn-sm" data-popact="all" title="Open Advanced Plot Settings at this part">All settings <i class="bi bi-box-arrow-down-right"></i></button>
+      </div>`;
+    [uid, idPre] = save;
+    pop.querySelector(".ps-pop-body").scrollTop = keep;
+  }
+  // bottom of the page's fixed / sticky header, so the box never slides under it
+  function topBar() {
+    let el = document.elementFromPoint(innerWidth / 2, 2);
+    while (el && el !== document.body && el !== document.documentElement) {
+      const pos = getComputedStyle(el).position;
+      if (pos === "fixed" || pos === "sticky") return Math.max(0, el.getBoundingClientRect().bottom);
+      el = el.parentElement;
+    }
+    return 0;
+  }
+  function placePop(cx, cy) {
+    const p = pop;
+    p.style.visibility = "hidden";                     // measured, and not found by elementFromPoint
+    const top = topBar() + 8, m = 10;
+    if (innerWidth < 640) {                            // phones: docked to the bottom, the chart stays visible above
+      p.classList.add("ps-pop-dock"); p.style.left = p.style.top = p.style.maxHeight = ""; p.style.visibility = ""; return;
+    }
+    p.style.maxHeight = `${Math.max(220, innerHeight - top - m)}px`;
+    p.classList.remove("ps-pop-dock");
+    const w = p.offsetWidth, h = p.offsetHeight;
+    let x = cx + 18, y = cy - 30;
+    if (x + w > innerWidth - m) x = cx - w - 18;
+    x = Math.max(m, Math.min(x, innerWidth - w - m));
+    y = Math.max(top, Math.min(y, innerHeight - h - m));
+    p.style.left = `${x}px`; p.style.top = `${y}px`;
+    p.style.visibility = "";
+  }
+  /** Open the box for one part of the chart, next to the point clicked (client px). */
+  function editPart(part, info, cx, cy) {
+    if (!PARTS[part] || !ctx) return;
+    const same = pop && !pop.hidden && popPart === part && JSON.stringify(info || {}) === JSON.stringify(popInfo || {});
+    popPart = part; popInfo = info || {};
+    popEl(); renderPop();
+    if (!same) { pop.hidden = false; placePop(cx, cy); }
+    const first = pop.querySelector(".ps-pop-body input, .ps-pop-body select");
+    if (first && !same) first.focus({ preventScroll: true });
+  }
+  function closeEdit() {
+    if (!pop || pop.hidden) return;
+    pop.hidden = true; popPart = null; popInfo = null;
+    ctx && ctx.onEditClose && ctx.onEditClose();
+  }
+  // "Reset this part": every field in the box goes back to the default
+  function resetPart() {
+    const P = PARTS[popPart], x = popInfo;
+    P.groups(x).forEach(g => {
+      if (g.custom === "bp") { style.bp.hidden = style.bp.hidden.filter(y => y !== x.year); style.bp.hiddenLabel = style.bp.hiddenLabel.filter(y => y !== x.year); }
+      if (g.custom === "pol") delete style.pol.per[x.key];
+      if (g.custom === "lg") { style.legend.omit = style.legend.omit.filter(k => k !== x.key); delete style.legend.labels[x.key]; }
+      (g.fields || []).forEach(fd => {
+        if (fd.type === "segColor") { style.trend.palette[fd.path] = DEFAULTS.trend.palette[fd.path]; style.trend.paletteName = "custom"; return; }
+        if (fd.type === "palette") { style.trend.palette = DEFAULTS.trend.palette.slice(); style.trend.paletteName = DEFAULTS.trend.paletteName; return; }
+        if (fd.type === "checkOpt" || fd.type === "selectOpt") return;   // Display switches are not "look"
+        setPath(style, fd.path, clone(getPath(DEFAULTS, fd.path)));
+      });
+    });
+    markCustom(); changed(); renderPop();
+  }
+
+  // ------------------------------------------------------------------
   // Events (delegated)
   // ------------------------------------------------------------------
   function onInput(e) {
@@ -513,6 +713,7 @@
     if (el.dataset.pal != null) {
       style.trend.palette[+el.dataset.pal] = el.value; style.trend.paletteName = "custom";
       const sel = ctx.root.querySelector("[data-palette]"); if (sel) sel.value = "custom";
+      const code = el.parentElement.querySelector("code"); if (code) code.textContent = el.value;
       markCustom(); return changed();
     }
     if (el.dataset.per) {
@@ -661,5 +862,6 @@
     c.root.addEventListener("click", onClick);
   }
 
-  root.TrendPlotStyle = { DEFAULTS, PRESETS, PALETTES, get: () => style, mount, refresh, merge };
+  root.TrendPlotStyle = { DEFAULTS, PRESETS, PALETTES, get: () => style, mount, refresh, merge,
+    editPart, closeEdit, partName, editing: () => !!(pop && !pop.hidden) };
 })(typeof window !== "undefined" ? window : globalThis);

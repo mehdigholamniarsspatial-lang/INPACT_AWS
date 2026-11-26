@@ -315,6 +315,19 @@ The former Streamlit "Piecewise Regression Dashboard", now a native page.
   * **Zoom in (Z)** draws a box; **Reset view** zooms back out. Each tool
     button shows a step-by-step guide on hover. Plotly's own toolbar is
     hidden.
+  * **Edit plot (E):** the chart becomes selectable, like MATLAB's plot edit
+    mode. Hovering outlines and names a part (title, axis titles, axes, plot
+    area, figure, observed data, trend segment, band, projection, breakpoint
+    or policy line or its label, legend, legend entry); clicking it opens a
+    small, draggable box with only that part's settings, applied at once.
+    "Reset this part" restores its defaults and "All settings" opens Advanced
+    Plot Settings at the matching tab. Zoom, breakpoint clicks, hover labels
+    and legend toggling are off in this mode. Parts are found by hit-testing:
+    traces carry a `meta` tag (`obs`, `seg:<i>`, `band:<i>`, `pred:<i>`,
+    `proj`) and the vertical lines a shape `name` (`bp:<year>`,
+    `pol:<key>`), in `trend-chart.js` (`editHit`). The box is built in
+    `plot-style.js` (`PARTS`, `editPart`) from the same field definitions and
+    handlers as the full panel, so the two always agree.
   * **Policies** (toolbar button): hides or shows every policy line at once.
     The ticks in the Policy overlay panel are kept, and the button shows how
     many lines it affects. Its state is saved in the shareable link.

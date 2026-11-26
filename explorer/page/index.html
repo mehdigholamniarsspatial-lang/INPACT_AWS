@@ -21,7 +21,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <!-- Bootstrap Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<link href="/static/explorer/trend/trend.css?v=20261127b" rel="stylesheet">
+<link href="/static/explorer/trend/trend.css?v=20261128c" rel="stylesheet">
 <!-- Leaflet -->
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <!-- Google Fonts -->
@@ -3989,6 +3989,22 @@ a.ug-go.alt:hover{color:var(--navy)}
                 </ol>
               </div>
             </div>
+            <div class="tr-tool-wrap">
+            <button type="button" class="tr-tool tr-tool-edit" data-mode="edit" aria-pressed="false" aria-describedby="trGuideEdit">
+              <i class="bi bi-pencil-square"></i>
+              <span class="tr-tool-txt"><b>Edit plot</b><small>Click a part</small></span>
+              <kbd>E</kbd>
+            </button>
+            <div class="tr-guide" role="tooltip" id="trGuideEdit">
+                <b><i class="bi bi-pencil-square"></i> Edit the chart directly</b>
+                <ol>
+                  <li>Move over the chart: each part (title, axis, line, background, legend) is outlined and named.</li>
+                  <li>Click it: a small box opens with only that part's settings.</li>
+                  <li>Changes show at once. <b>Reset this part</b> undoes them; <b>All settings</b> opens Advanced Plot Settings.</li>
+                </ol>
+                <span class="tr-guide-tip">Press <b>B</b> or <b>Z</b> to go back to splitting or zooming.</span>
+              </div>
+            </div>
           </div>
           <!-- Show / hide every policy line ticked in the Policy overlay panel -->
           <button type="button" class="tr-tool tr-tool-pol" id="trPolToggle" aria-pressed="true" disabled
@@ -5937,6 +5953,7 @@ a.ug-go.alt:hover{color:var(--navy)}
             <ul class="ug-list">
               <li><b>Split the trend</b> (<kbd>B</kbd>): clicking the chart adds a breakpoint (step 3).</li>
               <li><b>Zoom in</b> (<kbd>Z</kbd>): drag a box around the years and values to enlarge them.</li>
+              <li><b>Edit plot</b> (<kbd>E</kbd>): click any part of the chart to change its look in a small settings box (step 8).</li>
               <li><b>Reset view</b>, or a double-click on the chart, shows all years again.</li>
               <li><b>Legend</b> (below the chart by default): click any entry (observed data, a segment, the projection, breakpoints or a policy group) to hide or show it.</li>
             </ul>
@@ -5966,11 +5983,21 @@ a.ug-go.alt:hover{color:var(--navy)}
         <div class="ug-step" data-step="tr-plotstyle">
           <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT8">
             <span class="ug-step-num">8</span><i class="bi bi-palette ug-step-ic" aria-hidden="true"></i>
-            <span class="ug-step-txt"><b>Change the chart&rsquo;s appearance in Advanced Plot Settings</b><span>Colours, lines, markers, axes, legend and figure size.</span></span>
+            <span class="ug-step-txt"><b>Change the chart&rsquo;s appearance: Edit plot or Advanced Plot Settings</b><span>Click a part of the chart to edit it, or use the full panel for colours, lines, axes, legend and size.</span></span>
             <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
           </button>
           <div class="ug-step-body" id="ugT8">
-            <p>Click <b>Advanced Plot Settings</b> below the chart to open it. These settings change only how the chart looks; the data, fits and statistics stay the same. The bar at the top of the panel:</p>
+            <p>These settings change only how the chart looks; the data, fits and statistics stay the same. There are two ways to change them.</p>
+            <p><b>Quick way: Edit plot.</b> Edit the chart directly, one part at a time.</p>
+            <ol class="ug-list">
+              <li>Press <b>Edit plot</b> in the chart toolbar (or the <kbd>E</kbd> key). The chart gets a dashed frame; it no longer zooms, adds breakpoints or shows hover values.</li>
+              <li>Move the pointer over the chart. Each part is outlined and named: the <b>chart title</b>, the <b>axis titles</b>, the <b>X</b> and <b>Y axes</b> (tick labels), the <b>plot area</b> (background, gridlines, border), the <b>observed emissions</b>, each <b>trend line</b>, a <b>band</b>, the <b>projection</b>, a <b>breakpoint</b> or <b>policy line</b> (or its label), the margin around the plot (<b>figure</b>), the <b>legend</b> and each <b>legend entry</b>.</li>
+              <li>Click the part. A small box opens beside it with only that part&rsquo;s settings: for example the colour, width, style and opacity of a line, the text and font of a title, or the limits and tick labels of an axis. A breakpoint, policy line or legend entry also has its own settings first (show or hide it, its colour, its label text).</li>
+              <li>Change a setting: the chart updates at once. Drag the box by its header if it covers what you are editing.</li>
+              <li><b>Reset this part</b> puts that part back to its default look. <b>All settings</b> opens Advanced Plot Settings at the matching section. Close the box with &times; or <kbd>Esc</kbd>.</li>
+              <li>Press <b>Split the trend</b> (<kbd>B</kbd>) or <b>Zoom in</b> (<kbd>Z</kbd>) to leave Edit plot.</li>
+            </ol>
+            <p><b>Full panel: Advanced Plot Settings.</b> Click <b>Advanced Plot Settings</b> below the chart to open every setting, grouped in sections, plus presets and saved styles. Changes made in Edit plot appear here too. The bar at the top of the panel:</p>
             <ul class="ug-list">
               <li><b>Preset</b>: start from a ready-made style: <em>INPACT default</em>, <em>Scientific publication</em>, <em>MATLAB style</em>, <em>Minimal</em> or <em>High contrast</em>.</li>
               <li><b>Live preview</b>: when on, each change redraws the chart immediately; when off, make several changes and press <b>Apply</b>.</li>
@@ -6211,8 +6238,8 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <!-- Trend Analysis tab (Plotly itself is loaded on first visit to the tab) -->
 <script src="/static/explorer/trend/stats.js"></script>
-<script src="/static/explorer/trend/plot-style.js?v=20261127b"></script>
-<script src="/static/explorer/trend/trend-chart.js?v=20261127b"></script>
+<script src="/static/explorer/trend/plot-style.js?v=20261128c"></script>
+<script src="/static/explorer/trend/trend-chart.js?v=20261128c"></script>
 <script>
 /* =====================================================================
    Ireland Greenhouse Gas Policy Impact Explorer

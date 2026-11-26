@@ -30,7 +30,7 @@
   const MAX_BREAKS = 10;
   const HANDLE_PX = 8;
   // Plotly drag behaviour per tool (Breakpoint mode only reacts to clicks)
-  const DRAGMODE = { breakpoint: false, zoom: "zoom" };
+  const DRAGMODE = { breakpoint: false, zoom: "zoom", edit: false };
 
   const T = {
     inited: false, data: null, gd: null,
@@ -258,9 +258,9 @@
       if (!$("tab-trend").classList.contains("active")) return;
       const el = e.target instanceof Element ? e.target : null;
       if ((el && el.closest("input, select, textarea, [contenteditable]")) || e.ctrlKey || e.metaKey || e.altKey) return;
-      const k = { b: "breakpoint", z: "zoom" }[e.key.toLowerCase()];
+      const k = { b: "breakpoint", z: "zoom", e: "edit" }[e.key.toLowerCase()];
       if (k) { setMode(k); e.preventDefault(); }
-      if (e.key === "Escape") { hideCard(true); closePalette(); }
+      if (e.key === "Escape") { hideCard(true); closePalette(); if (window.TrendPlotStyle) window.TrendPlotStyle.closeEdit(); }
     });
   }
 
@@ -283,6 +283,12 @@
           legend: (T.legend || []).map(e => ({ key: e.key, label: e.label })),
         };
       },
+      openSettings: () => {
+        const c = $("trPlotSettings");
+        if (window.bootstrap && !c.classList.contains("show")) window.bootstrap.Collapse.getOrCreateInstance(c).show();
+        c.closest(".tr-ps").scrollIntoView({ behavior: "smooth", block: "start" });
+      },
+      onEditClose: () => { ED.sel = null; paintEdit(); },
     });
     $("trPlotSettings").addEventListener("shown.bs.collapse", () => window.TrendPlotStyle.refresh());
   }
@@ -298,10 +304,13 @@
       b.classList.toggle("active", on);
       b.setAttribute("aria-pressed", on ? "true" : "false");
     });
-    if (T.gd && T.gd.layout) window.Plotly.relayout(T.gd, { dragmode: DRAGMODE[mode] });
+    if (T.gd && T.gd.layout) window.Plotly.relayout(T.gd, { dragmode: DRAGMODE[mode], hovermode: mode === "edit" ? false : "x unified" });
+    $("trPlotWrap").toggleAttribute("data-edit", mode === "edit");
+    if (mode === "edit") hideCard(true); else editDone();
     $("trModeHint").innerHTML = {
       breakpoint: '<i class="bi bi-hand-index"></i> <b>Split the trend:</b> click a year to add a breakpoint, or drag a dashed line to move it. Tick policies in the <b>Policy overlay</b> panel to draw them on the chart.',
       zoom: '<i class="bi bi-hand-index"></i> <b>Zoom in:</b> drag a box. Double-click the chart or press Reset view to zoom out.',
+      edit: '<i class="bi bi-hand-index"></i> <b>Edit plot:</b> click any part of the chart (title, axes, a line, the background, the legend) to change its look. Esc closes the box.',
     }[mode];
   }
 
@@ -373,11 +382,12 @@
     const n = parseInt(hex.slice(1), 16);
     return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
   };
-  function bandTraces(lo, hi, xs, color, name, alpha) {
+  // meta: which part of the chart a trace is (Edit plot), e.g. "obs", "seg:0", "band:0", "proj"
+  function bandTraces(lo, hi, xs, color, name, alpha, meta) {
     return [
-      { x: xs, y: lo, type: "scatter", mode: "lines", line: { width: 0 }, hoverinfo: "skip", showlegend: false },
+      { x: xs, y: lo, type: "scatter", mode: "lines", line: { width: 0 }, hoverinfo: "skip", showlegend: false, meta },
       { x: xs, y: hi, type: "scatter", mode: "lines", line: { width: 0 }, fill: "tonexty", fillcolor: rgba(color, alpha),
-        hoverinfo: "skip", name, showlegend: false },
+        hoverinfo: "skip", name, showlegend: false, meta },
     ];
   }
   function lineGrid(a, b) { // dense x grid so bands curve smoothly
@@ -439,7 +449,7 @@
       line: { color: rgba(O.line.color, O.line.opacity), width: O.line.width, dash: O.line.dash },
       marker: { color: O.marker.color, size: O.marker.size, symbol: O.marker.symbol, opacity: O.marker.opacity,
         line: { color: O.marker.edge, width: O.marker.edgeWidth } },
-      hovertemplate: `%{y:,.1f} ${UNITS}<extra>Observed</extra>`,
+      hovertemplate: `%{y:,.1f} ${UNITS}<extra>Observed</extra>`, meta: "obs",
     });
 
     // Piecewise segments (line + optional bands share one legend entry)
@@ -450,13 +460,13 @@
         bandColor: PS.band.color || c, bandOpacity: PS.band.opacity });
       if (!shown(key)) return;
       const g = lineGrid(seg.start, seg.end), bd = S.bands(seg, g, T.conf);
-      if (T.opt.pred) traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, PS.pred.color || c, "Prediction interval", PS.pred.opacity));
-      if (T.opt.band) traces.push(...bandTraces(bd.map(p => p.meanLo), bd.map(p => p.meanHi), g, PS.band.color || c, "Confidence band", PS.band.opacity));
+      if (T.opt.pred) traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, PS.pred.color || c, "Prediction interval", PS.pred.opacity, `pred:${i}`));
+      if (T.opt.band) traces.push(...bandTraces(bd.map(p => p.meanLo), bd.map(p => p.meanHi), g, PS.band.color || c, "Confidence band", PS.band.opacity, `band:${i}`));
       traces.push({
         x: [seg.start, seg.end], y: [seg.intercept + seg.slope * seg.start, seg.intercept + seg.slope * seg.end],
         type: "scatter", mode: "lines", line: { color: rgba(c, PS.trend.opacity), width: PS.trend.width, dash: PS.trend.dash },
         name: `${label} (${fmtSigned(seg.slope)} kt/yr)`, showlegend: inLegend(key),
-        hovertemplate: `Seg ${seg.index} fit: %{y:,.1f}<extra>${fmtSigned(seg.slope)} /yr</extra>`,
+        hovertemplate: `Seg ${seg.index} fit: %{y:,.1f}<extra>${fmtSigned(seg.slope)} /yr</extra>`, meta: `seg:${i}`,
       });
     });
 
@@ -469,10 +479,10 @@
         color: P.color, style: P.dash, band: true, bandColor: P.bandColor, bandOpacity: P.bandOpacity });
       if (shown("proj")) {
         const g = lineGrid(last.end, T.opt.proj), bd = S.bands(last, g, T.conf);
-        traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, P.bandColor, "Projection interval", P.bandOpacity));
+        traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, P.bandColor, "Projection interval", P.bandOpacity, "proj"));
         traces.push({
           x: g, y: bd.map(p => p.y), type: "scatter", mode: "lines", line: { color: rgba(P.color, P.opacity), width: P.width, dash: P.dash },
-          name: label, showlegend: inLegend("proj"), hovertemplate: `Projection: %{y:,.1f}<extra></extra>`,
+          name: label, showlegend: inLegend("proj"), hovertemplate: `Projection: %{y:,.1f}<extra></extra>`, meta: "proj",
         });
       }
     }
@@ -486,7 +496,7 @@
         if (B.hidden.includes(bp)) return;
         const lab = B.label.show && !B.hiddenLabel.includes(bp);
         shapes.push({
-          type: "line", xref: "x", yref: "y domain", x0: bp, x1: bp, y0: 0, y1: 1,
+          name: `bp:${bp}`, type: "line", xref: "x", yref: "y domain", x0: bp, x1: bp, y0: 0, y1: 1,
           line: { color: B.color, width: B.width, dash: B.dash }, opacity: B.opacity,
           label: lab ? { text: String(bp), textposition: B.label.position, textangle: +B.label.angle,
             font: { family: fam(B.label.family, PS), size: B.label.size, weight: fontW(B.label.weight), color: B.label.color },
@@ -518,7 +528,7 @@
       const showLabel = PO.label.show && o.label !== false;
       const max = Math.max(8, PO.label.maxChars | 0);
       shapes.push({
-        type: "line", xref: "x", yref: "y domain", x0: x, x1: x, y0: 0, y1: 1,
+        name: `pol:${p.key}`, type: "line", xref: "x", yref: "y domain", x0: x, x1: x, y0: 0, y1: 1,
         line: { color: c, width: PO.width, dash: p.kind === "sector" ? PO.sectorDash : PO.coreDash }, opacity: PO.opacity, layer: "above",
         label: showLabel ? { text: txt.length > max ? txt.slice(0, max - 1).trimEnd() + "…" : txt,
           textposition: PO.label.position, textangle: +PO.label.angle, xanchor: PO.label.anchor, padding: PO.label.padding,
@@ -534,7 +544,7 @@
       height: F.height,
       margin: { l: F.margin.l, r: F.margin.r, t: titleOn ? Math.max(F.margin.t, F.title.size + 26) : F.margin.t, b: F.margin.b },
       dragmode: DRAGMODE[T.mode],
-      hovermode: "x unified",
+      hovermode: T.mode === "edit" ? false : "x unified",    // Edit plot: no hover labels
       hoverlabel: { bgcolor: "rgba(255,255,255,.96)", bordercolor: "#c9d3dc", font: { size: 12 } },
       showlegend: false,                       // replaced by the HTML legend (see renderLegend)
       plot_bgcolor: F.plot, paper_bgcolor: F.paperTransparent ? "rgba(0,0,0,0)" : F.paper,
@@ -623,6 +633,7 @@
     renderPolicyToggle();
     renderSide();
     if (window.TrendPlotStyle) window.TrendPlotStyle.refresh();
+    if (ED.sel) requestAnimationFrame(paintEdit);
     if ($("trAdvancedPanel").classList.contains("show")) renderDiagnostics();
   }
 
@@ -1195,6 +1206,7 @@
     };
     window.addEventListener("mousemove", e => {
       if (T.drag) { move(e.clientX, e.clientY); return; }
+      if (T.mode === "edit") return;
       if (e.target instanceof Node && gd.contains(e.target)) {
         if (T.card && T.card.contains(e.target)) return;
         const h = hit(e.clientX, e.clientY);
@@ -1210,6 +1222,7 @@
     const end = () => { if (T.drag) { T.drag = null; document.body.classList.remove("tr-dragging"); recompute(); } };
     window.addEventListener("mouseup", end);
     window.addEventListener("touchend", end);
+    bindEditor();
   }
 
   function plotGeom() {
@@ -1234,6 +1247,197 @@
       if (Math.abs(xp(T.bps[i]) - px) <= HANDLE_PX) return { kind: "bp", i };
     }
     return null;
+  }
+
+  // ------------------------------------------------------------------
+  // Edit plot (chart tool "Edit plot", key E): the chart becomes selectable.
+  // Hovering a part outlines it and names it; clicking it opens a small box
+  // with only that part's settings (TrendPlotStyle.editPart, plot-style.js).
+  // Parts: title, axis titles, axes, plot area, figure, observed data, trend
+  // segments, bands, projection, breakpoint and policy lines, legend (entries).
+  // ------------------------------------------------------------------
+  const ED = { sel: null, hl: null, selBox: null, chip: null };
+  const box4 = r => r && { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  function unionRect(els) {
+    let r = null;
+    els.forEach(el => {
+      const b = el.getBoundingClientRect();
+      if (!b.width && !b.height) return;
+      r = r ? { left: Math.min(r.left, b.left), top: Math.min(r.top, b.top), right: Math.max(r.right, b.right), bottom: Math.max(r.bottom, b.bottom) } : box4(b);
+    });
+    return r;
+  }
+  // pixel helpers for the plot area (client coordinates)
+  function edGeom() {
+    const g = plotGeom(), fl = T.gd._fullLayout;
+    if (!g || !fl.yaxis) return null;
+    const ya = fl.yaxis, L = g.rect.left + g.s.l, top = g.rect.top + g.top;
+    return { ...g, ya, L, R: L + g.s.w, top, bottom: g.rect.top + g.bot,
+      X: v => L + g.xa.c2p(v), Y: v => top + ya.c2p(v) };
+  }
+  const tracesOf = meta => (T.gd.data || []).filter(t => t.meta === meta);
+  /** Screen box (client px) of a part, for the hover and selection outlines. */
+  function partRect(part, info) {
+    const gd = T.gd, G = edGeom();
+    if (!G) return null;
+    const plot = { left: G.L, right: G.R, top: G.top, bottom: G.bottom };
+    switch (part) {
+      case "title": return unionRect(gd.querySelectorAll(".g-gtitle text"));
+      case "xtitle": return unionRect(gd.querySelectorAll(".g-xtitle text"));
+      case "ytitle": return unionRect(gd.querySelectorAll(".g-ytitle text"));
+      case "xaxis": return unionRect(gd.querySelectorAll(".xaxislayer-above .xtick text"));
+      case "yaxis": return unionRect(gd.querySelectorAll(".yaxislayer-above .ytick text"));
+      case "plot": return plot;
+      case "figure": return box4(G.rect);
+      case "legend": return box4($("trLegend").getBoundingClientRect());
+      case "legendEntry": {
+        const b = [...$("trLegend").querySelectorAll("[data-lg]")].find(el => el.dataset.lg === info.key);
+        return b ? box4(b.getBoundingClientRect()) : null;
+      }
+      case "bp": case "pol": { const x = G.X(info.x); return { left: x - 4, right: x + 4, top: G.top, bottom: G.bottom }; }
+      default: {                                         // a trace: the box around its points, inside the plot area
+        let r = null;
+        tracesOf(info.meta).forEach(t => t.x.forEach((xv, j) => {
+          const x = G.X(xv), y = G.Y(t.y[j]);
+          if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+          r = r ? { left: Math.min(r.left, x), right: Math.max(r.right, x), top: Math.min(r.top, y), bottom: Math.max(r.bottom, y) } : { left: x, right: x, top: y, bottom: y };
+        }));
+        if (!r) return null;
+        const c = { left: Math.max(plot.left, r.left - 5), right: Math.min(plot.right, r.right + 5), top: Math.max(plot.top, r.top - 5), bottom: Math.min(plot.bottom, r.bottom + 5) };
+        return c.right > c.left && c.bottom > c.top ? c : null;
+      }
+    }
+  }
+  const segDist = (px, py, ax, ay, bx, by) => {
+    const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+    const t = l2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l2)) : 0;
+    return Math.hypot(px - ax - t * dx, py - ay - t * dy);
+  };
+  function tracePart(meta) {
+    const [k, n] = String(meta).split(":");
+    if (k === "seg") {
+      const seg = T.result && T.result.pw && T.result.pw.segments[+n];
+      const pal = (PSget().trend.palette || []).length || 8;
+      return { part: "trend", info: { meta, pal: +n % pal, label: seg ? `Trend ${seg.start}–${seg.end}` : "Trend line" } };
+    }
+    return { part: { obs: "obs", band: "band", pred: "pred", proj: "proj" }[k] || "plot", info: { meta } };
+  }
+  function shapePart(s) {
+    const i = s.name.indexOf(":"), k = s.name.slice(0, i), v = s.name.slice(i + 1);
+    if (k === "bp") return { part: "bp", info: { year: +v, x: +v } };
+    const p = policyByKey(v);
+    return { part: "pol", info: { key: v, name: p ? p.name : v, color: p ? p.color : "#666666", x: s.x0 } };
+  }
+  /** The part of the chart under the pointer (client px), or null. */
+  function editHit(cx, cy, target) {
+    const lg = $("trLegend");
+    if (target instanceof Node && lg.contains(target)) {
+      const b = target.closest("[data-lg]");
+      if (!b) return { part: "legend" };
+      const e = (T.legend || []).find(x => x.key === b.dataset.lg);
+      return { part: "legendEntry", info: { key: b.dataset.lg, label: e ? e.label : b.dataset.lg } };
+    }
+    const gd = T.gd, G = edGeom();
+    if (!G || !(target instanceof Node) || !gd.contains(target)) return null;
+    const near = (r, m = 3) => r && cx >= r.left - m && cx <= r.right + m && cy >= r.top - m && cy <= r.bottom + m;
+    for (const p of ["title", "xtitle", "ytitle"]) if (near(partRect(p))) return { part: p };
+    const shapes = (gd.layout && gd.layout.shapes) || [];
+    // a policy name or breakpoint year written beside its line
+    for (const el of gd.querySelectorAll(".shapelayer [data-index]")) {
+      const s = shapes[+el.dataset.index];
+      if (!s || !s.name) continue;
+      if ([...el.querySelectorAll("text")].some(t => near(box4(t.getBoundingClientRect()), 1))) return shapePart(s);
+    }
+    const inPlot = cx >= G.L && cx <= G.R && cy >= G.top && cy <= G.bottom;
+    if (inPlot) {
+      // vertical lines first (they are drawn on top), then lines and markers, then filled bands
+      let best = null;
+      shapes.forEach(s => {
+        if (!s.name) return;
+        const d = Math.abs(G.X(s.x0) - cx);
+        if (d <= 6 && (!best || d < best.d)) best = { d, s };
+      });
+      if (best) return shapePart(best.s);
+      const data = gd.data || [];
+      let near1 = null;
+      data.forEach(t => {
+        if (!t.meta || t.fill || !t.x) return;
+        const mode = String(t.mode || ""), lines = mode.includes("lines") && (t.line && t.line.width) > 0;
+        const marks = mode.includes("markers");
+        if (!lines && !marks) return;
+        const tol = Math.max(5, lines ? t.line.width / 2 + 4 : 0, marks ? (t.marker.size || 6) / 2 + 3 : 0);
+        for (let j = 0; j < t.x.length; j++) {
+          const ax = G.X(t.x[j]), ay = G.Y(t.y[j]);
+          if (!Number.isFinite(ax) || !Number.isFinite(ay)) continue;
+          let d = Math.hypot(ax - cx, ay - cy);
+          if (lines && j + 1 < t.x.length) d = Math.min(d, segDist(cx, cy, ax, ay, G.X(t.x[j + 1]), G.Y(t.y[j + 1])));
+          if (d <= tol && (!near1 || d < near1.d)) near1 = { d, meta: t.meta };
+        }
+      });
+      if (near1) return tracePart(near1.meta);
+      for (let i = data.length - 1; i > 0; i--) {         // inside a band: between its lower and upper edge
+        const hi = data[i], lo = data[i - 1];
+        if (!hi.fill || !hi.meta || lo.meta !== hi.meta) continue;
+        const xs = hi.x, xv = G.xa.p2c(cx - G.L);
+        if (!(xv >= xs[0] && xv <= xs[xs.length - 1])) continue;
+        let j = 0; while (j < xs.length - 2 && xs[j + 1] < xv) j++;
+        const f = xs[j + 1] === xs[j] ? 0 : (xv - xs[j]) / (xs[j + 1] - xs[j]);
+        const yAt = arr => G.Y(arr[j] + (arr[j + 1] - arr[j]) * f);
+        const a = yAt(hi.y), b = yAt(lo.y);
+        if (cy >= Math.min(a, b) - 2 && cy <= Math.max(a, b) + 2) return tracePart(hi.meta);
+      }
+      return { part: "plot" };
+    }
+    if (near(partRect("xaxis"), 4) || (cx >= G.L && cx <= G.R && cy > G.bottom)) return { part: "xaxis" };
+    if (near(partRect("yaxis"), 4) || (cy >= G.top && cy <= G.bottom && cx < G.L)) return { part: "yaxis" };
+    return { part: "figure" };
+  }
+  function paintBox(el, h) {
+    const r = h && partRect(h.part, h.info || {});
+    if (!r) { el.hidden = true; return; }
+    const w = $("trPlotWrap").getBoundingClientRect();
+    Object.assign(el.style, { left: `${r.left - w.left - 3}px`, top: `${r.top - w.top - 3}px`,
+      width: `${r.right - r.left + 6}px`, height: `${r.bottom - r.top + 6}px` });
+    el.hidden = false;
+  }
+  function paintEdit() { if (ED.selBox) paintBox(ED.selBox, T.mode === "edit" ? ED.sel : null); }
+  // leaving Edit plot: close the box and clear the outlines
+  function editDone() {
+    if (!ED.hl) return;
+    ED.sel = null;
+    [ED.hl, ED.selBox, ED.chip].forEach(el => { el.hidden = true; });
+    if (window.TrendPlotStyle) window.TrendPlotStyle.closeEdit();
+  }
+  function bindEditor() {
+    const wrap = $("trPlotWrap");
+    const mk = cls => { const d = document.createElement("div"); d.className = cls; d.hidden = true; d.setAttribute("aria-hidden", "true"); wrap.appendChild(d); return d; };
+    ED.hl = mk("tr-ed-hl"); ED.selBox = mk("tr-ed-hl tr-ed-sel"); ED.chip = mk("tr-ed-chip");
+    const on = () => T.mode === "edit" && window.TrendPlotStyle;
+    // in Edit plot the chart does not zoom, add breakpoints or toggle legend entries
+    wrap.addEventListener("mousedown", e => { if (on()) { e.stopPropagation(); e.preventDefault(); } }, true);
+    wrap.addEventListener("touchstart", e => { if (on()) e.stopPropagation(); }, { capture: true, passive: true });
+    wrap.addEventListener("dblclick", e => { if (on()) { e.stopPropagation(); e.preventDefault(); } }, true);
+    wrap.addEventListener("click", e => {
+      if (!on()) return;
+      e.stopPropagation(); e.preventDefault();
+      const h = editHit(e.clientX, e.clientY, e.target);
+      if (!h) return;
+      ED.sel = h; ED.chip.hidden = true; paintEdit();
+      window.TrendPlotStyle.editPart(h.part, h.info || {}, e.clientX, e.clientY);
+    }, true);
+    wrap.addEventListener("mousemove", e => {
+      if (!on()) return;
+      const h = editHit(e.clientX, e.clientY, e.target);
+      paintBox(ED.hl, h);
+      if (!h) { ED.chip.hidden = true; return; }
+      const w = wrap.getBoundingClientRect();
+      ED.chip.innerHTML = `<i class="bi bi-pencil"></i> ${esc(window.TrendPlotStyle.partName(h.part, h.info))}`;
+      ED.chip.style.left = `${Math.min(e.clientX - w.left + 14, w.width - 200)}px`;
+      ED.chip.style.top = `${e.clientY - w.top + 16}px`;
+      ED.chip.hidden = false;
+    });
+    wrap.addEventListener("mouseleave", () => { ED.hl.hidden = true; ED.chip.hidden = true; });
+    window.addEventListener("resize", () => { if (ED.sel) paintEdit(); });
   }
 
   // ------------------------------------------------------------------

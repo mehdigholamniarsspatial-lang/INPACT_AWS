@@ -297,6 +297,28 @@ body.tr-dragging,body.tr-dragging *{cursor:ew-resize!important;user-select:none}
 .ps-table .ps-name{max-width:18rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ps-table input[type=text]{min-width:9rem}
 .ps-empty{font-size:.76rem;color:var(--text-muted);margin:.3rem 0}
+
+/* ---- Edit plot: the chart as selectable parts, and the small settings box ---- */
+.tr-tool-edit.active{background:#0B5563;border-color:#0B5563}
+.tr-plotwrap[data-edit] .nsewdrag,.tr-plotwrap[data-edit] .draglayer *,.tr-plotwrap[data-edit] .tr-lg-item{cursor:pointer!important}
+.tr-plotwrap[data-edit] .tr-plot{outline:1px dashed rgba(11,85,99,.35);outline-offset:2px;border-radius:4px}
+.tr-ed-hl{position:absolute;pointer-events:none;z-index:6;border:1.5px dashed #0e8c8a;border-radius:4px;background:rgba(14,140,138,.06)}
+.tr-ed-sel{border:2px solid #0B5563;background:rgba(11,85,99,.06);box-shadow:0 0 0 3px rgba(11,85,99,.15)}
+.tr-ed-hl[hidden],.tr-ed-chip[hidden]{display:none}
+.tr-ed-chip{position:absolute;pointer-events:none;z-index:7;background:#0B5563;color:#fff;font-size:.7rem;font-weight:700;
+  padding:.18rem .5rem;border-radius:6px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.ps-pop{position:fixed;z-index:1080;width:340px;max-width:calc(100vw - 20px);max-height:calc(100vh - 20px);display:flex;flex-direction:column;
+  background:#fff;border:1px solid #c9d3dc;border-radius:12px;box-shadow:0 12px 32px rgba(16,40,64,.22)}
+.ps-pop[hidden]{display:none}
+.ps-pop-head{display:flex;align-items:center;gap:.5rem;padding:.55rem .6rem .5rem .8rem;border-bottom:1px solid var(--grey-border);
+  cursor:move;user-select:none;color:var(--navy);font-size:.82rem;background:#f6f9fb;border-radius:12px 12px 0 0}
+.ps-pop-head b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ps-pop-x{border:0;background:none;color:var(--text-muted);border-radius:6px;padding:.1rem .35rem;cursor:pointer}
+.ps-pop-x:hover{background:#e7edf2;color:var(--navy)}
+.ps-pop-body{overflow:auto;padding:.6rem .7rem;display:grid;gap:.55rem}
+.ps-pop-foot{display:flex;justify-content:space-between;align-items:center;gap:.4rem;padding:.45rem .7rem;border-top:1px solid var(--grey-border)}
+.ps-pop-foot .btn{font-size:.72rem}
+.ps-pop.ps-pop-dock{left:8px!important;right:8px;bottom:8px;top:auto!important;width:auto;max-height:62vh}
 @media (max-width: 900px){
   .ps-body{grid-template-columns:1fr}
   .ps-tabs{flex-direction:row;overflow-x:auto;border-right:0;border-bottom:1px solid var(--grey-border);padding:0 0 .4rem}
