@@ -2292,7 +2292,7 @@ html.map-standalone.ms-ts.ms-side-hidden #mapPanel{grid-template-columns:0 minma
 .ts-empty ol{margin:.25rem 0 0;padding-left:1.1rem;text-align:left;line-height:1.5}
 /* layers in the plot */
 .ts-list{list-style:none;margin:0;padding:0;display:grid;gap:.35rem}
-.ts-list li{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto;align-items:start;gap:.5rem;padding:.45rem .5rem;border:1px solid var(--grey-border);border-radius:9px;background:#fff;transition:background .15s}
+.ts-list li{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto auto;align-items:start;gap:.5rem;padding:.45rem .5rem;border:1px solid var(--grey-border);border-radius:9px;background:#fff;transition:background .15s}
 .ts-list li:hover{background:#FAFBFC}
 .ts-list li.off .nm,.ts-list li.off .ts-sw{opacity:.45}
 .ts-list input[type=checkbox]{margin-top:.12rem;accent-color:var(--teal);width:15px;height:15px;cursor:pointer}
@@ -2307,6 +2307,16 @@ html.map-standalone.ms-ts.ms-side-hidden #mapPanel{grid-template-columns:0 minma
 .ts-tag.ref{border-color:var(--navy);color:var(--navy);background:#EEF3F8}
 .ts-rm{border:0;background:none;color:var(--text-muted);padding:.1rem .2rem;border-radius:5px;cursor:pointer;font-size:.8rem;line-height:1}
 .ts-rm:hover{color:#fff;background:var(--red)}
+/* "Show on map": the plot layer drawn on the base map (its Map style can then be adjusted) */
+.ts-onmap{display:inline-flex;align-items:center;gap:.25rem;border:1px solid var(--grey-border);background:#fff;color:#0B5563;border-radius:6px;
+  padding:.12rem .4rem;font-family:inherit;font-size:.64rem;font-weight:800;line-height:1.2;cursor:pointer;white-space:nowrap}
+.ts-onmap:hover{border-color:var(--teal);background:#F4FBFA}
+.ts-onmap.on{background:var(--teal);border-color:var(--teal);color:#fff;cursor:default}
+.ts-onmap:disabled:not(.on){opacity:.5;cursor:not-allowed}
+.ts-onmap:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+.ts-list li.onmap{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal) inset}
+#mapSide .ms-step.ms-flash{animation:msFlash 1.6s ease-out}
+@keyframes msFlash{0%{box-shadow:0 0 0 3px rgba(14,140,138,.55)}100%{box-shadow:0 0 0 0 rgba(14,140,138,0)}}
 .ts-list .ts-list-empty{display:block;border-style:dashed;color:var(--text-muted);font-size:.72rem;line-height:1.45;background:#FAFBFC}
 .ts-link{border:0;background:none;color:var(--text-muted);font-family:inherit;font-size:.66rem;font-weight:700;text-transform:none;letter-spacing:0;cursor:pointer;text-decoration:underline;padding:0}
 .ts-link:hover{color:var(--red)}
@@ -5149,7 +5159,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <p>Once a layer is in the plot, the graph panel gives you full control of the analysis:</p>
               <ul class="ug-list">
                 <li><b>Area</b>: the panel repeats the Pixel / Region / Whole image choice, with details of the current selection (the cell location, the region shape or the county). Change it at any time: every series in the graph is recalculated for the new area.</li>
-                <li><b>Overlay layers</b>: go back to Step 2, choose another layer of the <b>same gas</b> (for example another sector, or another inverse model) and press <b>Add to plot</b> again. Each layer gets its own line, listed under <b>Layers in the plot</b>, where it can be shown, hidden or removed (<b>Remove all</b> clears the plot).</li>
+                <li><b>Overlay layers</b>: go back to Step 2, choose another layer of the <b>same gas</b> (for example another sector, or another inverse model) and press <b>Add to plot</b> again. Each layer gets its own line, listed under <b>Layers in the plot</b>, where it can be shown, hidden or removed (<b>Remove all</b> clears the plot). <b>Show on map</b> on a layer puts it on the base map (its dataset and selections fill the left panel; the year shown is kept where possible) and opens <b>Map style</b>, so its colours, value range and opacity can be adjusted; the layer on the map is marked <b>On map</b>.</li>
                 <li><b>Scale to first layer</b>: when the series differ greatly in size, this switch maps every other layer&rsquo;s minimum&ndash;maximum onto the first layer&rsquo;s range, so the shapes of the curves can be compared directly.</li>
                 <li><b>Uncertainty</b> (Inverse model, pixel): shows or hides the 1&sigma;-equivalent uncertainty band around the line.</li>
               </ul>
@@ -5176,7 +5186,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               </ul>
               <div class="ug-chips" role="group" aria-label="Include map options">
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="The map shown on the left, exactly as it is now (layer, style and area), next to the graph."><i class="bi bi-map"></i>Current Map</button>
-                <button type="button" class="ug-chip" aria-pressed="false" data-explain="One map per time step (every year, or every month for EDGAR monthly), arranged in a grid with one shared colour scale. When the plot has more than one layer, <b>Map series</b> chooses which layer&rsquo;s maps fill the grid. <b>Statistics table</b> (on by default) adds a last panel with one row per map: year, maximum, mean, minimum, median and standard deviation over the map&rsquo;s cells; values share one power of ten, written with the unit under the table (for example &lsquo;Values &times;10&#8315;&sup3; kg CH&#8324; km&#8315;&sup2; yr&#8315;&sup1;&rsquo;). Use <b>Panel layout</b> to choose the number of rows and columns; the table fills the panels after the last map."><i class="bi bi-grid-3x3-gap"></i>Time Series Grid</button>
+                <button type="button" class="ug-chip" aria-pressed="false" data-explain="One map per time step (every year, or every month for EDGAR monthly), arranged in a grid with one shared colour scale. When the plot has more than one layer, <b>Map series</b> chooses which layer&rsquo;s maps fill the grid; choosing one also shows it on the base map and opens <b>Map style</b>, so you can set its colours and value range before downloading (the grid uses those settings). <b>Statistics table</b> (on by default) adds a last panel with one row per map: year, maximum, mean, minimum, median and standard deviation over the map&rsquo;s cells; values share one power of ten, written with the unit under the table (for example &lsquo;Values &times;10&#8315;&sup3; kg CH&#8324; km&#8315;&sup2; yr&#8315;&sup1;&rsquo;). Use <b>Panel layout</b> to choose the number of rows and columns; the table fills the panels after the last map."><i class="bi bi-grid-3x3-gap"></i>Time Series Grid</button>
               </div>
               <div class="ug-explain" aria-live="polite">Select an option above.</div>
               <div class="ug-actions">
@@ -10019,17 +10029,29 @@ if (MAP_STANDALONE) (function mapWindow(){
           scaling() && l.tf.ref && l.on ? `<span class="ts-tag ref" title="Other layers are scaled to this one">Reference</span>` : "",
           sc ? `<span class="ts-tag sc" title="Plotted as value ${esc(scaleTxt(l.tf))}">Scale ${esc(scaleTxt(l.tf))}</span>` : "",
         ].join("");
-        return `<li class="${l.on ? "" : "off"}">
+        const onMap = !!mapCard() && sameAsMap(l), busy = st.mapping === l.id;
+        const mapBtn = `<button type="button" class="ts-onmap${onMap ? " on" : ""}" data-map="${l.id}"
+            ${onMap || st.mapping || cmp.result ? "disabled" : ""} aria-pressed="${onMap}"
+            title="${onMap ? "This layer is on the map: adjust it in Map style (left panel)"
+              : cmp.result ? "Leave Compare to show a plot layer on the map"
+              : "Show this layer on the map and open its Map style, to adjust it before exporting"}">
+            <i class="bi ${busy ? "bi-hourglass-split" : onMap ? "bi-check2" : "bi-map"}" aria-hidden="true"></i>${onMap ? "On map" : "Show on map"}</button>`;
+        return `<li class="${l.on ? "" : "off"}${onMap ? " onmap" : ""}">
           <input type="checkbox" data-on="${l.id}" ${l.on ? "checked" : ""} aria-label="Show ${esc(l.short)} on the graph">
           <span class="ts-sw" style="background:${sc ? `repeating-linear-gradient(90deg,${l.colour} 0 5px,transparent 5px 8px)` : l.colour}"></span>
           <span class="nm"><b>${esc(l.short)}</b><small>${esc(DS_LABEL[l.def.dataset])} · ${esc(aggText(l))} · ${esc(l.unit)}</small>
             ${l.error ? `<small class="warn"><i class="bi bi-exclamation-triangle"></i> ${esc(l.error)}</small>` : ""}
             ${tags ? `<span class="ts-tags">${tags}</span>` : ""}</span>
+          ${mapBtn}
           <button type="button" class="ts-rm" data-rm="${l.id}" title="Remove from the plot" aria-label="Remove ${esc(l.short)} from the plot"><i class="bi bi-trash3"></i></button>
         </li>`;
       }).join("") : `<li class="ts-list-empty">Layers you add with <b>Add to plot</b> in the left panel appear here. Tick or untick them to show or hide them on the graph.</li>`;
       listEl.querySelectorAll("[data-on]").forEach(c => c.addEventListener("change", () => {
         const l = st.layers.find(x => x.id === +c.dataset.on); if (l) { l.on = c.checked; render(); }
+      }));
+      listEl.querySelectorAll("[data-map]").forEach(b => b.addEventListener("click", () => {
+        const l = st.layers.find(x => x.id === +b.dataset.map);
+        if (l) showOnMap(l);
       }));
       listEl.querySelectorAll("[data-rm]").forEach(b => b.addEventListener("click", () => {
         st.layers = st.layers.filter(x => x.id !== +b.dataset.rm);
@@ -10165,6 +10187,50 @@ if (MAP_STANDALONE) (function mapWindow(){
       return q;
     }
     const srcLayers = () => st.layers.filter(l => l.data);
+    // Show a plot layer on the base map: its dataset and selections go into the left panel (each select
+    // waits for its options, which the previous one fills), the map's year or month is kept where the
+    // layer has it, and step "Map style" opens so the map can be adjusted before the image is exported.
+    async function showOnMap(l){
+      if (st.mapping || cmp.result) return;
+      st.mapping = l.id; render();
+      const sleep = ms => new Promise(r => setTimeout(r, ms));
+      const choose = async (id, want) => {
+        const sel = $(id);
+        for (let i = 0; i < 40 && (sel.disabled || !sel.options.length); i++) await sleep(150);
+        const vals = [...sel.options].map(o => o.value).filter(Boolean);
+        for (let i = 0; i < 20 && want && !vals.includes(want); i++) { await sleep(150); vals.splice(0, vals.length, ...[...sel.options].map(o => o.value).filter(Boolean)); }
+        const v = want && vals.includes(want) ? want : vals.at(-1);
+        if (v != null && sel.value !== v) { sel.value = v; sel.dispatchEvent(new Event("change", { bubbles: true })); }
+        await sleep(60);
+      };
+      try {
+        const d = l.def, keepYear = id => (ds() === d.dataset ? val(id) : "") || lastYear(l);
+        document.querySelector(`.ms-ds-card[data-ds="${d.dataset}"]`)?.click();
+        await sleep(120);
+        if (d.dataset === "edgar") {
+          const yr = keepYear("edgarYear"), m = val("edgarMonth");
+          await choose("edgarGas", d.gas); await choose("edgarSector", d.sector); await choose("edgarYear", yr);
+          await choose("edgarMonth", d.step === "monthly" ? (m && m !== "annual" ? m : "1") : "annual");
+        } else if (d.dataset === "inverse") {
+          const yr = keepYear("invYear");
+          await choose("invModel", d.model); await choose("invTransport", d.transport); await choose("invGas", d.gas);
+          await choose("invYear", yr); await choose("invEstimate", d.estimate);
+        } else {
+          await choose("rasterYear", keepYear("rasterYear")); await choose("rasterSector", d.sector); await choose("rasterParam", d.gas);
+        }
+        for (let i = 0; i < 40 && !(mapCard() && sameAsMap(l)); i++) await sleep(150);
+        // open "Map style" and point to it
+        setOpen(steps[2], false); setOpen(steps[3], true);
+        steps[3].scrollIntoView({ behavior: "smooth", block: "nearest" });
+        steps[3].classList.remove("ms-flash"); void steps[3].offsetWidth; steps[3].classList.add("ms-flash");
+        if (withMap() && mapMode.value === "grid") srcSel.value = String(l.id);
+        setMsg(`${l.short} is on the map. Adjust it in Map style; the image uses these settings.`);
+      } catch (err) {
+        setMsg(`The layer could not be shown on the map: ${err.message}`, true);
+      } finally {
+        st.mapping = null; render(); syncMapOpts();
+      }
+    }
     function sameAsMap(l){
       const left = exportQuery(), q = layerQuery(l);
       return !cmp.result && left.get("dataset") === q.get("dataset") && SRC_KEYS[q.get("dataset")].every(k => left.get(k) === q.get(k));
@@ -10270,7 +10336,11 @@ if (MAP_STANDALONE) (function mapWindow(){
       if (next === "grid" && gridModeBtn.disabled) return;
       setMapMode(next, true);
     });
-    srcSel.addEventListener("change", () => { mapMode.layout = layoutSel.value; syncMapOpts(); });
+    srcSel.addEventListener("change", () => {
+      mapMode.layout = layoutSel.value;
+      const l = gridLayer();
+      if (l && !sameAsMap(l)) showOnMap(l); else syncMapOpts();
+    });
     statsCb.addEventListener("change", () => {
       try { localStorage.setItem("inpact.tsGridStats", statsCb.checked ? "1" : "0"); } catch (e) {}
       renderLayouts();
@@ -10291,8 +10361,14 @@ if (MAP_STANDALONE) (function mapWindow(){
     });
     // A map layer shown or removed on the left switches the box on or off
     const ctrlBox = mapEl.querySelector(".leaflet-control-container");
-    if (ctrlBox) new MutationObserver(() => { syncMapBox(); redrawMapTime(); }).observe(ctrlBox, { childList: true, subtree: true });
+    if (ctrlBox) new MutationObserver(() => { syncMapBox(); redrawMapTime(); syncOnMap(); }).observe(ctrlBox, { childList: true, subtree: true });
 
+    // The "On map" buttons follow the layer on the map (also when it is changed in the left panel)
+    let onMapKey = "";
+    function syncOnMap(){
+      const k = st.layers.map(l => (mapCard() && sameAsMap(l)) ? l.id : "").join(",") + "|" + (st.mapping || "");
+      if (k !== onMapKey) { onMapKey = k; if (st.layers.length) render(); }
+    }
     // Write the resolution into the JPEG's JFIF header so image and print software see the chosen dpi
     function jpegWithDpi(buf, dpi){
       const b = new Uint8Array(buf);
