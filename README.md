@@ -432,6 +432,14 @@ app runs separately on Streamlit Community Cloud and opens in a new browser tab
 (https://inpact-epa-structural-break-analysis.streamlit.app/). Nothing done
 there changes this dashboard's data.
 
+**Hidden since 26 Nov 2026** and due to be removed: its Main Menu button carries
+`hidden`, and the User Guide no longer mentions it. Chapter 4 of the User Guide
+is now **Trend Analysis** (`data-chapter="trend"`; old `#guide/breaks` links
+redirect to it), a 10-step guide to the Trend Analysis tab: series, method,
+manual and automatic breakpoints (with the BIC method), the Policy overlay
+panel and policy cards, display options, Advanced Plot Settings, Advanced
+Statistics and exports.
+
 ---
 
 ## Datasets tab

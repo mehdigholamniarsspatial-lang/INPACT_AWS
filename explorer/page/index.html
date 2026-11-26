@@ -4496,7 +4496,7 @@ a.ug-go.alt:hover{color:var(--navy)}
 </div><!-- /tab-data -->
 
 <!-- ================= TAB: USER GUIDE (interactive guide; deep link #guide) =================
-     Chapter 1 is the Introduction, chapter 2 the Policy Timeline, chapter 3 Spatial Mapping (3.1 Time series, 3.2 Compare, 3.3 Air Quality) and chapter 4 Trend &amp; Structural Breaks. To add a chapter,
+     Chapter 1 is the Introduction, chapter 2 the Policy Timeline, chapter 3 Spatial Mapping (3.1 Time series, 3.2 Compare, 3.3 Air Quality) and chapter 4 Trend Analysis. To add a chapter,
      add a sidebar button with data-chapter="<id>" and a matching
      <section class="ug-chapter" data-chapter="<id>" hidden> in .ug-main. -->
 <div class="tab-pane" id="tab-guide" role="tabpanel" aria-label="User Guide">
@@ -4513,7 +4513,7 @@ a.ug-go.alt:hover{color:var(--navy)}
             <li><button type="button" class="ug-subchap" data-in="mapping" data-sub="compare"><span class="n">3.2</span>Compare</button></li>
             <li><button type="button" class="ug-subchap" data-in="mapping" data-sub="airquality"><span class="n">3.3</span>Air Quality</button></li>
           </ul></li>
-        <li><button type="button" class="ug-chap" data-chapter="breaks"><span class="n">4</span>Trend &amp; Structural Breaks</button></li>
+        <li><button type="button" class="ug-chap" data-chapter="trend"><span class="n">4</span>Trend Analysis</button></li>
       </ul>
       <div class="ug-progress" aria-live="polite">
         <span id="ugProgressTxt">0 steps explored</span>
@@ -4570,7 +4570,6 @@ a.ug-go.alt:hover{color:var(--navy)}
               <button type="button" class="ug-chip" data-go="policy"><i class="bi bi-calendar3-range"></i>Policy Timeline</button>
               <button type="button" class="ug-chip" data-go="mapping"><i class="bi bi-globe-europe-africa"></i>Spatial Mapping</button>
               <button type="button" class="ug-chip" data-go="trend"><i class="bi bi-activity"></i>Trend Analysis</button>
-              <button type="button" class="ug-chip" data-go="streamlit" hidden style="display:none"><i class="bi bi-bar-chart-steps"></i>Structural Break Analysis</button>
               <button type="button" class="ug-chip" data-go="data"><i class="bi bi-database"></i>Datasets</button>
               <button type="button" class="ug-chip" data-go="about"><i class="bi bi-info-circle"></i>About INPACT</button>
               <button type="button" class="ug-chip" data-go="feedback"><i class="bi bi-chat-square-text"></i>Feedback</button>
@@ -4647,7 +4646,7 @@ a.ug-go.alt:hover{color:var(--navy)}
           </div>
         </div>
 
-        <!-- 5. Structural Break Analysis -->
+        <!-- 5. Trend Analysis -->
         <div class="ug-step" data-step="breaks">
           <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugB5">
             <span class="ug-step-num">5</span><i class="bi bi-bar-chart-steps ug-step-ic" aria-hidden="true"></i>
@@ -4655,10 +4654,10 @@ a.ug-go.alt:hover{color:var(--navy)}
             <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
           </button>
           <div class="ug-step-body" id="ugB5">
-            <p>The <b>Structural Break Analysis</b> companion app searches an emission series for the points where its trend changed direction or speed, so you can check whether those years line up with policies. <b>Trend Analysis</b> fits the segments in between.</p>
+            <p>In <b>Trend Analysis</b>, choose a gas and a sector, then split the series at <b>breakpoints</b> (click a year on the chart, or press <b>Auto-detect</b>) to see when the trend changed direction or speed. Tick policies in the <b>Policy overlay</b> panel to check whether those years line up with policy events. Chapter 4 explains every step.</p>
             <div class="ug-actions">
-              <button type="button" class="ug-go" data-go="streamlit"><i class="bi bi-box-arrow-up-right"></i>Open Structural Break Analysis</button>
-              <button type="button" class="ug-go alt" data-go="trend"><i class="bi bi-activity"></i>Trend Analysis</button>
+              <button type="button" class="ug-go" data-go="trend"><i class="bi bi-activity"></i>Open Trend Analysis</button>
+              <button type="button" class="ug-go alt" data-next="trend"><i class="bi bi-book"></i>Chapter 4: Trend Analysis</button>
               <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
             </div>
           </div>
@@ -5550,276 +5549,429 @@ a.ug-go.alt:hover{color:var(--navy)}
           <span><b>Well done!</b> You can now show, style and filter the air quality and health location layers.</span>
           <span class="ug-actions"><button type="button" class="ug-go alt" data-subgo="compare"><i class="bi bi-arrow-left-circle"></i>3.2 Compare</button>
           <button type="button" class="ug-go" data-go="mapping" data-mode="AirQuality"><i class="bi bi-wind"></i>Open Air Quality</button>
-          <button type="button" class="ug-go ug-chap-next" data-next="breaks"><i class="bi bi-arrow-right-circle"></i>Chapter 4: Trend &amp; Structural Breaks</button></span>
+          <button type="button" class="ug-go ug-chap-next" data-next="trend"><i class="bi bi-arrow-right-circle"></i>Chapter 4: Trend Analysis</button></span>
         </div>
       </div><!-- /3.3 -->
     </section>
 
-    <!-- ===================== CHAPTER 4: TREND & STRUCTURAL BREAKS ===================== -->
-    <section class="ug-chapter" data-chapter="breaks" aria-labelledby="ugBreakTitle" hidden>
+    <!-- ===================== CHAPTER 4: TREND ANALYSIS ===================== -->
+    <section class="ug-chapter" data-chapter="trend" aria-labelledby="ugTrendTitle" hidden>
 
       <div class="ug-hero">
-        <div class="eyebrow">User Guide &middot; Chapter 4 &middot; Trend &amp; Structural Breaks</div>
-        <h2 id="ugBreakTitle">Trend &amp; Structural Breaks: when did the emissions trend change, and was a policy nearby?</h2>
-        <p>Emissions rarely follow one straight line. A sector may rise for a decade, flatten, then fall faster after a new measure takes effect. This chapter shows how to split an emission series at its <b>break years</b>, fit a separate trend to each period, and lay the climate policy timeline over the graph so you can see whether the changes line up with policy events.</p>
+        <div class="eyebrow">User Guide &middot; Chapter 4 &middot; Trend Analysis</div>
+        <h2 id="ugTrendTitle">Trend Analysis: how has an emission series changed, when did its trend break, and which policies were in force?</h2>
+        <p>The Trend Analysis tab fits statistical trends to Ireland&rsquo;s national greenhouse gas inventory, one gas and one sector at a time. You can split the series into periods at <b>breakpoints</b> (chosen by you or detected automatically), compare the trend before and after each break, and draw climate policies on the same chart to see what was adopted around each change. Every calculation runs instantly in your browser, so each change you make updates the chart, the headline figures and the statistics straight away.</p>
         <div class="ug-meta">
-          <span><i class="bi bi-play-circle"></i>Video tutorial</span>
-          <span><i class="bi bi-cloud-haze2"></i>CO&#8322;, CH&#8324;, N&#8322;O and Total</span>
-          <span><i class="bi bi-calendar-range"></i>1990&ndash;2025</span>
-          <span><i class="bi bi-download"></i>JPEG and CSV exports</span>
+          <span><i class="bi bi-cloud-haze2"></i>Total GHG, CO&#8322;, CH&#8324; and N&#8322;O</span>
+          <span><i class="bi bi-diagram-3"></i>Sectors and subsectors</span>
+          <span><i class="bi bi-magic"></i>Manual and automatic breakpoints</span>
+          <span><i class="bi bi-flag"></i>Policy overlays linked to the Policy Timeline</span>
+          <span><i class="bi bi-download"></i>CSV, PNG and shareable link</span>
         </div>
       </div>
 
-      <div class="ug-video-card">
-        <div class="ug-video" data-yt="rtwIlPOp1Oo" data-title="INPACT Explorer: Trend and Structural Break Analysis tutorial">
-          <button type="button" class="ug-poster" aria-label="Play the Trend and Structural Break Analysis video"
-                  style="background-image:url('https://i.ytimg.com/vi/rtwIlPOp1Oo/hqdefault.jpg')">
-            <span class="ug-play" aria-hidden="true"><i class="bi bi-play-fill"></i></span>
-            <span class="ug-poster-lbl">Trend &amp; Structural Break Analysis</span>
-          </button>
-        </div>
-        <div class="ug-video-bar">
-          <div><div class="t">Watch: finding break years and comparing them with climate policies</div><div class="s">Pause at any point and repeat the same steps in the app.</div></div>
-          <a class="ug-yt" href="https://youtu.be/rtwIlPOp1Oo" target="_blank" rel="noopener"><i class="bi bi-youtube"></i>Watch on YouTube</a>
-        </div>
-      </div>
-
-      <!-- Two tools -->
+      <!-- Layout -->
       <div class="ug-card">
-        <h3 class="ug-card-title"><i class="bi bi-diagram-2"></i>Two tabs, one question</h3>
-        <div class="ug-ideas ug-ideas-2">
-          <div class="ug-idea"><b><i class="bi bi-activity"></i> Trend Analysis</b><span>A <em>quick, built-in</em> tool inside this dashboard. Pick a gas and a sector, then click a year to split the series into trend periods, drag the dashed breakpoint lines to move them, and tick core or sector policies in the Policy overlay panel to draw them on the chart. Every statistic updates instantly in your browser. Export the statistics as CSV, the chart as PNG, or copy a link to the analysis.</span>
-            <span class="ug-actions" style="margin-top:.6rem"><button type="button" class="ug-go alt" data-go="trend"><i class="bi bi-activity"></i>Open Trend Analysis</button></span></div>
-          <div class="ug-idea"><b><i class="bi bi-bar-chart-steps"></i> Structural Break Analysis</b><span>An <em>advanced</em> tool that runs as a separate Streamlit app. It fits a trend to each period between your break years, overlays EU, national and international climate policies, and gives full control of the figure, statistics, diagnostics and publication-quality exports. <strong>This tutorial covers this app.</strong></span>
-            <span class="ug-actions" style="margin-top:.6rem"><a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Open the Streamlit app</a></span></div>
+        <h3 class="ug-card-title"><i class="bi bi-layout-three-columns"></i>The screen at a glance</h3>
+        <div class="ug-ideas">
+          <div class="ug-idea"><b><i class="bi bi-sliders"></i> Left: controls</b><span><b>1 Series &amp; Model</b> (gas, sector, regression method, confidence level), <b>2 Breakpoints</b> (add, remove or auto-detect) and <b>3 Display</b> (bands, scale, tests, projection), with the CSV, PNG and Link buttons at the bottom.</span></div>
+          <div class="ug-idea"><b><i class="bi bi-graph-up"></i> Centre: results</b><span>The headline figures, the chart toolbar, the chart and its legend, the <b>Direction of trend</b> summary, and two folding panels: <b>Advanced Plot Settings</b> and <b>Advanced Statistics</b>.</span></div>
+          <div class="ug-idea"><b><i class="bi bi-flag"></i> Right: Policy overlay</b><span>Lists of policies to draw on the chart: the most relevant policies for the series, the sector&rsquo;s policies, and the core national, EU and international milestones. On smaller screens this panel moves below the controls.</span></div>
+        </div>
+        <div class="ug-actions" style="margin-top:.8rem">
+          <button type="button" class="ug-go" data-go="trend"><i class="bi bi-activity"></i>Open Trend Analysis</button>
         </div>
       </div>
 
       <!-- Key ideas -->
       <div class="ug-card">
-        <h3 class="ug-card-title"><i class="bi bi-key"></i>Three ideas behind a structural break</h3>
+        <h3 class="ug-card-title"><i class="bi bi-key"></i>Three ideas behind the analysis</h3>
         <div class="ug-ideas">
-          <div class="ug-idea"><b>Break year (T<sub>b</sub>).</b><span>The year in which the emissions trend changes: its direction, its speed, or both. Each break splits the timeline into <strong>regimes</strong> (periods), and each regime gets its own straight-line trend.</span></div>
-          <div class="ug-idea"><b>The slope tells the story.</b><span>The slope of a regime is the average change in emissions per year. Comparing slopes before and after a break shows whether the decline sped up, slowed down or reversed.</span></div>
-          <div class="ug-idea"><b>Policies give context.</b><span>Vertical policy lines show when EU, national and international measures were adopted, so you can see whether a break falls close to a policy event.</span></div>
+          <div class="ug-idea"><b>Breakpoint (T<sub>b</sub>).</b><span>A year in which the trend changes its direction, its speed, or both. Breakpoints split the series into <strong>segments</strong>, and each segment gets its own straight-line trend.</span></div>
+          <div class="ug-idea"><b>The slope tells the story.</b><span>A segment&rsquo;s slope is the average change in emissions per year, in kt CO&#8322;-eq. Comparing the slopes on either side of a break shows whether the decline sped up, slowed down or reversed.</span></div>
+          <div class="ug-idea"><b>Policies give context.</b><span>Policy lines mark the year each measure started, so you can see whether a break falls close to a policy event. A match is a question worth investigating, not proof of cause.</span></div>
         </div>
         <div class="ug-formula" role="math" aria-label="Piecewise linear model">
-          <div class="ug-formula-lbl">The model fitted to each regime <i>k</i></div>
+          <div class="ug-formula-lbl">The model fitted to each segment <i>k</i></div>
           <div class="ug-eq"><i>y</i><sub><i>t</i></sub> = &beta;<sub>0,<i>k</i></sub> + &beta;<sub>1,<i>k</i></sub>&thinsp;<i>t</i> + &epsilon;<sub><i>t</i></sub>, &nbsp;&nbsp; for &nbsp;<i>T</i><sub><i>k</i>&minus;1</sub> &lt; <i>t</i> &le; <i>T</i><sub><i>k</i></sub></div>
-          <div class="ug-formula-key"><i>y</i><sub><i>t</i></sub> = emissions in year <i>t</i>; &beta;<sub>1,<i>k</i></sub> = slope of regime <i>k</i> (change per year); &beta;<sub>0,<i>k</i></sub> = intercept; <i>T</i><sub>1</sub>, <i>T</i><sub>2</sub>, &hellip; = your break years, with the start and end of the analysis period as the outer edges. A break year belongs to the regime that ends there, and every regime needs at least <b>3 years</b> of data.</div>
+          <div class="ug-formula-key"><i>y</i><sub><i>t</i></sub> = emissions in year <i>t</i>; &beta;<sub>1,<i>k</i></sub> = slope of segment <i>k</i> (change per year); &beta;<sub>0,<i>k</i></sub> = intercept; <i>T</i><sub>1</sub>, <i>T</i><sub>2</sub>, &hellip; = breakpoints, with the first and last years of the series as the outer edges. A breakpoint year belongs to the segment that <b>ends</b> there. Each segment is fitted on its own, so the lines may jump at a break, and each needs at least <b>3 years</b> of data.</div>
         </div>
       </div>
 
       <div class="ug-steps-head">
-        <h3>In this tutorial, you will learn how to&hellip;</h3>
-        <p>Open a step, try it in the app, and tick it off when you are done.</p>
+        <h3>Step by step</h3>
+        <p>Open a step, try it in the dashboard with the <b>Show me</b> button, and tick it off when you are done.</p>
       </div>
 
       <div class="ug-steps">
 
-        <!-- 1. Open the app -->
-        <div class="ug-step" data-step="sb-open">
-          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugB1">
-            <span class="ug-step-num">1</span><i class="bi bi-box-arrow-up-right ug-step-ic" aria-hidden="true"></i>
-            <span class="ug-step-txt"><b>Open the Structural Break Analysis app</b><span>From the Main Menu, in a new browser tab.</span></span>
+        <!-- 1. Series -->
+        <div class="ug-step" data-step="tr-series">
+          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT1">
+            <span class="ug-step-num">1</span><i class="bi bi-cloud-haze2 ug-step-ic" aria-hidden="true"></i>
+            <span class="ug-step-txt"><b>Choose the greenhouse gas and sector</b><span>Put an emission series on the chart and read the headline figures.</span></span>
             <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
           </button>
-          <div class="ug-step-body" id="ugB1">
-            <p>In the Main Menu, select <b>Structural Break Analysis</b> and click the large red <b>Streamlit</b> icon. The app opens in a new browser tab, so this dashboard stays where you left it.</p>
-            <ul class="ug-list">
-              <li><b>First launch can take a moment.</b> The app is hosted on Streamlit Community Cloud and sleeps when nobody is using it. If you see a wake-up screen, confirm it and wait about 30&ndash;60 seconds while it starts.</li>
-              <li>The screen has two areas: the <b>sidebar</b> on the left holds every control, numbered from 1 to 5 so you can work down it; the <b>tabs</b> at the top (Home, Data, Inventory Overview, Regression, Statistics, Diagnostics, Export, About) show the results.</li>
-              <li>The app is self-contained: nothing you change there alters the data in this dashboard.</li>
-            </ul>
-            <div class="ug-actions">
-              <a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Open the app</a>
-              <button type="button" class="ug-go alt" data-go="streamlit"><i class="bi bi-bar-chart-steps"></i>Go to the launch page</button>
-              <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. GHG parameters -->
-        <div class="ug-step" data-step="sb-data">
-          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugB2">
-            <span class="ug-step-num">2</span><i class="bi bi-sliders ug-step-ic" aria-hidden="true"></i>
-            <span class="ug-step-txt"><b>Choose and modify the GHG parameters</b><span>Gas, sector, units and the analysis period.</span></span>
-            <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
-          </button>
-          <div class="ug-step-body" id="ugB2">
-            <p>In <b>1. Data Source</b>, keep <b>Bundled GHG inventory</b> (Ireland&rsquo;s national inventory, built in, 1990&ndash;2025) and choose a <b>Greenhouse gas / parameter</b>. Tap a gas to see what it covers:</p>
+          <div class="ug-step-body" id="ugT1">
+            <ol class="ug-list">
+              <li>Open <b>Trend Analysis</b> from the Main Menu.</li>
+              <li>In <b>1 Series &amp; Model</b>, choose a <b>Greenhouse gas</b>. Tap a gas below to see what it covers:</li>
+            </ol>
             <div class="ug-chips" role="group" aria-label="Greenhouse gases">
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="All greenhouse gases together, in CO&#8322;-equivalent. Use it for the overall picture of a sector or of the whole country."><i class="bi bi-collection"></i>Total GHG</button>
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="Carbon dioxide, mainly from burning fossil fuels for power, heat and transport, and from industrial processes such as cement."><i class="bi bi-fire"></i>CO&#8322;</button>
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="Methane, mainly from cattle (enteric fermentation), manure management, landfill and gas networks."><i class="bi bi-cloud"></i>CH&#8324;</button>
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="Nitrous oxide, mainly from fertiliser and manure applied to agricultural soils."><i class="bi bi-droplet"></i>N&#8322;O</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="All greenhouse gases together, expressed in CO&#8322;-equivalent. Use it for the overall picture of a sector or the whole country."><i class="bi bi-collection"></i>Total</button>
             </div>
             <div class="ug-explain" aria-live="polite">Select a gas above.</div>
-            <ul class="ug-list">
-              <li><b>Sector</b>: choose a sector or subsector, such as <em>Energy Industries</em>, <em>Public electricity and heat production</em> or <em>Agriculture</em>.</li>
-              <li><b>Units</b>: the label used in the annotations (default <em>kt CO2-eq</em>). It changes only the label, not the numbers.</li>
-              <li><b>2. Analysis Period</b>: set the <b>start</b> and <b>end</b> years. Only these years are used to fit the trends, but the graph still shows the full history for context.</li>
-              <li>To analyse your own series, switch to <b>Upload custom CSV/Excel</b>: put the date or year in the first column and the values in the others, then pick the date column and the variable.</li>
-            </ul>
+            <ol class="ug-list" start="3">
+              <li>Choose a <b>Sector / subsector</b>, for example <em>Energy Industries</em>, <em>Road transportation</em> or <em>Enteric fermentation</em>. The list shows only the sectors that report the chosen gas.</li>
+              <li>The chart draws the yearly values (kt CO&#8322;-eq) with a fitted trend for each segment, and its title shows the gas, the sector, the method, the confidence level and the number of years.</li>
+              <li>The <b>Policy overlay</b> panel on the right updates on its own to list the policies most relevant to the new series (see step 5).</li>
+            </ol>
+            <p>The row of headline figures above the chart summarises the series:</p>
+            <div class="ug-chips" role="group" aria-label="Headline figures">
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The most recent value and its year."><i class="bi bi-calendar-check"></i>Latest</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The change from the previous year, in per cent and in kt. Green means emissions fell; red means they rose."><i class="bi bi-arrow-left-right"></i>Year on year</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The change from the first year of the series (usually 1990) to the latest year, in per cent and in kt."><i class="bi bi-hourglass-split"></i>Since 1990</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The slope of the last segment, in kt per year, with its period and confidence interval. A negative slope means emissions are falling."><i class="bi bi-graph-down-arrow"></i>Current trend</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="R&sup2; and the p-value of the last segment&rsquo;s slope. Stars mark significance: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001."><i class="bi bi-bullseye"></i>Fit (last segment)</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Shown when a year is set in &lsquo;Project last trend to&rsquo; (2030 by default): the value the last segment&rsquo;s trend reaches in that year, with its prediction interval."><i class="bi bi-forward"></i>Projection</button>
+            </div>
+            <div class="ug-explain" aria-live="polite">Select a figure above.</div>
             <div class="ug-actions">
-              <a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Try it in the app</a>
+              <button type="button" class="ug-go" data-go="trend" data-spot="#trGas"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
               <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
             </div>
           </div>
         </div>
 
-        <!-- 3. Break year and fitted segments -->
-        <div class="ug-step" data-step="sb-breaks">
-          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugB3">
-            <span class="ug-step-num">3</span><i class="bi bi-bezier2 ug-step-ic" aria-hidden="true"></i>
-            <span class="ug-step-txt"><b>Set the break years and read the fitted trend segments</b><span>Regimes, slopes, R&sup2;, RMSE and the regression method.</span></span>
+        <!-- 2. Method and confidence -->
+        <div class="ug-step" data-step="tr-method">
+          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT2">
+            <span class="ug-step-num">2</span><i class="bi bi-calculator ug-step-ic" aria-hidden="true"></i>
+            <span class="ug-step-txt"><b>Choose the regression method and confidence level</b><span>How the trend lines and their uncertainty are calculated.</span></span>
             <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
           </button>
-          <div class="ug-step-body" id="ugB3">
-            <p>In <b>3. Structural Break Dates (T<sub>b</sub>)</b>, type <b>one year per line</b> (the default is 2001 and 2015). The app splits the series at those years and fits a separate line to each regime; leave the box empty for one trend over the whole period. Open the <b>Regression</b> tab to see the result: the measured points, a coloured trend line and confidence band for each regime, and a dashed vertical line at each break year.</p>
-            <p>Each regime has an annotation box with three numbers:</p>
-            <div class="ug-formula" role="math" aria-label="Slope, R squared and RMSE">
-              <div class="ug-eq"><b>S</b> = &beta;&#770;<sub>1</sub> = <span class="ug-frac"><span>&Sigma; (<i>t</i> &minus; <i>t&#772;</i>)(<i>y</i> &minus; <i>y&#772;</i>)</span><span>&Sigma; (<i>t</i> &minus; <i>t&#772;</i>)<sup>2</sup></span></span>, &nbsp;&nbsp; &beta;&#770;<sub>0</sub> = <i>y&#772;</i> &minus; &beta;&#770;<sub>1</sub><i>t&#772;</i></div>
-              <div class="ug-eq"><b>R&sup2;</b> = 1 &minus; <span class="ug-frac"><span>SS<sub>res</sub></span><span>SS<sub>tot</sub></span></span> = 1 &minus; <span class="ug-frac"><span>&Sigma; (<i>y</i> &minus; <i>&#375;</i>)<sup>2</sup></span><span>&Sigma; (<i>y</i> &minus; <i>y&#772;</i>)<sup>2</sup></span></span>, &nbsp;&nbsp; <b>RMSE</b> = <span class="ug-sqrt">&radic;<span><span class="ug-frac"><span>SS<sub>res</sub></span><span><i>n</i></span></span></span></span></div>
-              <div class="ug-formula-key"><b>S</b> (slope) is the average change in emissions per year: negative means falling, positive means rising. <b>R&sup2;</b> (0 to 1) is the share of the year-to-year variation the line explains. <b>RMSE</b> is the typical distance of the points from the line, in the data&rsquo;s units. <i>&#375;</i> is the fitted value and <i>n</i> the number of years in the regime.</div>
-            </div>
-            <p>In <b>4. Regression Options</b>, choose how the lines are fitted. Tap a method to learn more:</p>
+          <div class="ug-step-body" id="ugT2">
+            <p>In <b>Regression method</b>, choose how each segment&rsquo;s line is fitted. Tap a method to learn more:</p>
             <div class="ug-chips" role="group" aria-label="Regression methods">
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="Ordinary Least Squares, the default. It finds the line that minimises the sum of squared residuals, &Sigma;(y &minus; &#375;)&sup2;. The standard choice when the series has no strong outliers."><i class="bi bi-graph-up"></i>OLS</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Robust regression with the Huber loss: small residuals are squared as in OLS, large ones only grow linearly, &rho;(u) = u&sup2;/2 when |u| &le; 1.345 and 1.345|u| &minus; 1.345&sup2;/2 otherwise. A single unusual year (a cold winter, a plant outage) pulls the line much less."><i class="bi bi-shield-check"></i>Huber</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The slope is the median of the slopes between every pair of years, &beta;&#770;&#8321; = median[(y&lt;sub&gt;j&lt;/sub&gt; &minus; y&lt;sub&gt;i&lt;/sub&gt;) / (t&lt;sub&gt;j&lt;/sub&gt; &minus; t&lt;sub&gt;i&lt;/sub&gt;)]. Rank-based and very resistant to outliers; good for short or noisy regimes."><i class="bi bi-bar-chart-line"></i>Theil&ndash;Sen</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Robust regression with the Huber loss (tuning constant 1.345, scale from the median absolute deviation): small residuals are squared as in OLS, large ones only grow linearly, &rho;(u) = u&sup2;/2 when |u| &le; 1.345 and 1.345|u| &minus; 1.345&sup2;/2 otherwise. A single unusual year (a cold winter, a plant outage) pulls the line much less."><i class="bi bi-shield-check"></i>Robust: Huber</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The slope is the median of the slopes between every pair of years, &beta;&#770;&#8321; = median[(y&#11388; &minus; y&#7522;) / (t&#11388; &minus; t&#7522;)]. Rank-based and very resistant to outliers; a good choice for short or noisy segments."><i class="bi bi-bar-chart-line"></i>Theil&ndash;Sen</button>
             </div>
             <div class="ug-explain" aria-live="polite">Select a method above.</div>
-            <ul class="ug-list">
-              <li><b>Confidence level</b> (80&ndash;99%, default 95%) sets the width of the band and of the slope interval: &beta;&#770;<sub>1</sub> &plusmn; <i>t</i><sub>1&minus;&alpha;/2,&thinsp;<i>n</i>&minus;2</sub> &middot; SE(&beta;&#770;<sub>1</sub>). If the interval does not include zero, the trend in that regime is statistically clear.</li>
-              <li><b>Compute Mann&ndash;Kendall test</b> (optional) checks whether the series rises or falls consistently, without assuming a straight line. It reports Kendall&rsquo;s &tau;, the Z-score, the p-value and Sen&rsquo;s slope:</li>
-            </ul>
-            <div class="ug-formula" role="math" aria-label="Mann-Kendall test">
-              <div class="ug-eq"><b>S</b><sub>MK</sub> = &Sigma;<sub><i>k</i>=1</sub><sup><i>n</i>&minus;1</sup> &Sigma;<sub><i>j</i>=<i>k</i>+1</sub><sup><i>n</i></sup> sgn(<i>y</i><sub><i>j</i></sub> &minus; <i>y</i><sub><i>k</i></sub>), &nbsp;&nbsp; <b>&tau;</b> = <span class="ug-frac"><span>S<sub>MK</sub></span><span><i>n</i>(<i>n</i> &minus; 1) / 2</span></span>, &nbsp;&nbsp; <b>Z</b> = <span class="ug-frac"><span>S<sub>MK</sub> &mnplus; 1</span><span>&radic;Var(S<sub>MK</sub>)</span></span></div>
-              <div class="ug-formula-key">Each pair of years scores +1 if the later year is higher and &minus;1 if lower. &tau; runs from &minus;1 (always falling) to +1 (always rising). The trend is called <em>increasing</em> or <em>decreasing</em> when the p-value is below &alpha; = 0.05; otherwise <em>no significant monotonic change</em>.</div>
+            <p>Drag the <b>Confidence level</b> slider (80&ndash;99%, default 95%; double-click it to return to 95%). Every band, interval and test updates while you drag. The slope interval of each segment is:</p>
+            <div class="ug-formula" role="math" aria-label="Slope confidence interval">
+              <div class="ug-eq">&beta;&#770;<sub>1</sub> &plusmn; <i>t</i><sub>1&minus;&alpha;/2,&thinsp;<i>n</i>&minus;2</sub> &middot; SE(&beta;&#770;<sub>1</sub>), &nbsp;&nbsp; SE(&beta;&#770;<sub>1</sub>) = <span class="ug-frac"><span><i>s</i></span><span>&radic;&Sigma;(<i>t</i> &minus; <i>t&#772;</i>)<sup>2</sup></span></span>, &nbsp;&nbsp; <i>s</i><sup>2</sup> = <span class="ug-frac"><span>&Sigma;(<i>y</i> &minus; <i>&#375;</i>)<sup>2</sup></span><span><i>n</i> &minus; 2</span></span></div>
+              <div class="ug-formula-key">&alpha; = 1 &minus; confidence level, <i>n</i> = years in the segment. If the interval does not include zero, the segment has a statistically clear upward or downward trend at that level.</div>
             </div>
-            <div class="ug-note"><i class="bi bi-lightbulb"></i><span><b>Choosing break years:</b> start with years where the graph visibly bends or where a major policy took effect, then compare R&sup2; and RMSE with and without the break. A break that does not improve the fit much is probably not needed.</span></div>
             <div class="ug-actions">
-              <a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Try it in the app</a>
+              <button type="button" class="ug-go" data-go="trend" data-spot="#trMethod"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
               <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
             </div>
           </div>
         </div>
 
-        <!-- 4. Policy overlays -->
-        <div class="ug-step" data-step="sb-policy">
-          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugB4">
-            <span class="ug-step-num">4</span><i class="bi bi-flag ug-step-ic" aria-hidden="true"></i>
-            <span class="ug-step-txt"><b>Overlay the climate policy timelines</b><span>EU, national and international policies as vertical lines.</span></span>
+        <!-- 3. Manual breakpoints -->
+        <div class="ug-step" data-step="tr-bp-manual">
+          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT3">
+            <span class="ug-step-num">3</span><i class="bi bi-signpost-split ug-step-ic" aria-hidden="true"></i>
+            <span class="ug-step-txt"><b>Insert breakpoints manually</b><span>Click, type or drag to split the trend.</span></span>
             <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
           </button>
-          <div class="ug-step-body" id="ugB4">
-            <p>Under <b>Policy overlays</b>, tick the groups to show on the graph. Each group has its own line style. Tap a group:</p>
-            <div class="ug-chips" role="group" aria-label="Policy groups">
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="EU directives and regulations, such as the EU Emissions Trading System (2003), the Effort Sharing Decision and the European Climate Law. Shown by default as blue dashed lines."><i class="bi bi-flag"></i>EU policies</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Irish strategies, acts and plans, such as the National Climate Change Strategy (2000), the carbon tax (2010) and the Climate Action Plans. Shown by default as red solid lines."><i class="bi bi-geo-alt"></i>National policies</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Global agreements: the UNFCCC (1992), the Kyoto Protocol (1997) and the Paris Agreement (2015). Shown by default as purple dotted lines."><i class="bi bi-globe2"></i>International policies</button>
-            </div>
-            <div class="ug-explain" aria-live="polite">Select a group above.</div>
+          <div class="ug-step-body" id="ugT3">
+            <p>The tab opens with one breakpoint at 2001. You can add, move and remove breakpoints in four ways:</p>
+            <ol class="ug-list">
+              <li><b>Click the chart.</b> Make sure the <b>Split the trend</b> tool is active in the chart toolbar (press <kbd>B</kbd>), then click any year. A dashed vertical line appears and the series is refitted on both sides of it.</li>
+              <li><b>Type the years.</b> In <b>2 Breakpoints</b>, type one or more years separated by commas or spaces (for example <code>2008, 2015</code>) and press <b>Add</b> or <kbd>Enter</kbd>.</li>
+              <li><b>Drag a line.</b> Point at a dashed breakpoint line until the cursor becomes a double arrow, then drag it left or right. The fits, figures and statistics update while you drag.</li>
+              <li><b>Remove.</b> Click the <b>&times;</b> on a year chip in <b>2 Breakpoints</b> to remove that break, or the <i class="bi bi-trash"></i> button to remove all of them (one trend over the whole period).</li>
+            </ol>
+            <p>Below the chart, <b>Direction of trend</b> gives one coloured pill per segment: <em>Increasing</em>, <em>Decreasing</em> or <em>No significant trend</em>, with the test statistic and p-value. By default it uses the Mann&ndash;Kendall test (step 7); switch that option off to use the slope&rsquo;s t-test at your confidence level instead.</p>
             <ul class="ug-list">
-              <li><b>Edit the timelines</b>: each group has a text box with one entry per line, written as <code>year | policy name</code>. Delete a line to hide that policy, or add your own.</li>
-              <li><b>Restore all policy entries</b> brings back the full built-in list.</li>
-              <li><b>Customize policy lines</b>: change the colour, line type (solid, dashed, dotted, dash-dot) and width of each group.</li>
-              <li><b>Customize policy labels</b>: tick <em>Display brief labels beside policy lines</em>, then set the gap from the line, the text size and the font.</li>
-              <li>The <b>Data</b> tab lists the full policy timeline, with each policy&rsquo;s instrument type, target and direction of impact. Chapter 2 explains these policies in more detail.</li>
+              <li>Up to 10 breakpoints can be set. Each segment needs at least 3 years; a segment with fewer is skipped and a message tells you which break to move.</li>
+              <li>Breakpoints outside the years of the current series are kept but not used, so they return when you switch to a longer series.</li>
+            </ul>
+            <div class="ug-note"><i class="bi bi-lightbulb"></i><span><b>Choosing breakpoints:</b> start with years where the chart visibly bends or where a major policy took effect. Then check the <b>Chow test</b> in Advanced Statistics (step 9): a break whose p-value is not below 0.05 does not improve the fit enough to be needed.</span></div>
+            <div class="ug-actions">
+              <button type="button" class="ug-go" data-go="trend" data-spot="#trBpInput"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
+              <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Auto-detect -->
+        <div class="ug-step" data-step="tr-bp-auto">
+          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT4">
+            <span class="ug-step-num">4</span><i class="bi bi-magic ug-step-ic" aria-hidden="true"></i>
+            <span class="ug-step-txt"><b>Detect breakpoints automatically</b><span>How Auto-detect finds the best breaks, and how to read the result.</span></span>
+            <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
+          </button>
+          <div class="ug-step-body" id="ugT4">
+            <ol class="ug-list">
+              <li>In <b>2 Breakpoints</b>, choose the largest number of breaks to allow: <b>up to 1</b>, <b>2</b> (default) or <b>3</b>.</li>
+              <li>Press <b><i class="bi bi-magic"></i> Auto-detect</b>. Your current breakpoints are replaced by the detected ones, which you can then drag, remove or add to as in step 3.</li>
+              <li>If no break improves the model, the breakpoints are cleared and a message says that a single trend fits best.</li>
+              <li>Open <b>Advanced Statistics &rarr; Break detection (BIC)</b> to see the best set found for each number of breaks.</li>
+            </ol>
+            <p><b>Methodology.</b> Auto-detect searches for the breakpoint years that best explain the series, while penalising extra breaks so the series is not split more than the data justify:</p>
+            <ol class="ug-list">
+              <li><b>Candidate segments.</b> For every run of consecutive years that is at least <b>4 years</b> long, a straight line is fitted by ordinary least squares and its sum of squared residuals (SSR) is stored.</li>
+              <li><b>Exhaustive search.</b> For each number of breaks <i>m</i> = 1, 2, &hellip; up to your limit, dynamic programming finds the set of break years with the <b>lowest total SSR</b> across all segments. This is an exact search over every allowed combination, not a step-by-step approximation, so the result does not depend on the order in which breaks are tried.</li>
+              <li><b>Penalised comparison.</b> Each option, including &ldquo;no break&rdquo; (<i>m</i> = 0), is scored with the Bayesian Information Criterion, and the option with the <b>lowest BIC</b> is selected.</li>
+            </ol>
+            <div class="ug-formula" role="math" aria-label="Break detection by BIC">
+              <div class="ug-formula-lbl">Objective and selection rule</div>
+              <div class="ug-eq">SSR(<i>T</i><sub>1</sub>,&hellip;,<i>T</i><sub><i>m</i></sub>) = &Sigma;<sub><i>k</i>=1</sub><sup><i>m</i>+1</sup> &Sigma;<sub><i>t</i> &isin; segment <i>k</i></sub> (<i>y</i><sub><i>t</i></sub> &minus; &beta;&#770;<sub>0,<i>k</i></sub> &minus; &beta;&#770;<sub>1,<i>k</i></sub><i>t</i>)<sup>2</sup></div>
+              <div class="ug-eq">BIC(<i>m</i>) = <i>n</i> &middot; ln<span class="ug-frac"><span>SSR<sub><i>m</i></sub></span><span><i>n</i></span></span> + (3<i>m</i> + 2) &middot; ln <i>n</i></div>
+              <div class="ug-formula-key"><i>n</i> = number of years in the series; SSR<sub><i>m</i></sub> = the smallest SSR possible with <i>m</i> breaks. The penalty counts the model&rsquo;s parameters: an intercept and a slope for each of the <i>m</i> + 1 segments, plus one break year for each break, 2(<i>m</i> + 1) + <i>m</i> = 3<i>m</i> + 2. A break is therefore kept only if it reduces the residual error by more than its cost of about 3&thinsp;ln&thinsp;<i>n</i> (&asymp; 10.7 for 35 years).</div>
+            </div>
+            <p><b>Reading the Break detection table.</b> Each row is the best set for one number of breaks, with its SSR and BIC; the selected row is marked <em>best</em>. The difference in BIC between rows shows how strong the evidence is: as a common rule of thumb, a difference of 2&ndash;6 is positive, 6&ndash;10 strong and above 10 very strong evidence for the model with the lower BIC.</p>
+            <ul class="ug-list">
+              <li>Detection always uses OLS, whatever method is selected in step 2. The chart then refits the detected segments with your chosen method.</li>
+              <li>The minimum of 4 years per segment (one more than for manual breaks) keeps each detected trend estimable with some degrees of freedom.</li>
+              <li>The break year is the <b>last year of the earlier segment</b>; the new trend starts the following year.</li>
+            </ul>
+            <div class="ug-note"><i class="bi bi-exclamation-triangle"></i><span><b>Use the result as evidence, not a verdict.</b> With 30&ndash;35 annual values, several nearby years can fit almost equally well, so look at the BIC table and the Chow tests before reporting a break. One-off events (the 2008 financial crisis, the 2020 pandemic), weather and inventory recalculations can create breaks with no link to policy.</span></div>
+            <div class="ug-actions">
+              <button type="button" class="ug-go" data-go="trend" data-spot="#trBpAuto"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
+              <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Policy overlay panel -->
+        <div class="ug-step" data-step="tr-pol-panel">
+          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT5">
+            <span class="ug-step-num">5</span><i class="bi bi-flag ug-step-ic" aria-hidden="true"></i>
+            <span class="ug-step-txt"><b>Use the Policy overlay panel</b><span>Find the policies relevant to the series and draw them on the chart.</span></span>
+            <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
+          </button>
+          <div class="ug-step-body" id="ugT5">
+            <p>The panel on the right lists the policies you can draw on the chart. <b>Tick a policy</b> to add it as a labelled vertical line at the year it started; untick it to remove the line. The counter at the top shows how many policies are on the chart. The panel has three tabs; tap one to learn more:</p>
+            <div class="ug-chips" role="group" aria-label="Policy overlay tabs">
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The default tab. It ranks the policies for the gas and sector on the chart: policies of the matching policy sector plus cross-sectoral climate laws, keeping only those that affect the chosen gas. Each row shows its rank, start year, mechanism, reported effect (kt/yr), a relevance bar and its strength. The top 10 are shown; &lsquo;Show all&rsquo; lists the rest, and &lsquo;Top 5 on chart&rsquo; draws the first five at once."><i class="bi bi-star-fill"></i>Most relevant</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Every policy in the Policy Timeline for one policy sector, in a coloured box. By default only those that affect the chart&rsquo;s gas are listed; switch on &lsquo;Also list policies for other gases&rsquo; to see the rest, and &lsquo;Include cross-sectoral laws&rsquo; to add a second box with the national climate laws."><i class="bi bi-grid-3x3-gap"></i>Sector policies</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The main climate laws, plans, agreements and targets, grouped as International, EU, National and Targets. These do not depend on the gas or sector on the chart. Groups start closed; click a group&rsquo;s name to open it."><i class="bi bi-bank"></i>Core policies</button>
+            </div>
+            <div class="ug-explain" aria-live="polite">Select a tab above.</div>
+            <p><b>The panel follows the chart.</b> When you change the gas or the sector, the lists update automatically: the policy sector returns to the one matching the chart (for example <em>Road transportation</em> &rarr; Transport), a Core tab switches to <b>Most relevant</b>, and the note above the list flashes briefly. If the chart&rsquo;s sector has no single match (for example <em>Fugitive emissions</em>), choose one in <b>Policy sector</b>; you can also pick another sector there at any time.</p>
+            <p><b>How &ldquo;Most relevant&rdquo; ranks policies</b> (importance and strength):</p>
+            <div class="ug-formula" role="math" aria-label="Policy relevance score">
+              <div class="ug-eq">Relevance = 0.55 &middot; <span class="ug-frac"><span><i>I</i><sub>peak</sub></span><span>max <i>I</i><sub>peak</sub></span></span> + 0.30 &middot; <span class="ug-frac"><span>ln(1 + <i>E</i>)</span><span>max ln(1 + <i>E</i>)</span></span> + 0.15 &middot; Key</div>
+              <div class="ug-formula-key"><i>I</i><sub>peak</sub> = peak policy intensity (implementation &times; coverage &times; bindingness, 0&ndash;1; see Chapter 2); <i>E</i> = reported effect in kt CO&#8322;-eq per year; Key = 1 for an anchor policy or one with a material effect on its sector. Each part is scaled to the best policy in the same sector. The score is multiplied by 0.85 when a policy covers the gas only through &ldquo;all gases&rdquo;, and by 0.6 for a cross-sectoral law, so the sector&rsquo;s own measures come first. The bar shows each policy&rsquo;s score relative to the top one.</div>
+            </div>
+            <p>The other controls in the panel:</p>
+            <ul class="ug-list">
+              <li><b>Sort by</b> (Most relevant and Sector tabs): <em>Importance and strength</em> (default), <em>Year (newest first)</em> or <em>Year (oldest first)</em>.</li>
+              <li><b>Filter policies by period</b>: switch it on to show a two-handle year slider. Only policies that started between the two years are listed, and a note counts them. <b>Full period</b> resets the slider. Lines already on the chart stay.</li>
+              <li><b>Search policies</b>: type part of a name to filter every list; matching groups open.</li>
+              <li><b>Group boxes</b>: click a box&rsquo;s name to open or close it. The number shows how many of its policies are on the chart. <b>Show all</b> and <b>Hide all</b> tick or untick the whole group.</li>
+              <li><b>Colours</b>: click the round swatch beside a group&rsquo;s name to choose one of 12 colours, a custom colour, or reset. The colour is used for the box and for that group&rsquo;s lines on the chart.</li>
+              <li>A policy greyed out cannot be ticked because it started outside the years shown on the chart.</li>
+              <li><b>Remove all policy lines</b> (bottom of the panel) unticks every policy.</li>
             </ul>
             <div class="ug-actions">
-              <a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Try it in the app</a>
+              <button type="button" class="ug-go" data-go="trend" data-spot="#trPolPanel"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
+              <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Policy lines and cards -->
+        <div class="ug-step" data-step="tr-pol-card">
+          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT6">
+            <span class="ug-step-num">6</span><i class="bi bi-card-text ug-step-ic" aria-hidden="true"></i>
+            <span class="ug-step-txt"><b>Open a policy from the chart and go to its profile</b><span>Policy cards, links to the Policy Timeline, and showing or hiding lines.</span></span>
+            <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
+          </button>
+          <div class="ug-step-body" id="ugT6">
+            <p>Each ticked policy is drawn as a vertical line at its start year, labelled with a short name: <b>dotted</b> for core policies and <b>dash-dot</b> for sector policies, in its group&rsquo;s colour. Policies that started in the same year are spaced slightly apart so each stays visible.</p>
+            <ol class="ug-list">
+              <li><b>Hover</b> over a policy line: the cursor changes to a hand and a <b>policy card</b> opens beside the line.</li>
+              <li><b>Click</b> the line to keep the card open while you move the pointer into it.</li>
+              <li>Read the card: the policy&rsquo;s name; tags for its level or sector, its years and its mechanism; a description; and details such as type, instrument, gases affected, reported effect, <b>policy strength</b> (peak intensity, and its 2023 value) and, for core policies, the direction and outcome.</li>
+              <li>Press <b><i class="bi bi-diagram-3"></i> Open policy profile</b> to go to the policy&rsquo;s full profile in the <b>Policy Timeline</b> tab (its intensity over time, OECD scores, sources and related policies). Use <b>new tab</b> to open the profile in a separate browser tab and keep your analysis on screen. When a core policy has no profile of its own, the button reads <b>Open the Policy Timeline</b> and opens the timeline view instead.</li>
+              <li><b>Remove line</b> on the card takes the policy off the chart (it reads <b>Show on chart</b> when it is not drawn). Close the card with <b>&times;</b>, with <kbd>Esc</kbd>, or by clicking outside the chart.</li>
+            </ol>
+            <p>Three chart controls act on all policy lines at once:</p>
+            <ul class="ug-list">
+              <li><b>Policies</b> (toolbar) hides or shows every policy line while keeping the ticks in the panel, so you can compare the chart with and without them.</li>
+              <li><b>Clear policies</b> (toolbar) removes every policy line and unticks them in the panel.</li>
+              <li><b>Legend</b>: policy lines are grouped by colour group; click a group&rsquo;s entry to hide or show only that group.</li>
+            </ul>
+            <div class="ug-actions">
+              <button type="button" class="ug-go" data-go="trend" data-spot="#trChart"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
               <button type="button" class="ug-go alt" data-next="policy"><i class="bi bi-book"></i>Chapter 2: Policy Timeline</button>
               <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
             </div>
           </div>
         </div>
 
-        <!-- 5. Customise the figure -->
-        <div class="ug-step" data-step="sb-style">
-          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugB5">
-            <span class="ug-step-num">5</span><i class="bi bi-palette ug-step-ic" aria-hidden="true"></i>
-            <span class="ug-step-txt"><b>Customise annotations, colours, sizes and the legend</b><span>Make the figure ready for a report or a paper.</span></span>
+        <!-- 7. Chart tools and display -->
+        <div class="ug-step" data-step="tr-display">
+          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT7">
+            <span class="ug-step-num">7</span><i class="bi bi-eye ug-step-ic" aria-hidden="true"></i>
+            <span class="ug-step-txt"><b>Use the chart tools and display options</b><span>Zoom, legend, bands, log scale, Mann&ndash;Kendall and projection.</span></span>
             <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
           </button>
-          <div class="ug-step-body" id="ugB5">
-            <p>In <b>5. Figure Options</b>, set the <b>figure title</b> and the <b>X- and Y-axis labels</b>. Then open <b>Advanced figure customization</b>. The defaults already look good, so change only what you need. Tap a group of settings:</p>
-            <div class="ug-chips" role="group" aria-label="Figure settings">
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Show or hide the regime annotation boxes (slope, R&sup2;, RMSE) and place them inside or outside the plot, at any of the four corners."><i class="bi bi-chat-square-text"></i>Annotations</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Figure width and height (in inches), font size, marker size and transparency, measured-line width, and regression-line width."><i class="bi bi-arrows-angle-expand"></i>Sizes</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The colour and style (solid, dashed, dotted) of the line joining the measured points. Each regime&rsquo;s trend line takes its own colour automatically, and the policy-line colours are set in Policy overlays."><i class="bi bi-palette2"></i>Colours</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Show or hide the legend; place it inside one of the four corners or outside on any side; choose a boxed or transparent background; and set a vertical or horizontal layout with 1 to 8 columns."><i class="bi bi-list-ul"></i>Legend</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Switch the grid, the confidence band and the vertical break-year lines on or off."><i class="bi bi-grid"></i>Guides</button>
+          <div class="ug-step-body" id="ugT7">
+            <p><b>Chart toolbar.</b> Hover over a tool for a short how-to.</p>
+            <ul class="ug-list">
+              <li><b>Split the trend</b> (<kbd>B</kbd>): clicking the chart adds a breakpoint (step 3).</li>
+              <li><b>Zoom in</b> (<kbd>Z</kbd>): drag a box around the years and values to enlarge them.</li>
+              <li><b>Reset view</b>, or a double-click on the chart, shows all years again.</li>
+              <li><b>Legend</b> (below the chart by default): click any entry (observed data, a segment, the projection, breakpoints or a policy group) to hide or show it.</li>
+            </ul>
+            <p><b>3 Display</b> switches. Tap one to learn more:</p>
+            <div class="ug-chips" role="group" aria-label="Display options">
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The shaded band around each trend line: the range in which the true mean trend lies at your confidence level. On by default."><i class="bi bi-distribute-vertical"></i>Confidence band</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="A wider band: the range in which a single new year&rsquo;s value is expected to fall. It includes the year-to-year scatter as well as the uncertainty of the line."><i class="bi bi-arrows-expand"></i>Prediction interval</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Show or hide the dashed breakpoint lines and their year labels. The segments are still fitted when the lines are hidden."><i class="bi bi-signpost"></i>Breakpoint lines</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="A logarithmic Y axis. Equal distances then show equal percentage changes, which helps when comparing a large and a small period of the series."><i class="bi bi-graph-up-arrow"></i>Log scale</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Adds the Mann&ndash;Kendall trend test for each segment (Advanced Statistics) and uses it for the Direction of trend pills. It checks for a consistent rise or fall without assuming a straight line. On by default."><i class="bi bi-sort-numeric-down"></i>Mann&ndash;Kendall</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The default is 2030. Type another future year to extend the last segment&rsquo;s trend as a dashed line with a shaded prediction interval. A Projection figure appears in the headline row. Clear the box to remove it."><i class="bi bi-forward"></i>Project last trend to</button>
+            </div>
+            <div class="ug-explain" aria-live="polite">Select an option above.</div>
+            <div class="ug-formula" role="math" aria-label="Confidence band and prediction interval">
+              <div class="ug-eq"><i>&#375;</i>(<i>t</i>) &plusmn; <i>t</i><sub>1&minus;&alpha;/2,&thinsp;<i>n</i>&minus;2</sub> &middot; <i>s</i> &middot; <span class="ug-sqrt">&radic;<span><span class="ug-frac"><span>1</span><span><i>n</i></span></span> + <span class="ug-frac"><span>(<i>t</i> &minus; <i>t&#772;</i>)<sup>2</sup></span><span>&Sigma;(<i>t</i> &minus; <i>t&#772;</i>)<sup>2</sup></span></span></span></span> &nbsp;&nbsp;(confidence band)</div>
+              <div class="ug-eq"><i>&#375;</i>(<i>t</i>) &plusmn; <i>t</i><sub>1&minus;&alpha;/2,&thinsp;<i>n</i>&minus;2</sub> &middot; <i>s</i> &middot; <span class="ug-sqrt">&radic;<span>1 + <span class="ug-frac"><span>1</span><span><i>n</i></span></span> + <span class="ug-frac"><span>(<i>t</i> &minus; <i>t&#772;</i>)<sup>2</sup></span><span>&Sigma;(<i>t</i> &minus; <i>t&#772;</i>)<sup>2</sup></span></span></span></span> &nbsp;&nbsp;(prediction interval)</div>
+              <div class="ug-formula-key">Both widen away from the middle of the segment, and the projection&rsquo;s interval grows the further ahead you project. A projection assumes the last trend simply continues; it is not a forecast of future policy.</div>
+            </div>
+            <div class="ug-actions">
+              <button type="button" class="ug-go" data-go="trend" data-spot="#trShowBand"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
+              <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 8. Advanced Plot Settings -->
+        <div class="ug-step" data-step="tr-plotstyle">
+          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT8">
+            <span class="ug-step-num">8</span><i class="bi bi-palette ug-step-ic" aria-hidden="true"></i>
+            <span class="ug-step-txt"><b>Change the chart&rsquo;s appearance in Advanced Plot Settings</b><span>Colours, lines, markers, axes, legend and figure size.</span></span>
+            <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
+          </button>
+          <div class="ug-step-body" id="ugT8">
+            <p>Click <b>Advanced Plot Settings</b> below the chart to open it. These settings change only how the chart looks; the data, fits and statistics stay the same. The bar at the top of the panel:</p>
+            <ul class="ug-list">
+              <li><b>Preset</b>: start from a ready-made style: <em>INPACT default</em>, <em>Scientific publication</em>, <em>MATLAB style</em>, <em>Minimal</em> or <em>High contrast</em>.</li>
+              <li><b>Live preview</b>: when on, each change redraws the chart immediately; when off, make several changes and press <b>Apply</b>.</li>
+              <li><b>Reset to default</b> restores the normal look.</li>
+              <li><b>Save</b> stores the current style under a name, <b>Load saved&hellip;</b> brings it back, and <i class="bi bi-trash"></i> deletes it. <b>Export</b> and <b>Import</b> save a style to a JSON file and load it again, for example to share a house style with colleagues.</li>
+            </ul>
+            <p>The settings are arranged in tabs. Tap one to see what it controls:</p>
+            <div class="ug-chips" role="group" aria-label="Plot settings tabs">
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The line joining the yearly values (show, colour, width, style, opacity) and the markers (show, symbol, size, colour, opacity, edge colour and width)."><i class="bi bi-graph-up"></i>Observed data</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The colour palette for the segments (INPACT, MATLAB, Okabe&ndash;Ito colour-blind safe, Tableau, greyscale, high contrast), trend line width, style and opacity; the fill colour and opacity of the confidence band and prediction interval; and the projection line and its interval."><i class="bi bi-bezier2"></i>Trends &amp; intervals</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The breakpoint lines (show, colour, width, style, opacity), their year labels (font, size, weight, colour, position, rotation), and settings for each breakpoint on its own."><i class="bi bi-signpost-split"></i>Breakpoints</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="All policy lines (width, core and sector line styles, opacity), their labels (show, font, size, weight, colour, vertical, horizontal or diagonal orientation, position, alignment, offset, maximum length), and settings for each policy on the chart on its own."><i class="bi bi-flag"></i>Policy overlays</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Each axis has its own tab: title text and font; tick label font, size, colour and rotation; tick direction, length, interval and custom positions; minor ticks; minimum and maximum; linear or logarithmic scale and zero line (Y axis); axis line; and major and minor gridlines."><i class="bi bi-arrows"></i>X axis / Y axis</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Show or hide the legend; place it below, above, to the right of, or inside any corner of the chart; set 1&ndash;4 columns, item spacing, text size and colour, background, border; and rename or hide individual entries."><i class="bi bi-list-ul"></i>Legend</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The chart title (show, text, size, weight), plot and figure background colours (or a transparent background), default text colour, chart height and margins, a box around the plot, and the font family and base size."><i class="bi bi-aspect-ratio"></i>Figure</button>
+            </div>
+            <div class="ug-explain" aria-live="polite">Select a tab above.</div>
+            <div class="ug-note"><i class="bi bi-info-circle"></i><span>Your style is kept in this browser, so it is still there after a reload, and it is used by the <b>PNG</b> export. It is not included in a shared link: use <b>Export</b> to pass a style to someone else.</span></div>
+            <div class="ug-actions">
+              <button type="button" class="ug-go" data-go="trend" data-spot=".tr-ps"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
+              <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- 9. Advanced Statistics -->
+        <div class="ug-step" data-step="tr-stats">
+          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT9">
+            <span class="ug-step-num">9</span><i class="bi bi-sliders2 ug-step-ic" aria-hidden="true"></i>
+            <span class="ug-step-txt"><b>Read the Advanced Statistics</b><span>Segment statistics, Chow tests, break detection, Mann&ndash;Kendall and residual diagnostics.</span></span>
+            <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
+          </button>
+          <div class="ug-step-body" id="ugT9">
+            <p>Click <b>Advanced Statistics</b> at the bottom of the results to open it. It contains up to five sections, all updated with every change:</p>
+            <p><b>1. Segment statistics</b>: one row per segment, coloured like its line on the chart. Tap a group of columns:</p>
+            <div class="ug-chips" role="group" aria-label="Segment statistics columns">
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Seg (segment number), Period (first and last year) and N (number of years)."><i class="bi bi-calendar-range"></i>Period</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Slope /yr (kt CO&#8322;-eq per year), its standard error SE and confidence interval CI, the Intercept (the line&rsquo;s value in year 0, needed only for calculations) and Level at start (the line&rsquo;s value in the segment&rsquo;s first year, easier to read)."><i class="bi bi-graph-down"></i>Trend</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="R&sup2; (share of variation explained, 0&ndash;1), Adjusted R&sup2; (corrected for the number of years), RMSE (typical distance of the points from the line, in kt) and MAE (mean absolute error)."><i class="bi bi-bullseye"></i>Fit</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="t (slope divided by its standard error), p (the probability of a slope this large if the true trend were flat; stars mark p &lt; 0.05, 0.01, 0.001) and F (the overall F-statistic of the segment&rsquo;s regression)."><i class="bi bi-check2-square"></i>Significance</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Durbin&ndash;Watson: tests whether neighbouring residuals are correlated. About 2 means no autocorrelation; below about 1.5 suggests positive autocorrelation, which makes the p-values too optimistic."><i class="bi bi-link"></i>Durbin&ndash;Watson</button>
             </div>
             <div class="ug-explain" aria-live="polite">Select a group above.</div>
+            <div class="ug-formula" role="math" aria-label="Fit statistics">
+              <div class="ug-eq"><b>R&sup2;</b> = 1 &minus; <span class="ug-frac"><span>&Sigma;(<i>y</i> &minus; <i>&#375;</i>)<sup>2</sup></span><span>&Sigma;(<i>y</i> &minus; <i>y&#772;</i>)<sup>2</sup></span></span>, &nbsp; Adj&nbsp;R&sup2; = 1 &minus; (1 &minus; R&sup2;)<span class="ug-frac"><span><i>n</i> &minus; 1</span><span><i>n</i> &minus; 2</span></span>, &nbsp; <b>RMSE</b> = <span class="ug-sqrt">&radic;<span><span class="ug-frac"><span>&Sigma;(<i>y</i> &minus; <i>&#375;</i>)<sup>2</sup></span><span><i>n</i></span></span></span></span>, &nbsp; <i>t</i> = <span class="ug-frac"><span>&beta;&#770;<sub>1</sub></span><span>SE(&beta;&#770;<sub>1</sub>)</span></span>, &nbsp; DW = <span class="ug-frac"><span>&Sigma;(<i>e</i><sub><i>t</i></sub> &minus; <i>e</i><sub><i>t</i>&minus;1</sub>)<sup>2</sup></span><span>&Sigma;<i>e</i><sub><i>t</i></sub><sup>2</sup></span></span></div>
+            </div>
+            <p><b>2. Chow test at each breakpoint</b>: an F-test of whether one line for the whole series fits as well as separate lines on either side of the break. A p-value below 0.05 (&ldquo;Lines differ (structural break)&rdquo;) supports keeping the break.</p>
+            <div class="ug-formula" role="math" aria-label="Chow test">
+              <div class="ug-eq"><i>F</i> = <span class="ug-frac"><span>(SSR<sub>pooled</sub> &minus; SSR<sub>1</sub> &minus; SSR<sub>2</sub>) / <i>k</i></span><span>(SSR<sub>1</sub> + SSR<sub>2</sub>) / (<i>n</i> &minus; 2<i>k</i>)</span></span>, &nbsp;&nbsp; <i>k</i> = 2</div>
+              <div class="ug-formula-key">SSR<sub>pooled</sub> = squared residuals of one line through all years; SSR<sub>1</sub>, SSR<sub>2</sub> = those of the lines before and after the break. Compared with an F distribution with (<i>k</i>, <i>n</i> &minus; 2<i>k</i>) degrees of freedom.</div>
+            </div>
+            <p><b>3. Break detection (BIC)</b>: appears after you press Auto-detect (step 4). It lists the best breakpoint set for each number of breaks with its SSR and BIC; the lowest BIC is marked <em>best</em>.</p>
+            <p><b>4. Segment-level Mann&ndash;Kendall analysis</b>: appears when <em>Mann&ndash;Kendall per segment</em> is on (the default). For each segment it gives S, Kendall&rsquo;s &tau;, Z, p, the trend verdict, and Sen&rsquo;s slope with its confidence interval. It is two-sided, corrected for tied values, and uses &alpha; = 0.05.</p>
+            <div class="ug-formula" role="math" aria-label="Mann-Kendall test">
+              <div class="ug-eq"><b>S</b> = &Sigma;<sub><i>k</i>=1</sub><sup><i>n</i>&minus;1</sup> &Sigma;<sub><i>j</i>=<i>k</i>+1</sub><sup><i>n</i></sup> sgn(<i>y</i><sub><i>j</i></sub> &minus; <i>y</i><sub><i>k</i></sub>), &nbsp;&nbsp; <b>&tau;</b> = <span class="ug-frac"><span>S</span><span><i>n</i>(<i>n</i> &minus; 1) / 2</span></span>, &nbsp;&nbsp; <b>Z</b> = <span class="ug-frac"><span>S &mnplus; 1</span><span>&radic;Var(S)</span></span>, &nbsp;&nbsp; Sen&rsquo;s slope = median<span class="ug-frac"><span><i>y</i><sub><i>j</i></sub> &minus; <i>y</i><sub><i>i</i></sub></span><span><i>t</i><sub><i>j</i></sub> &minus; <i>t</i><sub><i>i</i></sub></span></span></div>
+              <div class="ug-formula-key">Each pair of years scores +1 if the later year is higher and &minus;1 if lower. &tau; runs from &minus;1 (always falling) to +1 (always rising). The trend is <em>increasing</em> or <em>decreasing</em> when p &lt; 0.05, otherwise <em>no significant trend</em>. Sen&rsquo;s slope is a robust estimate of the change per year.</div>
+            </div>
+            <p><b>5. Residual diagnostics</b>: four charts that check whether straight lines describe the data well. Residuals are the gaps between the observed values and the fitted lines. Tap a chart:</p>
+            <div class="ug-chips" role="group" aria-label="Residual diagnostics">
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Residuals over time, coloured by segment. They should scatter randomly around zero; a curve or a run of same-sign residuals suggests a missing break or a non-linear trend."><i class="bi bi-dot"></i>Residuals over time</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="A histogram of the residuals. A roughly symmetric, bell-shaped distribution supports the confidence intervals and p-values."><i class="bi bi-bar-chart"></i>Residual distribution</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Normal Q&ndash;Q plot: residuals against the values expected from a normal distribution. Points close to the red dashed line indicate normal residuals; curved ends indicate heavy tails or outliers."><i class="bi bi-diagram-2"></i>Normal Q&ndash;Q</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Residual autocorrelation (ACF) for lags of 1 to 10 years. Bars outside the blue dotted bounds (&plusmn;1.96/&radic;n) show that residuals are correlated over time."><i class="bi bi-soundwave"></i>Autocorrelation</button>
+            </div>
+            <div class="ug-explain" aria-live="polite">Select a chart above.</div>
+            <p>Below the charts, the <b>Durbin&ndash;Watson</b> statistic for all residuals and the <b>Jarque&ndash;Bera</b> normality test (with skew and kurtosis) are given; a Jarque&ndash;Bera p-value below 0.05 suggests the residuals are not normal, so treat the p-values with care or try the Huber or Theil&ndash;Sen method.</p>
+            <div class="ug-formula" role="math" aria-label="Jarque-Bera test">
+              <div class="ug-eq"><b>JB</b> = <span class="ug-frac"><span><i>n</i></span><span>6</span></span> (<i>S</i><sup>2</sup> + <span class="ug-frac"><span>(<i>K</i> &minus; 3)<sup>2</sup></span><span>4</span></span>)</div>
+              <div class="ug-formula-key"><i>S</i> = skewness, <i>K</i> = kurtosis of the residuals; compared with a &chi;<sup>2</sup> distribution with 2 degrees of freedom.</div>
+            </div>
             <div class="ug-actions">
-              <a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Try it in the app</a>
+              <button type="button" class="ug-go" data-go="trend" data-spot=".trend-adv:not(.tr-ps)"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
               <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
             </div>
           </div>
         </div>
 
-        <!-- 6. Track changes -->
-        <div class="ug-step" data-step="sb-track">
-          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugB6">
-            <span class="ug-step-num">6</span><i class="bi bi-arrow-repeat ug-step-ic" aria-hidden="true"></i>
-            <span class="ug-step-txt"><b>Track your changes on the graph</b><span>Every edit redraws the results instantly.</span></span>
+        <!-- 10. Export and share -->
+        <div class="ug-step" data-step="tr-export">
+          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT10">
+            <span class="ug-step-num">10</span><i class="bi bi-download ug-step-ic" aria-hidden="true"></i>
+            <span class="ug-step-txt"><b>Export and share your analysis</b><span>CSV statistics, a PNG figure and a link that reopens everything.</span></span>
             <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
           </button>
-          <div class="ug-step-body" id="ugB6">
-            <p>Each change in the sidebar (a new break year, another gas, a policy removed, a different method) updates the graph and the statistics immediately, so you can test ideas one at a time and see their effect.</p>
-            <ul class="ug-list">
-              <li><b>Figure mode</b> (Regression tab): <em>Publication</em> gives a clean static figure; <em>Interactive</em> lets you hover over points and policy lines for exact values, and zoom or pan to a period.</li>
-              <li><b>Regime Summary</b>, below the graph, shows each regime&rsquo;s equation and R&sup2; at a glance.</li>
-              <li><b>Statistics</b> tab: full tables for the whole series and for each regime, plus every regime equation written out.</li>
-              <li><b>Diagnostics</b> tab: four panels (residuals against fitted values, residual distribution, normal Q&ndash;Q plot, and observed against predicted) to check that straight lines describe the data well.</li>
-            </ul>
-            <p>To measure how much a break changed the trend, compare the regimes on either side of it:</p>
-            <div class="ug-formula" role="math" aria-label="Change at a break">
-              <div class="ug-eq">&Delta;<b>S</b> = &beta;&#770;<sub>1,<i>k</i>+1</sub> &minus; &beta;&#770;<sub>1,<i>k</i></sub>, &nbsp;&nbsp; <b>Jump at T<sub>b</sub></b> = (&beta;&#770;<sub>0,<i>k</i>+1</sub> + &beta;&#770;<sub>1,<i>k</i>+1</sub> <i>T</i><sub>b</sub>) &minus; (&beta;&#770;<sub>0,<i>k</i></sub> + &beta;&#770;<sub>1,<i>k</i></sub> <i>T</i><sub>b</sub>)</div>
-              <div class="ug-formula-key">&Delta;S is the change in the yearly rate: a negative &Delta;S after a policy means emissions started falling faster (or rising more slowly). The jump is the step in the level of the two trend lines at the break year. Because the time axis is the calendar year, the intercept &beta;&#770;<sub>0</sub> on its own refers to year 0 and is not meaningful; use it only in calculations like these.</div>
-            </div>
-            <div class="ug-actions">
-              <a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Try it in the app</a>
-              <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
-            </div>
-          </div>
-        </div>
-
-        <!-- 7. Export -->
-        <div class="ug-step" data-step="sb-export">
-          <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugB7">
-            <span class="ug-step-num">7</span><i class="bi bi-download ug-step-ic" aria-hidden="true"></i>
-            <span class="ug-step-txt"><b>Export your results</b><span>A JPEG figure, and CSV files for statistical and regression analysis.</span></span>
-            <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
-          </button>
-          <div class="ug-step-body" id="ugB7">
-            <p>Open the <b>Export</b> tab. Tap an export to see what it contains:</p>
+          <div class="ug-step-body" id="ugT10">
+            <p>The three buttons at the bottom of the controls. Tap one to see what it gives you:</p>
             <div class="ug-chips" role="group" aria-label="Exports">
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Under Figure Export, set Image format to jpg and choose a resolution (150, 300, 600 or 1200 DPI; 300 DPI suits most reports and journals), then press Download figure. The file is named after the gas and sector. PNG, PDF, SVG, TIFF and EPS are also available. The exported figure always uses the Publication style, with your policy lines and figure settings."><i class="bi bi-file-earmark-image"></i>Figure (JPEG)</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Download CSV saves regression_statistics.csv: one row per regime with its start and end year, number of years, slope, intercept, equation, R&sup2;, adjusted R&sup2;, RMSE, MAE, MSE, standard error, confidence interval, t-statistic, p-value, residual variance and method. Excel and JSON versions are also offered."><i class="bi bi-filetype-csv"></i>Statistics CSV</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Download analyzed (t, y) subset as CSV saves analysis_period_series.csv: the cleaned year and emission values inside your analysis period, ready to re-run or extend the regression in Excel, R or Python."><i class="bi bi-table"></i>Data CSV</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Downloads trend_stats_&lt;gas&gt;_&lt;sector&gt;.csv: a header line with the gas, sector and units, then one row per segment (period, N, method, confidence level, slope, SE, CI, intercept, level at start, R&sup2;, adjusted R&sup2;, RMSE, MAE, t, p, Durbin&ndash;Watson, the Mann&ndash;Kendall S, &tau;, Z, p and trend, and Sen&rsquo;s slope with its CI) and one row per Chow test."><i class="bi bi-filetype-csv"></i>CSV</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Downloads the chart as a high-resolution PNG image (1400 pixels wide at double resolution), with your plot style, policy lines and a legend in three columns below the chart. Suitable for reports and presentations."><i class="bi bi-image"></i>PNG</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Copies a link to this exact analysis: gas, sector, method, confidence level, breakpoints, display options, the policies on the chart, group colours, the period filter and the policy tab and sort. Anyone opening it sees the same chart. The address bar also keeps this state as you work."><i class="bi bi-link-45deg"></i>Link</button>
             </div>
             <div class="ug-explain" aria-live="polite">Select an export above.</div>
-            <p>The statistics file lets you check each regime&rsquo;s trend directly. For example, the slope is significantly different from zero when <i>p</i> &lt; 0.05, which is the same as the confidence interval excluding zero:</p>
-            <div class="ug-formula" role="math" aria-label="t statistic">
-              <div class="ug-eq"><i>t</i> = <span class="ug-frac"><span>&beta;&#770;<sub>1</sub></span><span>SE(&beta;&#770;<sub>1</sub>)</span></span>, &nbsp;&nbsp; Adjusted R&sup2; = 1 &minus; (1 &minus; R&sup2;) <span class="ug-frac"><span><i>n</i> &minus; 1</span><span><i>n</i> &minus; 2</span></span>, &nbsp;&nbsp; MAE = <span class="ug-frac"><span>1</span><span><i>n</i></span></span> &Sigma; |<i>y</i> &minus; <i>&#375;</i>|</div>
-            </div>
             <div class="ug-actions">
-              <a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>Try it in the app</a>
+              <button type="button" class="ug-go" data-go="trend" data-spot="#trCsvBtn"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
               <label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label>
             </div>
           </div>
         </div>
       </div><!-- /ug-steps -->
 
+      <div class="ug-card" style="margin-top:1.2rem">
+        <h3 class="ug-card-title"><i class="bi bi-list-check"></i>A worked example</h3>
+        <ol class="ug-list">
+          <li>Choose <b>CO&#8322;</b> and <b>Road transportation</b>. The Policy overlay panel switches to the most relevant transport policies.</li>
+          <li>Set <b>up to 2 breaks</b> and press <b>Auto-detect</b>. Open <b>Advanced Statistics</b> and check the Break detection table and the Chow test for each break.</li>
+          <li>In the panel, press <b>Top 5 on chart</b>. Hover over the lines near each break to read the policies, and open a profile with <b>Open policy profile</b>.</li>
+          <li>Compare the slopes before and after each break in <b>Segment statistics</b>, and read the <b>Projection 2030</b> figure to see where the current trend leads.</li>
+          <li>Choose the <b>Scientific publication</b> preset in Advanced Plot Settings, then export the <b>PNG</b> and <b>CSV</b>, and copy the <b>Link</b> for colleagues.</li>
+        </ol>
+      </div>
+
       <div class="ug-note" style="margin-top:1.2rem"><i class="bi bi-exclamation-triangle"></i><span><b>Correlation is not causation.</b> A break that follows a policy suggests a possible link but does not prove that the policy caused the change. Other factors, such as economic shocks (the 2008 financial crisis, the 2020 pandemic), fuel prices, weather or changes in inventory methods, may also play a role. Treat a break near a policy as a question worth investigating, not as an answer.</span></div>
 
       <div class="ug-next">
-        <span><b>Well done!</b> You can now set break years, fit and compare trend segments, overlay climate policies and export the results.</span>
+        <span><b>Well done!</b> You can now fit and split emission trends, detect breakpoints, overlay and explore climate policies, style the chart, read the statistics and share your results.</span>
         <span class="ug-actions"><button type="button" class="ug-go alt" data-next="mapping"><i class="bi bi-arrow-left-circle"></i>Chapter 3: Spatial Mapping</button>
-        <a class="ug-go" href="https://inpact-epa-structural-break-analysis.streamlit.app/" target="_blank" rel="noopener"><i class="bi bi-bar-chart-steps"></i>Open the Structural Break Analysis app</a></span>
+        <button type="button" class="ug-go" data-go="trend"><i class="bi bi-activity"></i>Open Trend Analysis</button></span>
       </div>
     </section>
     </div><!-- /ug-main -->
@@ -12150,6 +12302,7 @@ if (!MAP_STANDALONE && location.hash.startsWith("#trend")) activateTab("trend");
 
   // ---- Chapters ----
   function showChapter(key, updateHash){
+    if (key === "breaks") key = "trend";                    // chapter 4's former name (old links)
     if (!chapters.some(c => c.dataset.chapter === key)) key = "intro";
     if (key !== current) stopVideos();
     current = key;
