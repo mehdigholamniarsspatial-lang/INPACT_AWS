@@ -2924,7 +2924,9 @@ a.ug-go.alt:hover{color:var(--navy)}
   <button class="tab-btn" role="tab" aria-selected="false" data-tab="trend">
     <i class="bi bi-activity"></i><span>Trend<span class="tab-label-long"> Analysis</span></span>
   </button>
-  <button class="tab-btn" role="tab" aria-selected="false" data-tab="streamlit">
+  <!-- Structural Break Analysis: hidden from the menu (26 Nov 2026), may be removed later.
+       Its tab (#tab-streamlit) still exists; delete hidden + style below to show it again. -->
+  <button class="tab-btn" role="tab" aria-selected="false" data-tab="streamlit" hidden style="display:none">
     <i class="bi bi-bar-chart-steps"></i><span>Structural<span class="tab-label-long"> Break Analysis</span></span>
   </button>
   <button class="tab-btn" role="tab" aria-selected="false" data-tab="data">
@@ -4568,7 +4570,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <button type="button" class="ug-chip" data-go="policy"><i class="bi bi-calendar3-range"></i>Policy Timeline</button>
               <button type="button" class="ug-chip" data-go="mapping"><i class="bi bi-globe-europe-africa"></i>Spatial Mapping</button>
               <button type="button" class="ug-chip" data-go="trend"><i class="bi bi-activity"></i>Trend Analysis</button>
-              <button type="button" class="ug-chip" data-go="streamlit"><i class="bi bi-bar-chart-steps"></i>Structural Break Analysis</button>
+              <button type="button" class="ug-chip" data-go="streamlit" hidden style="display:none"><i class="bi bi-bar-chart-steps"></i>Structural Break Analysis</button>
               <button type="button" class="ug-chip" data-go="data"><i class="bi bi-database"></i>Datasets</button>
               <button type="button" class="ug-chip" data-go="about"><i class="bi bi-info-circle"></i>About INPACT</button>
               <button type="button" class="ug-chip" data-go="feedback"><i class="bi bi-chat-square-text"></i>Feedback</button>
