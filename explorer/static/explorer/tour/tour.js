@@ -36,6 +36,8 @@
   if (root.classList.contains("map-embed")) return;          // the dashboard around the frame runs tours
   const STANDALONE = root.classList.contains("map-standalone");
   const STORE_POS = "inpact.tour.pos", STORE_DONE = "inpact.tour.done", STORE_NUDGE = "inpact.tour.nudged";
+  const STORE_WELCOME = "inpact.tour.welcome";          // { last: time shown, never: true } (welcome window)
+  const WELCOME_EVERY_DAYS = 30;                         // shown again at most once a month, unless "Don't show this again"
   const STORE_DELAY = "inpact.tour.delay", STORE_DL = "inpact.tour.playDownloads";
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -123,7 +125,7 @@
     if (!root.classList.contains("hdr-shrinkable")) { window.scrollTo({ top: 0, behavior: "smooth" }); await sleep(450); return; }
     if (!railOn() && typeof window.showMainMenu === "function") { window.showMainMenu(false); await sleep(350); }
   }
-  const menuItem = tab => [`.hs-menu [data-tab="${tab}"]`, `#mainMenu .tab-btn[data-tab="${tab}"]`];
+  const menuItem = tab => [tab === "guide" ? ".hs-guide" : `.panel-head[data-go-section="${tab}"]`, `#mainMenu .tab-btn[data-tab="${tab}"]`];
 
   /* =====================================================================
      TOURS
@@ -160,7 +162,7 @@
         text: `<p><b>Spatial Mapping</b> is the dashboard&rsquo;s map workspace. It places gridded emission estimates for Ireland on a satellite base map, so you can see <b>where</b> emissions occur and <b>how they change</b> over time.</p>`,
         target: menuItem("mapping"), place: menuSide,
         prepare: menuPrep,
-        task: "Click Spatial Mapping in the menu.",
+        task: "Click the title of panel 2B, Spatial Environmental Mapping (or Spatial Mapping in the menu).",
         done: () => tabActive("mapping"),
         auto: async () => { await ensureMapping(); }
       },
@@ -424,10 +426,13 @@
       },
       {
         id: "menu", phase: "Navigation", where: "page",
-        title: "The Main Menu",
-        text: `<p>The Main Menu leads to every section of the platform: the <b>Explorer Dashboard</b> (national emissions), the <b>Policy Timeline</b>, <b>Spatial Mapping</b>, <b>Trend Analysis</b>, the <b>Datasets</b> catalogue and information <b>About INPACT</b>.</p>
-               <p>On this first page, the <b>Explorer Dashboard</b>, the other sections float on the banner, each with a key figure. Once you open one, the menu moves to the <b>left side</b> of the page, so every section stays one click away; <b>Explorer Dashboard</b> at the top of that menu brings you back to this page.</p>`,
-        target: [".hs-menu", "#mainMenu"], place: menuSide,
+        title: "Open a section from its panel",
+        text: `<p>This first page, the <b>Explorer Dashboard</b>, is also the way into every section. Click the <b>title bar of a panel</b> to open its section:</p>
+               <ul><li><b>2A Time-Series Emissions Analysis</b>: Trend Analysis</li><li><b>2B Spatial Environmental Mapping</b>: Spatial Mapping</li>
+                   <li><b>3 Policy Intelligence</b> and <b>4 Roadmap</b>: the Policy Timeline</li><li><b>5 Public Participation</b>: Feedback</li>
+                   <li><b>Research Team</b>: About INPACT</li><li><b>6 Datasets</b>: the data catalogue</li></ul>
+               <p>Once a section is open, the menu sits on the <b>left side</b> of the page; <b>Explorer Dashboard</b> at its top brings you back here.</p>`,
+        target: ['.panel-head[data-go-section="trend"]', "#mainMenu"], place: menuSide,
         prepare: menuPrep
       },
       {
@@ -448,8 +453,9 @@
       {
         id: "tours", phase: "Help", where: "page",
         title: "Guided tours",
-        text: `<p>All interactive walkthroughs are listed under <b>Guided tours</b>. Each one shows you the real controls, explains them and can perform the steps for you. You can leave a tour at any time and resume it later from the same step.</p>`,
-        target: ['.hs-menu [data-tour-picker]', "#tourBtn"], place: menuSide,
+        text: `<p>Interactive walkthroughs show you the real controls, explain them and can perform the steps for you. You can leave a tour at any time and resume it later from the same step.</p>
+               <p>They are offered when you first open the dashboard, listed in the <b>User Guide</b>, and at the foot of the left menu in the other sections.</p>`,
+        target: [".hs-guide", "#tourBtn"], place: menuSide,
         prepare: menuPrep
       },
       {
@@ -919,21 +925,34 @@
   }
 
   /* ---------- Tour picker (Guided tours) ---------- */
-  function openPicker() {
+  // welcome: true opens it as the welcome window shown on the Explorer Dashboard (title, "Don't show this again")
+  function openPicker(welcome) {
+    welcome = welcome === true;
     if (!ui.picker) {
       const p = document.createElement("div");
       p.className = "gt-picker"; p.hidden = true;
       p.innerHTML = `<div class="gt-pk" role="dialog" aria-modal="true" aria-labelledby="gtPkTitle">
           <div class="gt-pk-head"><div style="flex:1">
             <h2 id="gtPkTitle">Guided tours</h2>
-            <p>Interactive walkthroughs that show you the real controls of the dashboard, explain each one and can perform the steps for you. Leave at any time; your place is remembered.</p></div>
+            <p class="gt-pk-intro"></p></div>
             <button type="button" class="gt-x" aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
-          <div class="gt-pk-list"></div></div>`;
+          <div class="gt-pk-list"></div>
+          <div class="gt-pk-foot" hidden>
+            <label class="gt-pk-never"><input type="checkbox"> Don&rsquo;t show this again</label>
+            <button type="button" class="gt-btn ghost gt-pk-later">Not now</button>
+          </div></div>`;
       document.body.appendChild(p);
-      p.addEventListener("click", e => { if (e.target === p || e.target.closest(".gt-x")) closePicker(); });
+      p.addEventListener("click", e => { if (e.target === p || e.target.closest(".gt-x") || e.target.closest(".gt-pk-later")) closePicker(); });
       p.addEventListener("keydown", e => { if (e.key === "Escape") closePicker(); });
       ui.picker = p;
     }
+    ui.picker.dataset.welcome = welcome ? "1" : "";
+    ui.picker.querySelector("#gtPkTitle").textContent = welcome ? "Welcome to the INPACT Explorer" : "Guided tours";
+    ui.picker.querySelector(".gt-pk-intro").textContent = welcome
+      ? "New here? A guided tour shows you around the dashboard step by step, using its real controls. You can open the tours again at any time from the User Guide or the left-hand menu."
+      : "Interactive walkthroughs that show you the real controls of the dashboard, explain each one and can perform the steps for you. Leave at any time; your place is remembered.";
+    ui.picker.querySelector(".gt-pk-foot").hidden = !welcome;
+    ui.picker.querySelector(".gt-pk-never input").checked = false;
     const list = ui.picker.querySelector(".gt-pk-list");
     const pos = store.get(STORE_POS, {}), done = store.get(STORE_DONE, []);
     list.innerHTML = Object.entries(TOURS).filter(([, t]) => available(t)).map(([id, t]) => {
@@ -953,7 +972,30 @@
     ui.picker.hidden = false;
     const first = list.querySelector("button"); if (first) first.focus();
   }
-  function closePicker() { if (ui.picker) ui.picker.hidden = true; }
+  function closePicker() {
+    if (!ui.picker || ui.picker.hidden) return;
+    if (ui.picker.dataset.welcome) {                           // remember the welcome window was seen
+      const never = ui.picker.querySelector(".gt-pk-never input").checked;
+      store.set(STORE_WELCOME, { last: Date.now(), never: never || !!store.get(STORE_WELCOME, {}).never });
+      ui.picker.dataset.welcome = "";
+    }
+    ui.picker.hidden = true;
+  }
+
+  /* ---------- Welcome window: the guided tours, on the Explorer Dashboard ----------
+     Shown on the first visit, then at most once every WELCOME_EVERY_DAYS days, unless the viewer
+     ticked "Don't show this again". Not shown when the page opens on another section (a link). */
+  function maybeWelcome() {
+    if (STANDALONE || root.classList.contains("hdr-shrinkable")) return;
+    if (location.hash && location.hash !== "#") return;
+    const w = store.get(STORE_WELCOME, {});
+    if (w.never) return;
+    if (w.last && Date.now() - w.last < WELCOME_EVERY_DAYS * 864e5) return;
+    setTimeout(() => {
+      if (st.tour || root.classList.contains("hdr-shrinkable") || (ui.picker && !ui.picker.hidden)) return;
+      openPicker(true);
+    }, 1200);
+  }
 
   /* ---------- Spatial Mapping: floating help button and first-visit prompt ---------- */
   function syncFab() {
@@ -1013,7 +1055,7 @@
   /* ---------- Launchers ---------- */
   document.addEventListener("click", e => {
     const s = e.target.closest("[data-tour-start]");
-    if (s) { e.preventDefault(); start(s.dataset.tourStart, +s.dataset.tourStep || 0, { autoplay: s.hasAttribute("data-tour-autoplay") }); return; }
+    if (s) { e.preventDefault(); closePicker(); start(s.dataset.tourStart, +s.dataset.tourStep || 0, { autoplay: s.hasAttribute("data-tour-autoplay") }); return; }
     const p = e.target.closest("[data-tour-picker]");
     if (p) { e.preventDefault(); openPicker(); }
   });
@@ -1025,6 +1067,7 @@
   function init() {
     renderOutlines();
     setupMappingHelp();
+    maybeWelcome();
     // Deep link: #tour/<id>
     const m = location.hash.match(/^#tour\/([\w-]+)/);
     if (m && TOURS[m[1]]) setTimeout(() => start(m[1]), 600);

@@ -349,3 +349,17 @@ html:not(.hdr-shrinkable):not(.map-standalone) .hs-cow,html:not(.hdr-shrinkable)
 .ch4-t-dot{fill:#0E8C8A;stroke:#fff;stroke-width:1.5}
 .ch4-t-tipbg{fill:#0B2A45}
 .ch4-t-tip{font-size:10px;font-weight:700;fill:#fff;font-family:inherit}
+
+/* ---------- User Guide button, just left of the funder logo (hero.js) ---------- */
+.hs-guide{display:none}
+html:not(.hdr-shrinkable):not(.map-standalone) .hs-guide{display:inline-flex;align-items:center;gap:.4rem;align-self:flex-start;margin:44px 0 0 auto;position:relative;z-index:4;
+  border:1.5px solid rgba(255,255,255,.9);border-radius:999px;background:rgba(255,255,255,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+  color:#0B2A45;font:inherit;font-size:.84rem;font-weight:700;padding:.4rem .9rem;cursor:pointer;box-shadow:0 6px 14px rgba(11,42,69,.12);
+  text-shadow:0 0 6px rgba(255,255,255,.9);transition:background .2s ease,box-shadow .2s ease}
+html:not(.hdr-shrinkable):not(.map-standalone) .hs-guide i{color:#0E8C8A;font-size:1rem}
+html:not(.hdr-shrinkable):not(.map-standalone) .hs-guide:hover{background:rgba(255,255,255,.92);box-shadow:0 8px 18px rgba(11,42,69,.18)}
+html:not(.hdr-shrinkable):not(.map-standalone) .hs-guide:focus-visible{outline:3px solid #E8A33D;outline-offset:2px}
+html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder{margin-left:.9rem}
+/* wide screens: the glowing map sits a little further left, clear of the button */
+@media (min-width:1600px){ html:not(.hdr-shrinkable):not(.map-standalone) .hs-art{right:360px} }
+@media (max-width:767px){ html:not(.hdr-shrinkable):not(.map-standalone) .hs-guide{margin-top:16px;padding:.35rem .55rem} html:not(.hdr-shrinkable):not(.map-standalone) .hs-guide span{display:none} }

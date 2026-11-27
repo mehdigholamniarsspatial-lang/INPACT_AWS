@@ -41,7 +41,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="/static/explorer/trend/trend.css?v=20261128c" rel="stylesheet">
 <!-- In-app guided walkthroughs (static/explorer/tour/) -->
-<link href="/static/explorer/tour/tour.css?v=20261127i" rel="stylesheet">
+<link href="/static/explorer/tour/tour.css?v=20261127j" rel="stylesheet">
 <!-- Leaflet -->
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <!-- Google Fonts -->
@@ -2933,9 +2933,10 @@ a.ug-go.alt:hover{color:var(--navy)}
 <!-- "Atmosphere" header look (static/explorer/header/); remove this line and atmosphere.js to go back -->
 <link href="/static/explorer/header/atmosphere.css?v=20261127a" rel="stylesheet">
 <!-- Landing banner (static/explorer/header/hero.*); remove this line and hero.js to go back to the plain header -->
-<link href="/static/explorer/header/hero.css?v=20261127r" rel="stylesheet">
+<link href="/static/explorer/header/hero.css?v=20261127s" rel="stylesheet">
 <!-- Main menu as a vertical rail on the left once a section is open (static/explorer/header/menu.*) -->
 <link href="/static/explorer/header/menu.css?v=20261127c" rel="stylesheet">
+<link href="/static/explorer/header/sections.css?v=20261127b" rel="stylesheet">
 </head>
 <body>
 
@@ -3892,21 +3893,18 @@ a.ug-go.alt:hover{color:var(--navy)}
       </div>
     </div>
 
-    <!-- TARGETS DASHBOARD -->
-    <section class="panel" aria-label="National climate targets">
+    <!-- DATASETS (27 Nov 2026: was "National Climate Targets Dashboard"). A summary of the data catalogue:
+         its key figures and its categories, filled from the Datasets tab by static/explorer/header/sections.js.
+         The title bar opens the Datasets tab; a category opens it filtered on that category. -->
+    <section class="panel" aria-label="Datasets" id="dsPanel">
       <div class="panel-head">
         <span class="panel-num">6</span>
-        <h2 class="panel-title">National Climate Targets Dashboard</h2>
+        <h2 class="panel-title">Datasets</h2>
+        <span class="ms-auto text-muted" style="font-size:.72rem">The sources behind every chart, map and policy view</span>
       </div>
       <div class="panel-body">
-        <div class="targets-grid">
-          <div class="target-card"><i class="bi bi-graph-down-arrow icon"></i><div class="big">51%</div><div class="desc">Emission Reduction Target by 2030 (vs 2018)</div></div>
-          <div class="target-card"><i class="bi bi-globe-europe-africa icon"></i><div class="big navy">2050</div><div class="desc">Climate Neutrality — Climate Neutral Ireland</div></div>
-          <div class="target-card"><i class="bi bi-wind icon"></i><div class="big">80%</div><div class="desc">Renewable Electricity by 2030</div></div>
-          <div class="target-card"><i class="bi bi-sun icon"></i><div class="big">43%</div><div class="desc">Renewable Energy Share by 2030</div></div>
-          <div class="target-card"><i class="bi bi-flower1 icon"></i><div class="big">25%</div><div class="desc">Agriculture Emission Reduction Target</div></div>
-          <div class="target-card"><i class="bi bi-recycle icon"></i><div class="big navy">Net-Zero</div><div class="desc">Economy-wide transition pathway</div></div>
-        </div>
+        <div class="ds-kpis" id="dsKpis"></div>
+        <div class="ds-cats" id="dsCats"></div>
       </div>
     </section>
 
@@ -4696,7 +4694,7 @@ a.ug-go.alt:hover{color:var(--navy)}
             <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
           </button>
           <div class="ug-step-body" id="ugB1">
-            <p>The menu takes you to every part of the platform. The first page is the <b>Explorer Dashboard</b>: the other sections float on its banner as cards, each with a key figure, together with the <b>Guided tours</b>. Drag the cards to arrange them anywhere on the banner (or move a selected card with <b>Shift</b> + the arrow keys); your layout is remembered in this browser, and <b>Reset layout</b> puts them back. If you scroll down, the menu follows as a bar at the top. Once you open a section, the menu moves to the <b>left side</b> of the page, where every section stays one click away (<b>Explorer Dashboard</b> brings you back to the first page), and a section&rsquo;s own pages (for example the Policy Timeline&rsquo;s Overview, Timeline and Categories) appear as a row at the top. On a phone, press <b>Main Menu</b> (upper left) or the logo to show the menu. Try it: each button below opens that section.</p>
+            <p>The first page is the <b>Explorer Dashboard</b>, and it is also the way into every section: click the <b>title bar of a panel</b> to open its section. <b>2A Time-Series Emissions Analysis</b> opens Trend Analysis, <b>2B Spatial Environmental Mapping</b> opens Spatial Mapping, <b>3 Policy Intelligence</b> and <b>4 Climate Policy Roadmap</b> open the Policy Timeline, <b>5 Public Participation</b> opens Feedback, <b>Research Team</b> opens About INPACT and <b>6 Datasets</b> opens the data catalogue (click a category there to open the catalogue on it). The <b>User Guide</b> button at the top right of the banner opens this guide. On your first visit a <b>welcome window</b> offers the guided tours; close it with <b>Not now</b>, or tick <b>Don&rsquo;t show this again</b>. You can drag the INPACT logo anywhere on the banner; <b>Reset</b> puts it back. Once you open a section, the menu sits on the <b>left side</b> of the page, where every section stays one click away (<b>Explorer Dashboard</b> brings you back to the first page), and a section&rsquo;s own pages (for example the Policy Timeline&rsquo;s Overview, Timeline and Categories) appear as a row at the top. On a phone, press <b>Main Menu</b> (upper left) or the logo to show the menu. Try it: each button below opens that section.</p>
             <div class="ug-chips">
               <button type="button" class="ug-chip" data-go="explorer"><i class="bi bi-graph-up-arrow"></i>Explorer Dashboard</button>
               <button type="button" class="ug-chip" data-go="policy"><i class="bi bi-calendar3-range"></i>Policy Timeline</button>
@@ -6373,11 +6371,12 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="/static/explorer/trend/plot-style.js?v=20261128e"></script>
 <script src="/static/explorer/trend/trend-chart.js?v=20261128f"></script>
 <script src="/static/explorer/settings-io.js?v=20261128a"></script>
-<script src="/static/explorer/tour/tour.js?v=20261127k" defer></script>
+<script src="/static/explorer/tour/tour.js?v=20261127l" defer></script>
 <script src="/static/explorer/header/atmosphere.js?v=20261127a" defer></script>
-<script src="/static/explorer/header/hero.js?v=20261127k" defer></script>
+<script src="/static/explorer/header/hero.js?v=20261127l" defer></script>
 <script src="/static/explorer/header/hero-ch4.js?v=20261127k" defer></script>
 <script src="/static/explorer/header/menu.js?v=20261127b" defer></script>
+<script src="/static/explorer/header/sections.js?v=20261127a" defer></script>
 <script>
 /* =====================================================================
    Ireland Greenhouse Gas Policy Impact Explorer

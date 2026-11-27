@@ -145,37 +145,16 @@
       <div class="hs-p-legend">${shares.map(([n, v, c]) => `<span><i class="${c}"></i>${n} ${Math.round(v / last[1] * 100)}%</span>`).join("")}</div>
     </div>` : "";
 
-  /* ---------- The main menu, floating on the banner (landing page) ----------
-     Built from the Main Menu itself (#mainMenu), so a section added or hidden there follows here;
-     each card gets a one-line figure from the page's own data where there is one. */
-  const dsCount = (document.querySelector("#dcKpis .dc-kpi .v") || {}).textContent;
-  const blurb = {
-    explorer: last ? `${fmtMt(last[1])} Mt CO₂e in ${last[0]}` : "National emissions and policies",
-    policy: polReal.length ? `${polReal.length} milestones, ${Math.min(...polYears)}–${Math.max(...polYears)}` : "Ireland's climate policies",
-    mapping: "3 maps + air quality",
-    trend: last ? `${pct(last[1], first[1]) >= 0 ? "+" : ""}${pct(last[1], first[1]).toFixed(1)}% since ${first[0]}` : "Breakpoints and trends",
-    data: dsCount ? `${dsCount} sources, how to cite` : "Sources, coverage, citations",
-    about: "The project and team",
-    guide: "Chapters and videos",
-    feedback: "Share your views",
-  };
-  // Explorer Dashboard is this page itself, so it has no card here (the left menu takes you back to it)
-  const tabs = [...document.querySelectorAll("#mainMenu .tab-btn[data-tab]")]
-    .filter(b => !b.hidden && b.style.display !== "none" && b.dataset.tab !== "explorer");
-  const nav = document.createElement("nav");
-  nav.className = "hs-menu";
-  nav.setAttribute("aria-label", "Dashboard sections");
-  nav.innerHTML = tabs.map(b => {
-    const ic = (b.querySelector("i") || {}).className || "bi bi-circle";
-    return `<button type="button" class="hs-card" data-tab="${b.dataset.tab}">
-      <i class="${ic}" aria-hidden="true"></i><span><b>${b.textContent.trim()}</b><small>${blurb[b.dataset.tab] || ""}</small></span></button>`;
-  }).join("") + `<button type="button" class="hs-card" data-tour-picker>
-      <i class="bi bi-signpost-split" aria-hidden="true"></i><span><b>Guided tours</b><small>Step-by-step help</small></span></button>`;
-  nav.addEventListener("click", e => {
-    const b = e.target.closest(".hs-card[data-tab]");
-    if (b && typeof window.activateTab === "function") window.activateTab(b.dataset.tab);
-  });
-
+  /* ---------- User Guide button (top right of the banner) ----------
+     27 Nov 2026: the menu cards were removed from the banner; on this first page the title bar of each
+     panel now opens its section (sections.js), and Guided tours are offered in a welcome window (tour.js). */
+  const guide = document.createElement("button");
+  guide.type = "button";
+  guide.className = "hs-guide";
+  guide.innerHTML = `<i class="bi bi-book" aria-hidden="true"></i><span>User Guide</span>`;
+  guide.title = "Open the User Guide: chapters, videos and guided tours";
+  guide.addEventListener("click", () => { if (typeof window.activateTab === "function") window.activateTab("guide"); });
+  const nav = document.createElement("div");      // no menu cards any more: kept empty, so the drag code below moves only the logo
 
   const wrap = document.createElement("div");
   wrap.className = "hero-scene";               // decorative, except the cows and the bog (buttons, hero-ch4.js)
@@ -185,7 +164,7 @@
   art.className = "hs-art";
   art.innerHTML = holo + panel;
   inner.appendChild(art);
-  inner.appendChild(nav);
+  inner.appendChild(guide);
 
   // The cards line up under the title (its left edge moves with the logo size)
   const text = inner.querySelector(".header-text");
@@ -228,7 +207,7 @@
   }
   const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
   function clampAll() {
-    if (!nav.offsetParent) return;
+    if (!header.offsetParent) return;
     items.forEach(c => { const [x, y] = offOf(c); if (!x && !y) return; const b = bounds(c); setOff(c, clamp(x, b.minX, b.maxX), clamp(y, b.minY, b.maxY)); });
     savePos(); syncReset();
   }
@@ -237,7 +216,7 @@
   const reset = document.createElement("button");
   reset.type = "button"; reset.className = "hs-reset"; reset.hidden = true;
   reset.innerHTML = `<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Reset layout`;
-  reset.title = "Put the cards and the logo back in their places";
+  reset.title = "Put the logo back in its place";
   reset.addEventListener("click", () => {
     header.classList.add("hs-returning");
     items.forEach(c => { setOff(c, 0, 0); c.style.zIndex = ""; }); savePos(); syncReset();
@@ -251,10 +230,7 @@
   inner.appendChild(hint);
   const HINT_KEY = "inpact.hero.hint";
   let hinted = false; try { hinted = localStorage.getItem(HINT_KEY) === "1"; } catch (e) { hinted = true; }
-  if (!hinted) {
-    setTimeout(() => hint.classList.add("on"), 1800);
-    setTimeout(() => hint.classList.remove("on"), 9000);
-  }
+  // (the drag tip is no longer shown: with the menu cards gone, only the logo can be moved)
   const hintDone = () => { hint.classList.remove("on"); try { localStorage.setItem(HINT_KEY, "1"); } catch (e) { /* storage blocked */ } };
 
   items.forEach(c => { const [x, y] = offOf(c); setOff(c, x, y); });
