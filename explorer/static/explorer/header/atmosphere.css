@@ -1,0 +1,150 @@
+/* =====================================================================
+   "Atmosphere" header (27 Nov 2026)
+   A deep navy → teal → emerald band with slowly drifting contour lines,
+   the two logos on raised white "glass" badges (the INPACT badge tilts
+   in 3D with the pointer, atmosphere.js) and a thin animated signal line
+   along the bottom edge. Loaded after the page's own styles, so it only
+   restyles the header: remove its <link> (and atmosphere.js) to go back.
+   ===================================================================== */
+:root{
+  --atm-1:#0A2038;          /* deep navy */
+  --atm-2:#113A5C;          /* navy blue */
+  --atm-3:#0D5C63;          /* deep teal */
+  --atm-4:#0A6A4B;          /* emerald */
+  --atm-ink:#FFFFFF;
+  --atm-ink-soft:rgba(226,240,244,.84);
+  --atm-line:rgba(255,255,255,.16);
+  --header-h:108px;
+}
+@media (max-width:991px){ :root{--header-h:100px} }
+@media (max-width:575px){ :root{--header-h:84px} }
+
+/* ---------- The band ---------- */
+.app-header{
+  background:
+    radial-gradient(520px 180px at 18% 120%, rgba(127,224,168,.18), transparent 70%),
+    radial-gradient(640px 220px at 82% -40%, rgba(95,211,207,.20), transparent 70%),
+    linear-gradient(112deg, var(--atm-1) 0%, var(--atm-2) 38%, var(--atm-3) 74%, var(--atm-4) 100%);
+  color:var(--atm-ink);
+  box-shadow:0 8px 24px rgba(8,26,46,.28), 0 1px 0 rgba(255,255,255,.06) inset;
+  isolation:isolate;
+}
+.app-header .header-inner{position:relative;z-index:1}
+
+/* Drifting contour lines and two soft light "clouds" (atmosphere.js adds .atm-bg) */
+.atm-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.atm-bg svg{position:absolute;left:0;top:50%;width:200%;height:180%;transform:translateY(-50%);
+  animation:atmDrift 70s linear infinite}
+.atm-bg path{fill:none;stroke:rgba(255,255,255,.075);stroke-width:1.1}
+.atm-bg path:nth-child(3n){stroke:rgba(127,224,168,.10)}
+.atm-bg::before,.atm-bg::after{content:"";position:absolute;border-radius:50%;filter:blur(24px);opacity:.55}
+.atm-bg::before{width:340px;height:120px;left:28%;top:-30px;background:rgba(95,211,207,.22);animation:atmCloud 26s ease-in-out infinite alternate}
+.atm-bg::after{width:280px;height:110px;right:14%;bottom:-40px;background:rgba(127,224,168,.18);animation:atmCloud 32s ease-in-out infinite alternate-reverse}
+@keyframes atmDrift{from{transform:translate(0,-50%)}to{transform:translate(-50%,-50%)}}
+@keyframes atmCloud{from{transform:translateX(-40px)}to{transform:translateX(60px)}}
+
+/* Signal line along the bottom edge */
+.app-header::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:3px;z-index:2;pointer-events:none;
+  background:linear-gradient(90deg,#00843D,#0E8C8A,#5FD3CF,#E8A33D,#0E8C8A,#00843D);
+  background-size:200% 100%;animation:atmSignal 14s linear infinite;opacity:.95;
+}
+@keyframes atmSignal{from{background-position:0 0}to{background-position:-200% 0}}
+
+/* ---------- Brand (logo + title): a click shows the full menu ---------- */
+.brand{transition:background-color .25s ease,box-shadow .25s ease}
+.brand:hover{background:rgba(255,255,255,.07);box-shadow:inset 0 -2px 0 rgba(127,224,168,.55)}
+.brand:hover .app-title{color:#fff}
+.brand:active{background:rgba(255,255,255,.12)}
+.brand:focus-visible{outline:3px solid #E8A33D;outline-offset:2px}
+
+/* INPACT logo on a raised glass badge (tilt: --atm-rx / --atm-ry from atmosphere.js) */
+.brand-inpact{
+  position:relative;background:#fff;border-radius:16px;padding:4px 10px;
+  border:1px solid rgba(255,255,255,.75);
+  box-shadow:0 14px 28px rgba(4,18,34,.38),0 4px 8px rgba(4,18,34,.28),inset 0 1px 0 #fff,inset 0 -2px 0 rgba(14,140,138,.12);
+  transform:perspective(700px) rotateX(var(--atm-rx,0deg)) rotateY(var(--atm-ry,0deg)) translateZ(0);
+  transform-style:preserve-3d;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s ease;overflow:hidden;
+}
+.brand-inpact img{height:calc(var(--header-h) - 34px)}
+.brand:hover .brand-inpact{box-shadow:0 20px 36px rgba(4,18,34,.45),0 6px 12px rgba(4,18,34,.3),inset 0 1px 0 #fff,inset 0 -2px 0 rgba(14,140,138,.18)}
+/* a band of light sweeps across the badge when the brand is hovered */
+.brand-inpact::after{
+  content:"";position:absolute;top:-20%;bottom:-20%;left:-60%;width:40%;pointer-events:none;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.75),transparent);transform:skewX(-18deg);opacity:0;
+}
+.brand:hover .brand-inpact::after{animation:atmSheen 1.1s ease forwards}
+@keyframes atmSheen{0%{left:-60%;opacity:0}20%{opacity:1}100%{left:130%;opacity:0}}
+
+/* Title block */
+.header-text{border-left:1px solid var(--atm-line)}
+.app-title{font-size:1.5rem;color:var(--atm-ink);letter-spacing:.005em;text-shadow:0 2px 10px rgba(4,18,34,.35)}
+html.hdr-slim .app-title{font-size:1.06rem}
+@media (max-width:991px){ .app-title{font-size:1.22rem} }
+.app-title .accent{
+  background:linear-gradient(90deg,#7FE0A8 0%,#5FD3CF 100%);-webkit-background-clip:text;background-clip:text;
+  color:transparent;-webkit-text-fill-color:transparent;text-shadow:none;
+}
+.app-subtitle{color:var(--atm-ink-soft)}
+
+/* EPA funder on a white glass chip (the logo needs a light background) */
+.brand-funder{border-left:1px solid var(--atm-line)}
+.brand-funder .funded-by{color:rgba(226,240,244,.78)}
+.brand-funder a{
+  background:#fff;border-radius:12px;padding:5px 12px;border:1px solid rgba(255,255,255,.75);
+  box-shadow:0 10px 22px rgba(4,18,34,.32),0 2px 5px rgba(4,18,34,.22),inset 0 1px 0 #fff;
+  transition:transform .25s ease,box-shadow .25s ease;
+}
+.brand-funder a:hover{transform:translateY(-2px);box-shadow:0 14px 28px rgba(4,18,34,.4),0 3px 7px rgba(4,18,34,.25),inset 0 1px 0 #fff}
+.brand-funder a:focus-visible{outline:3px solid #E8A33D;outline-offset:3px}
+.brand-funder img{height:calc(var(--header-h) - 66px)}
+
+/* Corner button on the full menu: collapse it again, with a visible label on wide screens */
+html.hdr-shrinkable:not(.hdr-slim) .nav-toggle{
+  background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.32);box-shadow:none;
+  backdrop-filter:blur(4px);border-radius:10px;
+}
+.nav-toggle:hover{background:rgba(255,255,255,.22);color:#fff;border-color:rgba(255,255,255,.55)}
+.nav-toggle:focus-visible{outline:3px solid #E8A33D}
+@media (min-width:1600px){
+  html.hdr-shrinkable:not(.hdr-slim) .nav-toggle{width:auto;padding:0 .75rem;gap:.4rem}
+  html.hdr-shrinkable:not(.hdr-slim) .nav-toggle::after{content:"Hide menu";font-family:inherit;font-size:.8rem;font-weight:700}
+}
+
+/* ---------- Slim header (a tab is open) ---------- */
+html.hdr-slim .brand-inpact{padding:2px 7px;border-radius:11px}
+html.hdr-slim .brand-inpact img{height:calc(var(--header-h) - 20px)}
+html.hdr-slim .brand-funder a{padding:3px 8px;border-radius:9px}
+html.hdr-slim .brand-funder img{height:calc(var(--header-h) - 36px)}
+html.hdr-slim .app-header::after{height:2px}
+.main-menu-btn{background:#fff;color:var(--navy);box-shadow:0 4px 12px rgba(4,18,34,.3)}
+.main-menu-btn:hover{background:#E3F3F3;color:var(--navy)}
+.hdr-current{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.28)}
+
+/* ---------- Spatial Mapping opened on its own (/map/) ---------- */
+html.map-standalone .app-header{box-shadow:0 8px 24px rgba(8,26,46,.28)}
+html.map-standalone .brand-inpact img{height:calc(var(--header-h) - 38px)}
+html.map-standalone .brand-funder img{height:calc(var(--header-h) - 70px)}
+
+/* ---------- Small screens ---------- */
+@media (max-width:575px){
+  .brand-inpact{padding:3px 7px;border-radius:12px}
+  .brand-inpact img{height:calc(var(--header-h) - 26px)}
+  .brand-funder a{padding:4px 8px;border-radius:10px}
+  .brand-funder img{height:calc(var(--header-h) - 58px)}
+  html.hdr-slim .brand-inpact img{height:calc(var(--header-h) - 18px)}
+  html.hdr-slim .brand-funder img{height:calc(var(--header-h) - 38px)}
+}
+
+/* ---------- Less motion when the viewer asks for it ---------- */
+@media (prefers-reduced-motion:reduce){
+  .atm-bg svg,.atm-bg::before,.atm-bg::after,.app-header::after{animation:none}
+  .brand-inpact,.brand-funder a{transition:none;transform:none}
+  .brand:hover .brand-inpact::after{animation:none}
+}
+@media print{
+  .app-header{background:#fff;color:#000;box-shadow:none}
+  .atm-bg,.app-header::after{display:none}
+  .app-title,.app-subtitle,.brand-funder .funded-by{color:#000;text-shadow:none}
+  .app-title .accent{color:#0E8C8A;-webkit-text-fill-color:#0E8C8A;background:none}
+}
