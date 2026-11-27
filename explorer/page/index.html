@@ -23,7 +23,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="/static/explorer/trend/trend.css?v=20261128c" rel="stylesheet">
 <!-- In-app guided walkthroughs (static/explorer/tour/) -->
-<link href="/static/explorer/tour/tour.css?v=20261127h" rel="stylesheet">
+<link href="/static/explorer/tour/tour.css?v=20261127i" rel="stylesheet">
 <!-- Leaflet -->
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <!-- Google Fonts -->
@@ -3005,8 +3005,9 @@ a.ug-go.alt:hover{color:var(--navy)}
           title="Interactive step-by-step walkthroughs of the dashboard">
     <i class="bi bi-signpost-split"></i><span>Guided tours</span>
   </button>
-  <!-- Not a tab: export / import / reset this browser's dashboard settings (settings-io.js) -->
-  <button type="button" class="tab-tool" id="mySettingsBtn" style="margin-left:0" role="button" aria-haspopup="dialog" aria-controls="mySettings"
+  <!-- Not a tab: export / import / reset this browser's dashboard settings (settings-io.js).
+       Hidden from the menu (27 Nov 2026); delete hidden + display:none to show it again. -->
+  <button type="button" class="tab-tool" id="mySettingsBtn" hidden style="margin-left:0;display:none" role="button" aria-haspopup="dialog" aria-controls="mySettings"
           title="Export, import or reset your dashboard settings">
     <i class="bi bi-sliders"></i><span>My settings</span>
   </button>
@@ -4680,6 +4681,8 @@ a.ug-go.alt:hover{color:var(--navy)}
               <button type="button" class="ug-chip" data-go="about"><i class="bi bi-info-circle"></i>About INPACT</button>
               <button type="button" class="ug-chip" data-go="feedback"><i class="bi bi-chat-square-text"></i>Feedback</button>
             </div>
+            <!-- My settings is hidden from the menu (27 Nov 2026): its how-to is hidden too; remove hidden to show it again -->
+            <div hidden>
             <p><b>My settings</b> (right end of the menu) keeps your preferences: the Trend Analysis chart style, map colour palettes, Air Quality symbology and display options are remembered in this browser.</p>
             <ol class="ug-list">
               <li>Set the dashboard up the way you like it.</li>
@@ -4688,6 +4691,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <li><b>Reset all</b> returns every setting to the default.</li>
             </ol>
             <p>Nothing is sent to the server: the file holds settings only, no personal data, and is read in your browser. User Guide progress and the Feedback section are not included.</p>
+            </div>
             <div class="ug-actions"><label class="ug-done"><input type="checkbox">I&rsquo;ve got this</label></div>
           </div>
         </div>
@@ -6344,7 +6348,7 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="/static/explorer/trend/plot-style.js?v=20261128e"></script>
 <script src="/static/explorer/trend/trend-chart.js?v=20261128e"></script>
 <script src="/static/explorer/settings-io.js?v=20261128a"></script>
-<script src="/static/explorer/tour/tour.js?v=20261127h" defer></script>
+<script src="/static/explorer/tour/tour.js?v=20261127i" defer></script>
 <script>
 /* =====================================================================
    Ireland Greenhouse Gas Policy Impact Explorer

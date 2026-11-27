@@ -23,6 +23,7 @@
      done    : fn(ctx) -> true once the step's task is complete
      auto    : async fn(ctx) that performs the step ("Do it for me")
      autoLabel, noReplay (not repeated when a tour is started mid-way, e.g. downloads)
+     skip    : true leaves the step out (kept for later)
 
    Launch: window.inpactTour.start(id, stepIndex), [data-tour-start="id"]
    (optional data-tour-step), [data-tour-picker]. [data-tour-outline="id"]
@@ -402,7 +403,7 @@
     title: "Getting around the dashboard",
     icon: "bi-compass",
     eyebrow: "Basics tour",
-    summary: "The Main Menu, your saved settings, the User Guide and where to find these walkthroughs again.",
+    summary: "The Main Menu, the User Guide and where to find these walkthroughs again.",
     minutes: 1,
     pageOnly: true,
     steps: [
@@ -421,7 +422,7 @@
         prepare: async () => { if (typeof window.showMainMenu === "function") window.showMainMenu(false); await sleep(350); }
       },
       {
-        id: "settings", phase: "Navigation", where: "page",
+        id: "settings", phase: "Navigation", where: "page", skip: true,   // My settings is hidden from the menu
         title: "My settings",
         text: `<p>The dashboard remembers your preferences in this browser: chart styles, map colour palettes, Air Quality symbology and display options.</p>
                <p><b>My settings</b> exports them to a small file that you can import later, on another computer or share with colleagues. No personal data is stored.</p>`,
@@ -460,7 +461,7 @@
   const st = { tour: null, id: null, steps: [], i: 0, raf: 0, busy: false, last: "", lastCheck: 0, doneNow: false, gen: 0 };
   // Auto-play: delay in seconds (1 by default, the viewer can raise it), downloads included or not
   const play = { on: false, token: 0, delay: Math.min(30, Math.max(1, +store.get(STORE_DELAY, 1) || 1)), dl: !!store.get(STORE_DL, false) };
-  const stepsOf = t => t.steps.filter(s => !(STANDALONE && s.pageOnly));
+  const stepsOf = t => t.steps.filter(s => !s.skip && !(STANDALONE && s.pageOnly));
   const available = t => !(STANDALONE && t.pageOnly);
 
   function build() {
