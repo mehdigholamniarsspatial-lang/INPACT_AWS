@@ -1,0 +1,142 @@
+/* =====================================================================
+   In-app guided walkthroughs (tour.js)
+   A dimmed page with a "spotlight" hole over the control being explained,
+   and a card beside it. The four dim panels leave the hole open, so the
+   control can be used directly, also inside the Spatial Mapping frame.
+   ===================================================================== */
+.gt-root{position:fixed;inset:0;z-index:4000;pointer-events:none;font-family:inherit}
+.gt-root[hidden]{display:none}
+.gt-dim{position:fixed;background:rgba(9,24,38,.58);pointer-events:auto;transition:all .25s ease}
+.gt-dim.full{inset:0}
+.gt-ring{position:fixed;border-radius:12px;pointer-events:none;
+  box-shadow:0 0 0 3px #E8A33D,0 0 0 7px rgba(232,163,61,.28);transition:all .25s ease}
+.gt-ring::after{content:"";position:absolute;inset:-3px;border-radius:14px;animation:gtPulse 1.8s ease-out infinite}
+@keyframes gtPulse{0%{box-shadow:0 0 0 0 rgba(232,163,61,.55)}100%{box-shadow:0 0 0 16px rgba(232,163,61,0)}}
+.gt-ring[hidden]{display:none}
+
+/* The step card */
+.gt-card{position:fixed;width:min(380px,calc(100vw - 24px));background:#fff;color:#1E2B37;border-radius:16px;
+  box-shadow:0 18px 48px rgba(9,24,38,.35),0 2px 6px rgba(9,24,38,.15);pointer-events:auto;
+  transition:top .25s ease,left .25s ease,opacity .2s ease;overflow:hidden;outline:none}
+.gt-card.center{width:min(520px,calc(100vw - 24px))}
+.gt-head{display:flex;align-items:center;gap:.6rem;padding:.85rem 1rem .2rem}
+.gt-eyebrow{flex:1;min-width:0;font-size:.7rem;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--teal,#0E8C8A);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gt-count{flex:none;font-size:.75rem;font-weight:700;color:#5E6E7D;background:#EEF2F5;border-radius:20px;padding:.12rem .55rem}
+.gt-x{flex:none;border:0;background:transparent;width:30px;height:30px;border-radius:8px;color:#5E6E7D;font-size:1.1rem;
+  display:grid;place-items:center;cursor:pointer}
+.gt-x:hover{background:#EEF2F5;color:#1E2B37}
+.gt-x:focus-visible,.gt-btn:focus-visible,.gt-link:focus-visible{outline:3px solid #E8A33D;outline-offset:2px}
+.gt-body{padding:.25rem 1rem .4rem;max-height:min(46vh,380px);overflow-y:auto}
+.gt-title{font-size:1.08rem;font-weight:800;color:var(--navy,#0B2A45);line-height:1.3;margin:.1rem 0 .45rem}
+.gt-card.center .gt-title{font-size:1.35rem}
+.gt-text{font-size:.9rem;line-height:1.6;margin:0 0 .55rem}
+.gt-text p{margin:0 0 .5rem}
+.gt-text ul,.gt-text ol{margin:0 0 .5rem;padding-left:1.15rem}
+.gt-text li{margin-bottom:.2rem}
+.gt-text kbd{font-family:inherit;font-size:.78rem;font-weight:700;background:#EEF2F5;border:1px solid #D5DDE4;border-bottom-width:2px;border-radius:5px;padding:0 .3rem}
+.gt-tip{display:flex;gap:.5rem;align-items:flex-start;font-size:.84rem;line-height:1.5;background:#E6F4F3;border-left:3px solid var(--teal,#0E8C8A);
+  border-radius:8px;padding:.5rem .7rem;margin:0 0 .55rem}
+.gt-tip i{color:var(--teal,#0E8C8A);margin-top:.1rem}
+.gt-tip.warn{background:#FDF5E7;border-left-color:#E8A33D}
+.gt-tip.warn i{color:#B97A1E}
+.gt-task{display:flex;gap:.5rem;align-items:center;font-size:.84rem;font-weight:600;color:#3D4F60;background:#F5F7F9;
+  border:1px dashed #C9D4DD;border-radius:9px;padding:.45rem .7rem;margin:0 0 .4rem}
+.gt-task i{color:#5E6E7D}
+.gt-task.ok{background:#E8F6EE;border:1px solid rgba(0,132,61,.35);color:#0A6B36}
+.gt-task.ok i{color:#00843D}
+.gt-foot{display:flex;align-items:center;gap:.45rem;padding:.55rem 1rem .85rem;border-top:1px solid #EEF2F5;flex-wrap:wrap}
+.gt-bar{height:4px;background:#EEF2F5}
+.gt-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal,#0E8C8A),var(--emerald,#00843D));transition:width .3s ease}
+.gt-sp{flex:1}
+.gt-btn{display:inline-flex;align-items:center;gap:.4rem;border:0;border-radius:9px;font:inherit;font-size:.84rem;font-weight:700;
+  padding:.48rem .85rem;cursor:pointer;transition:background .2s,color .2s,box-shadow .2s}
+.gt-btn.primary{background:var(--navy,#0B2A45);color:#fff}
+.gt-btn.primary:hover{background:var(--navy-soft,#1D4264)}
+.gt-btn.primary.ready{background:var(--emerald,#00843D);box-shadow:0 0 0 4px rgba(0,132,61,.18)}
+.gt-btn.ghost{background:#fff;color:var(--navy,#0B2A45);border:1px solid #D5DDE4}
+.gt-btn.ghost:hover{background:#F5F7F9}
+.gt-btn.auto{background:#E6F4F3;color:#0A5E5C}
+.gt-btn.auto:hover{background:#D3ECEA}
+.gt-btn[disabled]{opacity:.55;cursor:default}
+.gt-btn .spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:gtSpin .7s linear infinite}
+@keyframes gtSpin{to{transform:rotate(360deg)}}
+.gt-link{border:0;background:transparent;font:inherit;font-size:.8rem;color:#5E6E7D;text-decoration:underline;cursor:pointer;padding:.2rem}
+.gt-keys{width:100%;font-size:.72rem;color:#7A8896;margin-top:.1rem}
+.gt-msg{font-size:.8rem;color:#B3261E;margin:.1rem 0 .3rem}
+.gt-msg:empty{display:none}
+
+/* Intro / finish cards: a short list of what the tour covers */
+.gt-outline{list-style:none;margin:.2rem 0 .6rem;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:.35rem .8rem}
+.gt-outline li{display:flex;gap:.45rem;align-items:flex-start;font-size:.84rem;line-height:1.4}
+.gt-outline i{color:var(--emerald,#00843D);margin-top:.1rem}
+@media (max-width:520px){ .gt-outline{grid-template-columns:1fr} }
+
+/* Tour picker (main menu "Guided tours" button) */
+.gt-picker{position:fixed;inset:0;z-index:3990;display:grid;place-items:center;background:rgba(9,24,38,.5);padding:16px}
+.gt-picker[hidden]{display:none}
+.gt-pk{width:min(620px,100%);max-height:calc(100vh - 32px);overflow:auto;background:#fff;border-radius:18px;box-shadow:0 18px 48px rgba(9,24,38,.35)}
+.gt-pk-head{display:flex;align-items:flex-start;gap:.8rem;padding:1.2rem 1.3rem .6rem}
+.gt-pk-head h2{font-size:1.25rem;font-weight:800;color:var(--navy,#0B2A45);margin:0 0 .2rem}
+.gt-pk-head p{margin:0;font-size:.88rem;color:#5E6E7D;line-height:1.5}
+.gt-pk-list{display:flex;flex-direction:column;gap:.6rem;padding:.4rem 1.3rem 1.3rem}
+.gt-pk-item{display:flex;align-items:center;gap:.9rem;border:1px solid #D5DDE4;border-radius:14px;padding:.85rem 1rem;background:#fff}
+.gt-pk-ic{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-size:1.3rem;
+  background:#E6F4F3;color:var(--teal,#0E8C8A)}
+.gt-pk-txt{flex:1;min-width:0}
+.gt-pk-txt b{display:block;color:var(--navy,#0B2A45);font-size:.98rem}
+.gt-pk-txt>span{display:block;font-size:.83rem;color:#5E6E7D;line-height:1.45}
+.gt-pk-txt>span.gt-pk-meta{display:flex;flex-wrap:wrap;gap:.3rem .9rem;margin-top:.25rem;font-size:.74rem;font-weight:700;color:#7A8896}
+.gt-pk-btns{flex:none;display:flex;flex-direction:column;gap:.35rem;align-items:stretch}
+@media (max-width:560px){ .gt-pk-item{flex-wrap:wrap} .gt-pk-btns{flex-direction:row;width:100%} .gt-pk-btns .gt-btn{flex:1;justify-content:center} }
+
+/* "New here?" prompt on the first visit to Spatial Mapping */
+.gt-nudge{position:fixed;right:18px;bottom:18px;z-index:3980;width:min(340px,calc(100vw - 36px));background:#fff;border-radius:14px;
+  box-shadow:0 12px 32px rgba(9,24,38,.3);padding:.9rem 1rem;border-top:4px solid var(--emerald,#00843D);animation:gtIn .35s ease}
+.gt-nudge[hidden]{display:none}
+.gt-nudge b{display:block;color:var(--navy,#0B2A45);font-size:.95rem;margin-bottom:.2rem}
+.gt-nudge p{margin:0 0 .6rem;font-size:.85rem;line-height:1.5;color:#3D4F60}
+.gt-nudge .row{display:flex;gap:.45rem;flex-wrap:wrap}
+@keyframes gtIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+/* Floating help button on the Spatial Mapping tab */
+.gt-fab{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:3970;display:none;align-items:center;gap:.45rem;
+  border:0;border-radius:30px;background:var(--navy,#0B2A45);color:#fff;font:inherit;font-size:.84rem;font-weight:700;
+  padding:.5rem .95rem;box-shadow:0 8px 22px rgba(9,24,38,.35);cursor:pointer}
+.gt-fab:hover{background:var(--navy-soft,#1D4264)}
+.gt-fab:focus-visible{outline:3px solid #E8A33D;outline-offset:2px}
+.gt-fab.on{display:inline-flex}
+
+/* User Guide: walkthrough launch cards and the text outline of a tour */
+.gt-launch{display:flex;flex-wrap:wrap;align-items:center;gap:1rem;background:linear-gradient(110deg,#E6F4F3,#E8F6EE);
+  border:1px solid rgba(14,140,138,.3);border-radius:var(--radius,14px);padding:1rem 1.2rem;margin:0 0 1.4rem}
+.gt-launch .gt-pk-ic{background:#fff}
+.gt-launch .t{flex:1;min-width:220px}
+.gt-launch .t>b{display:block;color:var(--navy,#0B2A45);font-size:1.02rem;margin-bottom:.15rem}
+.gt-launch .t>span{display:block;font-size:.88rem;color:#3D4F60;line-height:1.5}
+.gt-launch .b{display:flex;gap:.45rem;flex-wrap:wrap}
+.gt-ol{list-style:none;counter-reset:gtol;margin:0;padding:0;display:flex;flex-direction:column;gap:.1rem}
+.gt-ol li{counter-increment:gtol;display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:.7rem;align-items:start;
+  padding:.6rem .3rem;border-bottom:1px solid #EEF2F5}
+.gt-ol li:last-child{border-bottom:0}
+.gt-ol li::before{content:counter(gtol);width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  font-size:.78rem;font-weight:800;background:var(--teal-light,#E6F4F3);color:var(--teal,#0E8C8A)}
+.gt-ol .ph{display:block;font-size:.68rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7A8896;margin-bottom:.1rem}
+.gt-ol b{display:block;color:var(--navy,#0B2A45);font-size:.93rem}
+.gt-ol span.s{display:block;font-size:.85rem;color:#3D4F60;line-height:1.5}
+.gt-ol .gt-link{white-space:nowrap;text-decoration:none;font-weight:700;color:var(--teal,#0E8C8A)}
+.gt-ol .gt-link:hover{text-decoration:underline}
+
+@media (prefers-reduced-motion:reduce){
+  .gt-dim,.gt-ring,.gt-card,.gt-bar span{transition:none}
+  .gt-ring::after,.gt-nudge{animation:none}
+}
+
+/* User Guide sidebar: "Learn by doing" block; lead paragraph of a guide card */
+.ug-side-tours{margin:1rem .4rem .2rem;padding:.8rem .75rem;border-radius:12px;background:linear-gradient(135deg,#E6F4F3,#E8F6EE);
+  border:1px solid rgba(14,140,138,.25)}
+.ug-side-tours .lbl{display:flex;align-items:center;gap:.4rem;font-size:.74rem;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--teal,#0E8C8A)}
+.ug-side-tours p{font-size:.8rem;line-height:1.45;color:#3D4F60;margin:.3rem 0 .55rem}
+.ug-side-tours .ug-go{width:100%;justify-content:center}
+.ug-card-lead{font-size:.9rem;line-height:1.6;color:var(--text-main,#1E2B37);margin:0 0 .7rem}
+@media (max-width:900px){ .ug-side-tours{display:none} }

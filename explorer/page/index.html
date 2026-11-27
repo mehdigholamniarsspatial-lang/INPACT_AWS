@@ -22,6 +22,8 @@
 <!-- Bootstrap Icons -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="/static/explorer/trend/trend.css?v=20261128c" rel="stylesheet">
+<!-- In-app guided walkthroughs (static/explorer/tour/) -->
+<link href="/static/explorer/tour/tour.css?v=20261127f" rel="stylesheet">
 <!-- Leaflet -->
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <!-- Google Fonts -->
@@ -2846,8 +2848,8 @@ html.dc-lock{overflow:hidden}
 .ug-card-title i{color:var(--teal)}
 .ug-ideas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.7rem;margin-bottom:1rem}
 .ug-idea{background:var(--grey-panel);border:1px solid var(--grey-border);border-radius:10px;padding:.75rem .85rem}
-.ug-idea b{display:block;color:var(--navy);font-size:.92rem;margin-bottom:.25rem}
-.ug-idea span{display:block;font-size:.85rem;line-height:1.5;color:var(--text-main)}
+.ug-idea>b{display:block;color:var(--navy);font-size:.92rem;margin-bottom:.25rem}
+.ug-idea>span{display:block;font-size:.85rem;line-height:1.5;color:var(--text-main)}
 .ug-calc{border-top:1px dashed var(--grey-border);padding-top:.9rem}
 .ug-calc-row{display:grid;grid-template-columns:220px minmax(0,1fr) 46px;align-items:center;gap:.8rem;margin-bottom:.45rem}
 .ug-calc-row label{font-size:.88rem;font-weight:700;color:var(--navy);line-height:1.2}
@@ -2998,8 +3000,13 @@ a.ug-go.alt:hover{color:var(--navy)}
   <button class="tab-btn" role="tab" aria-selected="false" data-tab="feedback">
     <i class="bi bi-chat-square-text"></i><span>Feedback</span>
   </button>
+  <!-- Not a tab: the interactive walkthroughs (static/explorer/tour/tour.js) -->
+  <button type="button" class="tab-tool" id="tourBtn" data-tour-picker aria-haspopup="dialog"
+          title="Interactive step-by-step walkthroughs of the dashboard">
+    <i class="bi bi-signpost-split"></i><span>Guided tours</span>
+  </button>
   <!-- Not a tab: export / import / reset this browser's dashboard settings (settings-io.js) -->
-  <button type="button" class="tab-tool" id="mySettingsBtn" role="button" aria-haspopup="dialog" aria-controls="mySettings"
+  <button type="button" class="tab-tool" id="mySettingsBtn" style="margin-left:0" role="button" aria-haspopup="dialog" aria-controls="mySettings"
           title="Export, import or reset your dashboard settings">
     <i class="bi bi-sliders"></i><span>My settings</span>
   </button>
@@ -4603,6 +4610,12 @@ a.ug-go.alt:hover{color:var(--navy)}
         <span id="ugProgressTxt">0 steps explored</span>
         <div class="ug-bar" aria-hidden="true"><span id="ugProgressBar"></span></div>
       </div>
+      <!-- Interactive walkthroughs (static/explorer/tour/tour.js) -->
+      <div class="ug-side-tours">
+        <div class="lbl"><i class="bi bi-signpost-split"></i>Learn by doing</div>
+        <p>Interactive tours point at the real controls and can perform each step for you.</p>
+        <button type="button" class="ug-go" data-tour-picker><i class="bi bi-play-circle"></i>Guided tours</button>
+      </div>
     </aside>
 
     <div class="ug-main">
@@ -4630,6 +4643,17 @@ a.ug-go.alt:hover{color:var(--navy)}
         <div class="ug-video-bar">
           <div><div class="t">Watch: a quick tour of the Explorer</div><div class="s">Then follow the steps below at your own pace.</div></div>
           <a class="ug-yt" href="https://youtu.be/wEkZHbnXJRc" target="_blank" rel="noopener"><i class="bi bi-youtube"></i>Watch on YouTube</a>
+        </div>
+      </div>
+
+      <!-- Interactive walkthroughs -->
+      <div class="gt-launch">
+        <span class="gt-pk-ic"><i class="bi bi-signpost-split"></i></span>
+        <div class="t"><b>Prefer to learn by doing? Take a guided tour.</b>
+          <span>Interactive walkthroughs highlight each control on the dashboard, explain what it does and why it matters, and can perform the step for you. You can leave a tour at any time and resume it from the same step.</span></div>
+        <div class="b">
+          <button type="button" class="ug-go" data-tour-start="dashboard"><i class="bi bi-compass"></i>Dashboard basics (1 min)</button>
+          <button type="button" class="ug-go alt" data-tour-start="mapping-timeseries"><i class="bi bi-graph-up"></i>Spatial Mapping time series</button>
         </div>
       </div>
 
@@ -5055,6 +5079,16 @@ a.ug-go.alt:hover{color:var(--navy)}
       <!-- ---------- 3.1 Time series ---------- -->
       <div class="ug-sub" data-sub="timeseries" id="ugSubTs" role="tabpanel">
 
+        <!-- Interactive walkthrough of this subsection (tour "mapping-timeseries" in tour.js) -->
+        <div class="gt-launch">
+          <span class="gt-pk-ic"><i class="bi bi-signpost-split"></i></span>
+          <div class="t"><b>Interactive walkthrough: your first time series, about 6 minutes</b>
+            <span>Follow a complete analysis on the live workspace using a real example, <b>methane from livestock in MapEIre</b>. Each control is highlighted and explained in turn. Use it yourself, or press <b>Do it for me</b>.</span></div>
+          <div class="b">
+            <button type="button" class="ug-go" data-tour-start="mapping-timeseries"><i class="bi bi-play-fill"></i>Start the walkthrough</button>
+          </div>
+        </div>
+
         <div class="ug-video-card">
           <div class="ug-video" data-yt="Xx_45filPoY" data-title="INPACT Explorer: Spatial Mapping time series tutorial">
             <button type="button" class="ug-poster" aria-label="Play the Spatial Mapping time series video"
@@ -5080,9 +5114,16 @@ a.ug-go.alt:hover{color:var(--navy)}
           <div class="ug-note"><i class="bi bi-info-circle"></i><span>MapEIre has three years (2015, 2016 and 2019), so its time series shows <b>three samples</b>: the points are the data, and the dashed line between 2016 and 2019 only links them (no values exist in between).</span></div>
         </div>
 
+        <!-- The walkthrough as text: filled from the tour definition, so the guide and the tour always match -->
+        <div class="ug-card">
+          <h3 class="ug-card-title"><i class="bi bi-list-ol"></i>Worked example, step by step</h3>
+          <p class="ug-card-lead">The example below uses the MapEIre layer <b>2019 &middot; Agriculture &ndash; Livestock &middot; CH&#8324;</b> and ends with a grid of maps for <b>County Dublin</b>. Read it as a checklist, or press <b>Show me</b> on any step: the walkthrough opens at that step and sets up the earlier ones for you.</p>
+          <div data-tour-outline="mapping-timeseries"><p class="ug-card-lead">Loading the steps&hellip;</p></div>
+        </div>
+
         <div class="ug-steps-head">
-          <h3>In this tutorial, you will learn how to&hellip;</h3>
-          <p>Open a step, try it in the workspace, and tick it off when you are done.</p>
+          <h3>Reference: every option, explained</h3>
+          <p>Open a topic for the full detail, try it in the workspace and tick it off when you are done.</p>
         </div>
 
         <div class="ug-steps">
@@ -6305,6 +6346,7 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="/static/explorer/trend/plot-style.js?v=20261128d"></script>
 <script src="/static/explorer/trend/trend-chart.js?v=20261128d"></script>
 <script src="/static/explorer/settings-io.js?v=20261128a"></script>
+<script src="/static/explorer/tour/tour.js?v=20261127f" defer></script>
 <script>
 /* =====================================================================
    Ireland Greenhouse Gas Policy Impact Explorer
