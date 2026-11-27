@@ -17,7 +17,7 @@
      where   : "page" (dashboard) or "map" (Spatial Mapping workspace)
      pageOnly: skip on /map/ opened on its own
      target  : selector, list of selectors or fn(ctx) -> Element(s); none = centred card
-     place   : preferred card side: "right" | "left" | "bottom" | "top"
+     place   : preferred card side: "right" | "left" | "bottom" | "top" (or a function returning one)
      prepare : async fn(ctx) run before the step is shown (open a section…)
      task    : what the viewer should do (shown with a tick when done)
      done    : fn(ctx) -> true once the step's task is complete
@@ -115,6 +115,15 @@
   const inPlot = c => { const b = c.q("#tsAdd"); return !!b && /already/i.test(b.textContent); };
   // Time series analysis on (the tab above step 1 works as a switch: clicking it when ON closes it)
   const tsOn = c => c.pressed("#msTabTs");
+  // The menu: floating cards on the landing banner, a rail on the left once a section is open (768 px and
+  // wider), or the fold-away menu on phones. menuPrep shows it; menuSide puts the card beside it.
+  const railOn = () => root.classList.contains("hdr-shrinkable") && window.innerWidth >= 768;
+  const menuSide = () => (railOn() ? "right" : "bottom");
+  async function menuPrep() {
+    if (!root.classList.contains("hdr-shrinkable")) { window.scrollTo({ top: 0, behavior: "smooth" }); await sleep(450); return; }
+    if (!railOn() && typeof window.showMainMenu === "function") { window.showMainMenu(false); await sleep(350); }
+  }
+  const menuItem = tab => [`.hs-menu [data-tab="${tab}"]`, `#mainMenu .tab-btn[data-tab="${tab}"]`];
 
   /* =====================================================================
      TOURS
@@ -149,9 +158,9 @@
         id: "open", phase: "Getting started", where: "page", pageOnly: true,
         title: "Open the Spatial Mapping section",
         text: `<p><b>Spatial Mapping</b> is the dashboard&rsquo;s map workspace. It places gridded emission estimates for Ireland on a satellite base map, so you can see <b>where</b> emissions occur and <b>how they change</b> over time.</p>`,
-        target: '#mainMenu .tab-btn[data-tab="mapping"]', place: "bottom",
-        prepare: async () => { if (typeof window.showMainMenu === "function") window.showMainMenu(false); await sleep(350); },
-        task: "Click Spatial Mapping in the Main Menu.",
+        target: menuItem("mapping"), place: menuSide,
+        prepare: menuPrep,
+        task: "Click Spatial Mapping in the menu.",
         done: () => tabActive("mapping"),
         auto: async () => { await ensureMapping(); }
       },
@@ -417,9 +426,9 @@
         id: "menu", phase: "Navigation", where: "page",
         title: "The Main Menu",
         text: `<p>The Main Menu leads to every section of the platform: the <b>Explorer Dashboard</b> (national emissions), the <b>Policy Timeline</b>, <b>Spatial Mapping</b>, <b>Trend Analysis</b>, the <b>Datasets</b> catalogue and information <b>About INPACT</b>.</p>
-               <p>Once you open a section the menu folds away to save space. Press <b>Main Menu</b> in the upper left, or the logo, to bring it back.</p>`,
-        target: "#mainMenu", place: "bottom",
-        prepare: async () => { if (typeof window.showMainMenu === "function") window.showMainMenu(false); await sleep(350); }
+               <p>On this first page the sections float on the banner, each with a key figure. Once you open one, the menu moves to the <b>left side</b> of the page, so every section stays one click away.</p>`,
+        target: [".hs-menu", "#mainMenu"], place: menuSide,
+        prepare: menuPrep
       },
       {
         id: "settings", phase: "Navigation", where: "page", skip: true,   // My settings is hidden from the menu
@@ -433,15 +442,15 @@
         id: "guide", phase: "Help", where: "page",
         title: "The User Guide",
         text: `<p>The <b>User Guide</b> explains every section in detail, chapter by chapter, with video tutorials and step-by-step instructions you can tick off as you go.</p>`,
-        target: '#mainMenu .tab-btn[data-tab="guide"]', place: "bottom",
-        prepare: async () => { if (typeof window.showMainMenu === "function") window.showMainMenu(false); await sleep(200); }
+        target: menuItem("guide"), place: menuSide,
+        prepare: menuPrep
       },
       {
         id: "tours", phase: "Help", where: "page",
         title: "Guided tours",
         text: `<p>All interactive walkthroughs are listed under <b>Guided tours</b>. Each one shows you the real controls, explains them and can perform the steps for you. You can leave a tour at any time and resume it later from the same step.</p>`,
-        target: "#tourBtn", place: "bottom",
-        prepare: async () => { if (typeof window.showMainMenu === "function") window.showMainMenu(false); await sleep(200); }
+        target: [".hs-tours", "#tourBtn"], place: menuSide,
+        prepare: menuPrep
       },
       {
         id: "finish", phase: "Done",
@@ -619,7 +628,8 @@
         right: W - r.right - m >= cw, left: r.left - m >= cw,
         bottom: H - r.bottom - m >= ch, top: r.top - m >= ch
       };
-      const order = [step.place || "right", "right", "left", "bottom", "top"];
+      const pref = typeof step.place === "function" ? step.place() : step.place;
+      const order = [pref || "right", "right", "left", "bottom", "top"];
       const side = order.find(s => fits[s]);
       const clampY = v => Math.min(Math.max(m, v), H - ch - m);
       const clampX = v => Math.min(Math.max(m, v), W - cw - m);

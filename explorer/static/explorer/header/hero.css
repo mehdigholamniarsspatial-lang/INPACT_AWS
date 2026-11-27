@@ -6,14 +6,15 @@
    top); choosing a tab switches to the slim bar of atmosphere.css.
    ===================================================================== */
 html:not(.hdr-shrinkable):not(.map-standalone){--header-h:0px;--hero-h:290px}
-@media (max-width:1199px){ html:not(.hdr-shrinkable):not(.map-standalone){--hero-h:262px} }
+@media (max-width:1199px){ html:not(.hdr-shrinkable):not(.map-standalone){--hero-h:284px} }
 @media (max-width:767px){ html:not(.hdr-shrinkable):not(.map-standalone){--hero-h:190px} }
 @media (max-width:575px){ html:not(.hdr-shrinkable):not(.map-standalone){--hero-h:156px} }
 
-.hero-scene,.hs-art,.hs-links{display:none}
+.hero-scene,.hs-art,.hs-menu,.hs-tours{display:none}
 html:not(.hdr-shrinkable):not(.map-standalone) .hero-scene{display:block}
 html:not(.hdr-shrinkable):not(.map-standalone) .hs-art{display:block}
-html:not(.hdr-shrinkable):not(.map-standalone) .hs-links{display:flex}
+html:not(.hdr-shrinkable):not(.map-standalone) .hs-menu{display:grid}
+html:not(.hdr-shrinkable):not(.map-standalone) .hs-tours{display:inline-flex}
 
 /* ---------- The banner: sky, not pinned ---------- */
 html:not(.hdr-shrinkable):not(.map-standalone) .app-header{
@@ -83,18 +84,35 @@ html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder a,html:not(.hdr-shr
 html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder img{height:56px;mix-blend-mode:multiply}
 
 /* ---------- Quick links under the title ---------- */
-.hs-links{position:absolute;left:var(--hs-text-x,300px);top:136px;gap:.6rem;z-index:2;flex-wrap:wrap}
-.hs-link{display:inline-flex;align-items:center;gap:.6rem;min-width:0;border:1px solid rgba(255,255,255,.95);border-radius:13px;
+.hs-menu{position:absolute;left:var(--hs-text-x,300px);right:var(--hs-right,0px);top:130px;z-index:2;max-width:780px;
+  grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem}
+.hs-card{display:flex;align-items:center;gap:.55rem;min-width:0;border:1px solid rgba(255,255,255,.95);border-radius:13px;
   background:rgba(255,255,255,.74);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#0B2A45;font:inherit;text-align:left;
-  padding:.5rem .7rem .5rem .75rem;cursor:pointer;box-shadow:0 8px 20px rgba(11,42,69,.14),inset 0 1px 0 #fff;
+  padding:.45rem .6rem;cursor:pointer;box-shadow:0 8px 20px rgba(11,42,69,.14),inset 0 1px 0 #fff;
   transition:transform .2s ease,box-shadow .2s ease,background .2s ease}
-.hs-link>i:first-child{font-size:1.25rem;color:#0E8C8A;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:#E3F3F3}
-.hs-link b{display:block;font-size:.88rem;font-weight:800;line-height:1.15}
-.hs-link small{display:block;font-size:.74rem;color:#4C6275;line-height:1.25;white-space:nowrap}
-.hs-go{font-size:1.25rem;color:#0E8C8A;transition:transform .2s ease}
-.hs-link:hover{transform:translateY(-2px);background:rgba(255,255,255,.92);box-shadow:0 12px 26px rgba(11,42,69,.2),inset 0 1px 0 #fff}
-.hs-link:hover .hs-go{transform:translateX(3px)}
-.hs-link:focus-visible{outline:3px solid #E8A33D;outline-offset:2px}
+.hs-card>i{flex:none;font-size:1.15rem;color:#0E8C8A;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:#E3F3F3;
+  transition:background .2s,color .2s}
+.hs-card>span{min-width:0}
+.hs-card b{display:block;font-size:.84rem;font-weight:800;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hs-card small{display:block;font-size:.7rem;color:#4C6275;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hs-card:hover{transform:translateY(-2px);background:rgba(255,255,255,.94);box-shadow:0 12px 26px rgba(11,42,69,.2),inset 0 1px 0 #fff}
+.hs-card:hover>i{background:#0E8C8A;color:#fff}
+.hs-card:focus-visible,.hs-tours:focus-visible{outline:3px solid #E8A33D;outline-offset:2px}
+.hs-tours{position:absolute;right:0;top:92px;z-index:2;align-items:center;gap:.4rem;border:1px solid rgba(255,255,255,.95);border-radius:999px;
+  background:rgba(255,255,255,.7);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);color:#0B2A45;font:inherit;font-size:.76rem;font-weight:700;
+  padding:.3rem .75rem;cursor:pointer;box-shadow:0 6px 14px rgba(11,42,69,.12)}
+.hs-tours i{color:#0E8C8A}
+.hs-tours:hover{background:#fff}
+
+/* The white menu row is not needed on the banner (the cards are the menu) ... */
+@media (min-width:768px){
+  html:not(.hdr-shrinkable):not(.map-standalone) .tab-nav{display:none}
+  html:not(.hdr-shrinkable):not(.map-standalone) .nav-stack{box-shadow:none}
+  /* ... until the banner has scrolled away: then it slides in as a bar at the top */
+  html.hero-past:not(.hdr-shrinkable):not(.map-standalone) .tab-nav{display:flex;position:fixed;top:0;left:0;right:0;z-index:1200;
+    box-shadow:0 6px 18px rgba(11,42,69,.14);animation:hsBarIn .25s ease}
+}
+@keyframes hsBarIn{from{transform:translateY(-100%)}to{transform:none}}
 
 /* ---------- Glowing map of Ireland + live trend panel ---------- */
 .hs-art{position:absolute;right:215px;top:-12px;width:196px;height:262px;z-index:1;pointer-events:none}
@@ -107,7 +125,7 @@ html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder img{height:56px;mix
 .hs-orbit{position:absolute;left:-34%;right:-34%;top:30%;height:46%;border-radius:50%;border:1px solid rgba(255,255,255,.75);
   box-shadow:0 0 14px rgba(255,255,255,.6);transform:rotate(-14deg);animation:hsOrbit 9s ease-in-out infinite}
 .hs-orbit.o2{left:-22%;right:-22%;top:18%;height:70%;border-color:rgba(14,140,138,.35);box-shadow:none;transform:rotate(12deg);animation-delay:-4s}
-.hs-panel{position:absolute;left:70%;bottom:14px;width:236px;padding:.55rem .7rem .5rem;border-radius:12px;
+.hs-panel{position:absolute;left:70%;bottom:2px;width:236px;padding:.55rem .7rem .5rem;border-radius:12px;
   background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.95);
   box-shadow:0 10px 24px rgba(11,42,69,.16);color:#0B2A45}
 .hs-p-top{white-space:nowrap;display:flex;justify-content:space-between;gap:.4rem;font-size:.66rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#3A566D}
@@ -129,9 +147,10 @@ html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder img{height:56px;mix
 @keyframes hsDraw{to{stroke-dashoffset:0}}
 
 /* ---------- Narrower screens ---------- */
-@media (max-width:1379px){ .hs-art{right:200px;transform:scale(.86);transform-origin:top right} .hs-panel{display:none} }
+/* Wide screens: a wider banner, so the cards, the map and its panel each have room */
+@media (min-width:1600px){ html:not(.hdr-shrinkable):not(.map-standalone) .header-inner{max-width:1600px} }
+@media (max-width:1599px){ html:not(.hdr-shrinkable):not(.map-standalone) .hs-art{display:none} }
 @media (max-width:1279px){
-  html:not(.hdr-shrinkable):not(.map-standalone) .hs-art{display:none}
   html:not(.hdr-shrinkable):not(.map-standalone) .app-title{font-size:1.6rem}
 }
 @media (max-width:991px){
@@ -139,11 +158,15 @@ html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder img{height:56px;mix
   html:not(.hdr-shrinkable):not(.map-standalone) .app-title{font-size:1.3rem}
   html:not(.hdr-shrinkable):not(.map-standalone) .app-subtitle{font-size:.88rem}
   html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder img{height:44px}
-  .hs-links{top:124px}
-  .hs-link small{display:none}
+  .hs-menu{top:122px;gap:.4rem}
+  .hs-card small{display:none}
+  .hs-card b{white-space:normal;font-size:.76rem}
+  .hs-card{padding:.4rem .5rem}
+  .hs-card>i{width:28px;height:28px;font-size:1rem}
+  .hs-tours{top:92px}
 }
 @media (max-width:767px){
-  html:not(.hdr-shrinkable):not(.map-standalone) .hs-links{display:none}
+  html:not(.hdr-shrinkable):not(.map-standalone) .hs-menu,html:not(.hdr-shrinkable):not(.map-standalone) .hs-tours{display:none}
   html:not(.hdr-shrinkable):not(.map-standalone) .app-header{padding-top:14px}
   html:not(.hdr-shrinkable):not(.map-standalone) .brand-inpact img{height:84px}
 
@@ -159,4 +182,4 @@ html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder img{height:56px;mix
   .hs-puff{opacity:.6}
   .hs-line{animation:none;stroke-dashoffset:0}
 }
-@media print{ .hero-scene,.hs-art,.hs-links{display:none!important} }
+@media print{ .hero-scene,.hs-art,.hs-menu,.hs-tours{display:none!important} }

@@ -134,23 +134,39 @@
       <div class="hs-p-legend">${shares.map(([n, v, c]) => `<span><i class="${c}"></i>${n} ${Math.round(v / last[1] * 100)}%</span>`).join("")}</div>
     </div>` : "";
 
-  /* ---------- Quick links into the dashboard (real buttons) ---------- */
-  const links = [
-    { tab: "trend", icon: "bi-activity", t: "Trend Analysis",
-      s: last ? `${pct(last[1], first[1]) >= 0 ? "+" : ""}${pct(last[1], first[1]).toFixed(1)}% since ${first[0]}` : "Breakpoints and trends" },
-    { tab: "policy", icon: "bi-calendar3-range", t: "Policy Timeline",
-      s: polReal.length ? `${polReal.length} milestones, ${Math.min(...polYears)}–${Math.max(...polYears)}` : "Ireland's climate policies" },
-    { tab: "mapping", icon: "bi-globe-europe-africa", t: "Spatial Mapping", s: "3 emission maps + air quality" }
-  ];
+  /* ---------- The main menu, floating on the banner (landing page) ----------
+     Built from the Main Menu itself (#mainMenu), so a section added or hidden there follows here;
+     each card gets a one-line figure from the page's own data where there is one. */
+  const dsCount = (document.querySelector("#dcKpis .dc-kpi .v") || {}).textContent;
+  const blurb = {
+    explorer: last ? `${fmtMt(last[1])} Mt CO₂e in ${last[0]}` : "National emissions and policies",
+    policy: polReal.length ? `${polReal.length} milestones, ${Math.min(...polYears)}–${Math.max(...polYears)}` : "Ireland's climate policies",
+    mapping: "3 emission maps + air quality",
+    trend: last ? `${pct(last[1], first[1]) >= 0 ? "+" : ""}${pct(last[1], first[1]).toFixed(1)}% since ${first[0]}` : "Breakpoints and trends",
+    data: dsCount ? `${dsCount} sources, how to cite` : "Sources, coverage, citations",
+    about: "The project and team",
+    guide: "Chapters, videos and tours",
+    feedback: "Share your views",
+  };
+  const tabs = [...document.querySelectorAll("#mainMenu .tab-btn[data-tab]")].filter(b => !b.hidden && b.style.display !== "none");
   const nav = document.createElement("nav");
-  nav.className = "hs-links";
-  nav.setAttribute("aria-label", "Explore the dashboard");
-  nav.innerHTML = links.map(l => `<button type="button" class="hs-link" data-tab="${l.tab}">
-      <i class="bi ${l.icon}" aria-hidden="true"></i><span><b>${l.t}</b><small>${l.s}</small></span><i class="bi bi-arrow-right-short hs-go" aria-hidden="true"></i></button>`).join("");
+  nav.className = "hs-menu";
+  nav.setAttribute("aria-label", "Dashboard sections");
+  nav.innerHTML = tabs.map(b => {
+    const ic = (b.querySelector("i") || {}).className || "bi bi-circle";
+    return `<button type="button" class="hs-card" data-tab="${b.dataset.tab}">
+      <i class="${ic}" aria-hidden="true"></i><span><b>${b.textContent.trim()}</b><small>${blurb[b.dataset.tab] || ""}</small></span></button>`;
+  }).join("");
   nav.addEventListener("click", e => {
-    const b = e.target.closest(".hs-link");
+    const b = e.target.closest(".hs-card");
     if (b && typeof window.activateTab === "function") window.activateTab(b.dataset.tab);
   });
+  // Guided tours: a small pill under the funder logo
+  const tours = document.createElement("button");
+  tours.type = "button";
+  tours.className = "hs-tours";
+  tours.setAttribute("data-tour-picker", "");
+  tours.innerHTML = `<i class="bi bi-signpost-split" aria-hidden="true"></i>Guided tours`;
 
   const wrap = document.createElement("div");
   wrap.className = "hero-scene";
@@ -162,13 +178,22 @@
   art.innerHTML = holo + panel;
   inner.appendChild(art);
   inner.appendChild(nav);
+  inner.appendChild(tours);
 
-  // The quick links line up under the title (its left edge moves with the logo size)
+  // The cards line up under the title (its left edge moves with the logo size)
   const text = inner.querySelector(".header-text");
   const align = () => { if (text) inner.style.setProperty("--hs-text-x", (text.offsetLeft + 22) + "px"); };
   align();
   window.addEventListener("resize", align);
   if (window.ResizeObserver && text) new ResizeObserver(align).observe(text);
+
+  // Scrolled past the banner (landing page): the menu slides in as a bar at the top (hero.css)
+  const onScroll = () => {
+    if (root.classList.contains("hdr-shrinkable")) { root.classList.remove("hero-past"); return; }
+    root.classList.toggle("hero-past", window.scrollY > header.offsetHeight - 24);
+  };
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
 
   // The car drives along the coast road
   const car = wrap.querySelector(".hs-car"), road = wrap.querySelector(".hs-road");

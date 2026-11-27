@@ -1,0 +1,81 @@
+/* =====================================================================
+   Main menu as a vertical rail on the left (menu.js), once a section is open
+   (html.hdr-shrinkable) on screens 768 px and wider. The page moves right by
+   the rail's width; the slim header stays across the top. A section's own
+   sub-menu (Policy Timeline sections) sits centred at the top of the page.
+   Phones keep the fold-away menu with the "Main Menu" button.
+   On the landing page the menu floats on the banner instead (hero.css).
+   ===================================================================== */
+@media (min-width:768px){
+  html.hdr-shrinkable:not(.map-standalone){--rail-w:100px}
+
+  /* The rail */
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav{
+    position:fixed;top:var(--header-h);left:0;bottom:0;width:var(--rail-w);z-index:1095;
+    flex-direction:column;flex-wrap:nowrap;gap:.25rem;padding:.75rem .5rem .9rem;
+    max-height:none;opacity:1;visibility:visible;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin;
+    background:#fff;border-bottom:0;border-right:1px solid var(--grey-border);box-shadow:4px 0 18px rgba(11,42,69,.06);
+    transition:top .3s ease;
+  }
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-btn,
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-tool{
+    position:relative;flex:0 0 auto;flex-direction:column;justify-content:center;gap:.3rem;width:100%;margin:0;
+    padding:.6rem .25rem .55rem;border:0;border-radius:12px;text-align:center;
+    font-size:.68rem;font-weight:700;letter-spacing:.15px;line-height:1.15;color:var(--text-muted);
+  }
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-btn i,
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-tool i{
+    font-size:1.2rem;width:38px;height:32px;border-radius:10px;display:grid;place-items:center;transition:background .2s,color .2s;
+  }
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-btn>span{display:block}
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-btn .tab-label-long{display:inline}
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-btn:hover,
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-tool:hover{background:var(--grey-panel);color:var(--navy)}
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-btn.active{background:var(--emerald-light);color:var(--emerald-dark)}
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-btn.active i{background:var(--emerald);color:#fff}
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-btn.active::before{
+    content:"";position:absolute;left:-.5rem;top:18%;bottom:18%;width:4px;border-radius:0 4px 4px 0;background:var(--emerald);
+  }
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-btn:focus-visible,
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-tool:focus-visible{outline:2px solid var(--teal);outline-offset:-2px}
+  /* Guided tours at the foot of the rail */
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav #tourBtn{margin-top:auto;border-top:1px solid var(--grey-border);border-radius:0 0 12px 12px;padding-top:.75rem}
+
+  /* The page moves right of the rail */
+  html.hdr-shrinkable:not(.map-standalone) .nav-stack,
+  html.hdr-shrinkable:not(.map-standalone) .tab-pane,
+  html.hdr-shrinkable:not(.map-standalone) .app-footer{margin-left:var(--rail-w)}
+  html.hdr-shrinkable:not(.map-standalone) .nav-stack{box-shadow:none;background:transparent}
+
+  /* The rail replaces the "Main Menu" button and the corner collapse button */
+  html.hdr-shrinkable:not(.map-standalone) .hdr-nav,
+  html.hdr-shrinkable:not(.map-standalone) .nav-toggle{display:none!important}
+  html.hdr-shrinkable:not(.map-standalone) .app-header{padding-right:1.6rem}
+
+  /* A section's own sub-menu (Policy Timeline): centred at the top, as a row of pills */
+  html.hdr-shrinkable.pt-on:not(.map-standalone) .pt-subnav{
+    gap:.3rem;padding:.55rem 1rem;background:rgba(255,255,255,.96);border-bottom:1px solid var(--grey-border);
+    box-shadow:0 4px 14px rgba(11,42,69,.06);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  }
+  html.hdr-shrinkable.pt-on:not(.map-standalone) .pt-subtab:first-child{margin-left:auto}
+  html.hdr-shrinkable.pt-on:not(.map-standalone) .pt-subtab:last-child{margin-right:auto}
+  html.hdr-shrinkable.pt-on:not(.map-standalone) .pt-subtab{
+    padding:.45rem .85rem;border:1px solid transparent;border-bottom:1px solid transparent;border-radius:999px;font-size:.78rem;
+  }
+  html.hdr-shrinkable.pt-on:not(.map-standalone) .pt-subtab:hover{background:var(--grey-panel);border-color:var(--grey-border)}
+  html.hdr-shrinkable.pt-on:not(.map-standalone) .pt-subtab[aria-selected="true"]{
+    background:var(--teal-light);border-color:rgba(14,140,138,.45);color:#0B5563;
+  }
+}
+@media (min-width:768px) and (max-width:991px){
+  html.hdr-shrinkable:not(.map-standalone){--rail-w:86px}
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-btn,
+  html.hdr-shrinkable:not(.map-standalone) .tab-nav .tab-tool{font-size:.62rem}
+}
+@media (prefers-reduced-motion:reduce){
+  html.hdr-shrinkable .tab-nav{transition:none}
+}
+@media print{
+  html.hdr-shrinkable .tab-nav{display:none!important}
+  html.hdr-shrinkable .nav-stack,html.hdr-shrinkable .tab-pane,html.hdr-shrinkable .app-footer{margin-left:0!important}
+}
