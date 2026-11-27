@@ -2,34 +2,46 @@
 Storage, access keys, validation, results and research exports for the INPACT consultation.
 
 Responses are validated against the questionnaire in ``feedback_survey.py`` (each
-respondent group has its own) and appended, one JSON object per line, to
-``responses.jsonl`` in ``FEEDBACK_DIR`` (default ``data/feedback/`` in the project,
-kept out of Git; on the AWS server ``/var/lib/inpact/feedback``). An append-only
-JSON Lines file is simple, safe with several gunicorn workers (each line is written
-under a file lock), easy to back up, and keeps every answer exactly as given.
+respondent group has its own, with the routing of Section 13.1 of the instrument) and
+appended, one JSON object per line, to ``responses.jsonl`` in ``FEEDBACK_DIR`` (default
+``data/feedback/`` in the project, kept out of Git; on the AWS server
+``/var/lib/inpact/feedback``). An append-only JSON Lines file is simple, safe with
+several gunicorn workers (each line is written under a file lock), easy to back up, and
+keeps every answer exactly as given.
 
-The research exports (Excel and CSV) are built from that file on demand:
+Stored with each response (Section 13.6): the answers, the submission date (no time),
+the questionnaire version, the completion time, the device type, the group, the public
+form (A/B), the random survey code kept in the browser and the reference code shown to
+the respondent (for withdrawal). Not stored: IP address, precise timestamps, user agent.
 
-    README          survey version, export time, notes
-    Responses       one row per response: metadata, group and every single-answer question
-    MultiSelect     long format: response_id, group, question, option code / label
-    MatrixRatings   long format: response_id, group, question, row, score / don't know
-    PolicyRatings   long format: response_id, group, policy, criterion, score
-    PolicyComments  response_id, group, policy, comment
-    Codebook        every variable: question wording, groups asked, answer codes
-    Contacts        e-mail addresses of people who agreed to a follow-up interview,
-                    kept apart from the anonymous answers
+The survey code and the reference code are deleted one week after submission
+(``CONFIRM["code_days"]``): respondents can withdraw within that week, and their answers
+are anonymised from then on. ``purge_expired_codes`` runs whenever responses are saved
+or read, so no code is kept longer than promised.
+
+The research export (Excel and CSV) follows the codebook conventions of Appendix A:
+
+    README     version, export time, counts, coding conventions
+    Data       one row per response of the current version, one column per variable:
+               grids one column per row, multiple choice one 0/1 column per option,
+               the policy module as C*_[p] with p = 1-3 in presentation order;
+               substantive codes 1..n, non-substantive codes 92-99, -1 = not shown,
+               -2 = shown but not answered (I1: 91 and 90)
+    Codebook   every column: item, wording, groups shown, codes
+    Earlier    responses to earlier questionnaire versions (raw answers as JSON)
 
 Environment variables
 ---------------------
 FEEDBACK_DIR                folder for responses.jsonl (created if missing)
 FEEDBACK_ADMIN_KEY          research-team key for the downloads (disabled while unset)
-FEEDBACK_KEY_STAKEHOLDER    access keys of the four keyed groups: they open that group's
-FEEDBACK_KEY_RESEARCHER     questionnaire and the results dashboard. A group whose key is
-FEEDBACK_KEY_EXPERT         unset cannot be chosen.
+FEEDBACK_KEY_STAKEHOLDER    access keys of the four keyed groups. A group whose key is
+FEEDBACK_KEY_RESEARCHER     unset cannot be chosen.
+FEEDBACK_KEY_EXPERT
 FEEDBACK_KEY_POLICYMAKER
 FEEDBACK_MIN_CELL           a group's answers are shown in the results only from this many
-                            responses (default 3), so no individual can be recognised
+                            responses (default 5, Section 14.2)
+FEEDBACK_RESULTS_OPEN       "1" once fieldwork has closed: only then are the aggregated
+                            results shown to the professional groups (Section 11.3)
 """
 from __future__ import annotations
 
@@ -39,6 +51,7 @@ import io
 import json
 import os
 import re
+import secrets
 import threading
 import time
 import uuid
@@ -60,7 +73,8 @@ except ImportError:                     # Windows (local development)
 BASE_DIR = Path(__file__).resolve().parent.parent
 POLICIES_CSV = BASE_DIR / "data" / "policies.csv"
 _LOCK = threading.Lock()
-EMAIL_RE = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,190}\.[A-Za-z]{2,24}$")
+OTHER_MAX = 200
+REF_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"       # no 0/O, 1/I: easy to read back
 
 
 # ---------------------------------------------------------------------------
@@ -82,9 +96,13 @@ def admin_key() -> str:
 
 def min_cell() -> int:
     try:
-        return max(1, int(os.environ.get("FEEDBACK_MIN_CELL", "3")))
+        return max(1, int(os.environ.get("FEEDBACK_MIN_CELL", "5")))
     except ValueError:
-        return 3
+        return 5
+
+
+def results_open() -> bool:
+    return os.environ.get("FEEDBACK_RESULTS_OPEN", "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _norm_key(k) -> str:
@@ -104,7 +122,7 @@ def check_group_key(group: str, given) -> bool:
 
 
 def find_group_for_key(given):
-    """The keyed group whose key this is, or None (used by the results unlock form)."""
+    """The keyed group whose key this is, or None."""
     return next((g for g in survey.KEYED_GROUPS if check_group_key(g, given)), None)
 
 
@@ -125,7 +143,7 @@ def _policy_index() -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Validation: keep only answers that match the group's questionnaire
+# Validation: keep only answers that match the group's questionnaire and routing
 # ---------------------------------------------------------------------------
 class InvalidResponse(ValueError):
     pass
@@ -140,8 +158,10 @@ def _clean_text(v, max_len) -> str:
 def _clean_scale(v, q):
     if v in (None, ""):
         return None
-    if q.get("dk") and v == "dk":
-        return "dk"
+    if isinstance(v, str) and v in (q.get("na") or []):
+        return v
+    if isinstance(v, bool):
+        return None
     try:
         n = int(v)
     except (TypeError, ValueError):
@@ -150,125 +170,279 @@ def _clean_scale(v, q):
     return n if s["min"] <= n <= s["max"] else None
 
 
+def _clean_multi(v, codes, q):
+    if not isinstance(v, list):
+        return None
+    seen = []
+    for c in v:
+        if c in codes and c not in seen:
+            seen.append(c)
+    excl = [c for c in seen if c in q.get("exclusive", [])]
+    if excl and len(seen) > 1:                      # an exclusive answer stands alone
+        seen = excl[:1]
+    return seen[: q.get("max", len(codes))] or None
+
+
+def _clean_matrix(v, q, rows):
+    if not isinstance(v, dict):
+        return None
+    out = {}
+    for code, _ in rows:
+        s = _clean_scale(v.get(code), q)
+        if s is not None:
+            out[code] = s
+    return out or None
+
+
+def _perm(v, codes):
+    """A stored presentation order: a permutation of ``codes``, else None."""
+    return list(v) if isinstance(v, list) and sorted(map(str, v)) == sorted(codes) else None
+
+
+def _clean_value(q, v, answers, group, raw_answers):
+    """Clean one answer of a simple question type; returns (value, extra answers)."""
+    t, extra = q["type"], {}
+    if t == "single":
+        codes = [c for c, _ in survey.options_for(q, answers, group)]
+        val = v if v in codes else None
+        if val is not None and q.get("other") == val:
+            txt = _clean_text(raw_answers.get(q["id"] + "_other"), OTHER_MAX)
+            if txt:
+                extra[q["id"] + "_other"] = txt
+        return val, extra
+    if t == "multi":
+        codes = [c for c, _ in survey.options_for(q, answers, group)]
+        val = _clean_multi(v, codes, q)
+        if val and q.get("other") in val:
+            txt = _clean_text(raw_answers.get(q["id"] + "_other"), OTHER_MAX)
+            if txt:
+                extra[q["id"] + "_other"] = txt
+        return val, extra
+    if t == "scale":
+        return _clean_scale(v, q), extra
+    if t == "matrix":
+        return _clean_matrix(v, q, survey.dynamic_rows(q, answers)), extra
+    if t == "consents":
+        if not isinstance(v, list):
+            return None, extra
+        codes = [c for c, _ in q["rows"]]
+        val = [c for c in codes if c in v]
+        return val or None, extra
+    if t == "text":
+        return _clean_text(v, q.get("max_len", 1000)) or None, extra
+    return None, extra
+
+
+def _clean_pickgrid(q, v):
+    if not isinstance(v, dict):
+        return None
+    codes = [c for c, _ in q["options"]]
+    picked = []
+    for c in v.get("picked") or []:
+        if c in codes and c not in picked:
+            picked.append(c)
+    picked = picked[: q.get("max", 3)]
+    ratings = {}
+    for c in picked:
+        m = _clean_matrix((v.get("ratings") or {}).get(c), q, q["rows"])
+        if m:
+            ratings[c] = m
+    return {"picked": picked, "ratings": ratings} if picked else None
+
+
+def _clean_policy_items(q, entry, missing, title):
+    """The C1-C12 answers for one policy. C1 is required; "not at all familiar" skips the rest."""
+    out = {}
+    fam_q = q["items"][0]
+    fam = _clean_scale(entry.get(fam_q["id"]), fam_q)
+    if fam is None:
+        missing.append(f"C1 ({title})")
+        return out
+    out[fam_q["id"]] = fam
+    if fam == fam_q["scale"]["min"]:
+        return out
+    for it in q["items"][1:]:
+        val, _ = _clean_value(it, entry.get(it["id"]), {}, None, {})
+        if val is not None:
+            out[it["id"]] = val
+    return out
+
+
+def _clean_policies3(q, v, missing):
+    refs = {r["code"]: r for r in q["refs"]}
+    entries = v if isinstance(v, list) else []
+    order = [e.get("ref") for e in entries[:2] if isinstance(e, dict)]
+    if sorted(o for o in order if o) != sorted(refs):
+        order = [r["code"] for r in q["refs"]]           # no valid order sent: keep the listed order
+        entries = [next((e for e in entries if isinstance(e, dict) and e.get("ref") == c), {}) for c in order] + \
+            [e for e in entries if isinstance(e, dict) and not e.get("ref")]
+    out = []
+    for p, code in enumerate(order):
+        entry = entries[p] if p < len(entries) and isinstance(entries[p], dict) else {}
+        item = {"ref": code, "policy": refs[code]["title"]}
+        item.update(_clean_policy_items(q, entry, missing, refs[code]["title"]))
+        out.append(item)
+    own = next((e for e in entries[2:] if isinstance(e, dict) and e.get("policy")), None)
+    if own:
+        index = _policy_index()
+        prefixes = tuple(r.get("exclude_prefix") or r["timeline"] for r in q["refs"])
+        name = str(own.get("policy"))
+        if name in index and not name.startswith(prefixes):       # the reference policies cannot be chosen again
+            item = {"ref": None, "policy": name}
+            item.update(_clean_policy_items(q, own, missing, name))
+            out.append(item)
+    return out
+
+
 def clean_response(raw: dict) -> dict:
-    """Validate a submission; returns the cleaned answers (with "group"). Raises InvalidResponse."""
+    """Validate a submission. Returns {"answers", "form", "orders"}. Raises InvalidResponse."""
     if not isinstance(raw, dict):
         raise InvalidResponse("The submission is not in the expected format.")
     answers_in = raw.get("answers") if isinstance(raw.get("answers"), dict) else {}
     group = answers_in.get("group")
     if group not in survey.GROUP_CODES:
-        raise InvalidResponse("Please choose the group you are answering as.")
-    answers, missing = {}, []
-    policies = None
-    for step_id, q in survey.questions(group):
-        qid, t, v = q["id"], q["type"], answers_in.get(q["id"])
-        codes = [c for c, _ in q.get("options", [])]
-        val = None
-        if t == "group":
-            val = group
-        elif t == "single":
-            val = v if v in codes else None
-        elif t == "multi":
-            if isinstance(v, list):
-                seen = []
-                for c in v:
-                    if c in codes and c not in seen:
-                        seen.append(c)
-                val = seen[: q.get("max", len(codes))] or None
-        elif t == "scale":
-            val = _clean_scale(v, q)
-        elif t == "matrix":
-            if isinstance(v, dict):
-                rows = {}
-                for code, _ in q["rows"]:
-                    s = _clean_scale(v.get(code), q)
-                    if s is not None:
-                        rows[code] = s
-                val = rows or None
-        elif t == "text":
-            val = _clean_text(v, q.get("max_len", 1000)) or None
-        elif t == "check":
-            val = v is True
-        elif t == "email":
-            e = _clean_text(v, 254)
-            val = e if e and EMAIL_RE.match(e) else None
-        elif t == "policies":
-            if policies is None:
-                policies = _policy_index()
-            crit = [c for c, _, _ in q["criteria"]]
-            items = []
-            for item in (v if isinstance(v, list) else [])[: q.get("max", 6)]:
-                if not isinstance(item, dict) or item.get("policy") not in policies:
-                    continue
-                if any(i["policy"] == item["policy"] for i in items):
-                    continue
-                ratings = {}
-                for c in crit:
-                    s = _clean_scale((item.get("ratings") or {}).get(c), {**q, "dk": False})
-                    if s is not None:
-                        ratings[c] = s
-                comment = _clean_text(item.get("comment"), q.get("comment_max_len", 400))
-                if ratings or comment:
-                    items.append({"policy": item["policy"], "ratings": ratings, "comment": comment})
-            val = items or None
-        if val not in (None, False):
-            answers[qid] = val
-        if q.get("required") and val in (None, False):
-            missing.append(q["label"])
-    # The e-mail is kept only with the matching consent
+        raise InvalidResponse("Please choose the perspective you are answering from.")
+    form = raw.get("form") if group == "public" else None
+    if group == "public" and form not in survey.FORMS:
+        raise InvalidResponse("The survey form is missing. Please reload the page and try again.")
+    orders_in = raw.get("orders") if isinstance(raw.get("orders"), dict) else {}
+    answers, missing, orders = {"group": group}, [], {}
     for _, q in survey.questions(group):
-        dep = q.get("depends_on")
-        if dep and not answers.get(dep):
-            answers.pop(q["id"], None)
+        qid, t = q["id"], q["type"]
+        if t == "group" or not survey.visible(q, answers, form):
+            if qid == "S3b_main_sector" and len(answers.get("S3_sector") or []) == 1:
+                answers[qid] = answers["S3_sector"][0]              # filled in automatically (Section 13.1)
+            continue
+        v = answers_in.get(qid)
+        if t == "pickgrid":
+            val = _clean_pickgrid(q, v)
+        elif t == "policies3":
+            val = _clean_policies3(q, v, missing)
+        else:
+            val, extra = _clean_value(q, v, answers, group, answers_in)
+            answers.update(extra)
+        if val not in (None, False, []):
+            answers[qid] = val
+        if t == "consents" and q.get("required"):
+            if len(answers.get(qid) or []) < len(q["rows"]):
+                missing.append(q["label"].split(".")[0] + " (all statements)")
+        elif q.get("required") and val in (None, False, []):
+            missing.append(q["label"].split(".")[0])
+        if q.get("randomize"):
+            orders[qid] = _perm(orders_in.get(qid), [c for c, _ in q["rows"]])
+        if q.get("randomize_first"):
+            first = [c for c, _ in q["options"][: q["randomize_first"]]]
+            orders[qid] = _perm(orders_in.get(qid), first)
     if missing:
-        raise InvalidResponse("Please answer the required questions: " + "; ".join(missing[:3]))
-    return answers
+        raise InvalidResponse("Please answer the required questions: " + "; ".join(missing[:4]))
+    return {"answers": answers, "form": form, "orders": orders}
 
 
 # ---------------------------------------------------------------------------
 # Saving
 # ---------------------------------------------------------------------------
-def save_response(raw: dict, meta: dict) -> dict:
-    """Validate and store one response. Returns {"ok": True, "response_id": ...}."""
-    answers = clean_response(raw)
-    now = datetime.now(timezone.utc)
-    started = raw.get("started_at")
+def new_reference() -> str:
+    code = "".join(secrets.choice(REF_ALPHABET) for _ in range(8))
+    return code[:4] + "-" + code[4:]
+
+
+class _FileLock:
+    """Serialises writers of responses.jsonl, across threads and gunicorn workers. A separate
+    lock file is used, because purging codes replaces responses.jsonl with a new file."""
+
+    def __enter__(self):
+        _LOCK.acquire()
+        self.fh = (feedback_dir() / "responses.lock").open("a")
+        if fcntl:
+            fcntl.flock(self.fh, fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *exc):
+        try:
+            if fcntl:
+                fcntl.flock(self.fh, fcntl.LOCK_UN)
+            self.fh.close()
+        finally:
+            _LOCK.release()
+
+
+def _code_expired(rec, today) -> bool:
     try:
-        started_dt = datetime.fromisoformat(str(started).replace("Z", "+00:00"))
+        d = datetime.strptime(str(rec.get("submitted_date") or rec.get("submitted_utc") or "")[:10], "%Y-%m-%d")
+    except ValueError:
+        return True                                  # no usable date: do not keep the codes
+    return (today - d.date()).days >= int(survey.CONFIRM.get("code_days", 7))
+
+
+def purge_expired_codes() -> int:
+    """Delete the survey and reference codes of responses submitted a week or more ago. Returns how many."""
+    path = responses_path()
+    if not path.exists():
+        return 0
+    today = datetime.now(timezone.utc).date()
+    with _FileLock():
+        lines = path.read_text(encoding="utf-8").splitlines()
+        changed, out = 0, []
+        for line in lines:
+            try:
+                rec = json.loads(line) if line.strip() else None
+            except ValueError:
+                rec = None
+            if rec and (rec.get("client_id") or rec.get("reference_code")) and _code_expired(rec, today):
+                rec["client_id"] = None
+                rec["reference_code"] = None
+                rec["codes_deleted"] = today.isoformat()
+                line = json.dumps(rec, ensure_ascii=False)
+                changed += 1
+            out.append(line)
+        if changed:
+            tmp = path.with_suffix(".tmp")
+            with tmp.open("w", encoding="utf-8") as fh:
+                fh.write("\n".join(out) + "\n")
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp, path)
+    return changed
+
+
+def save_response(raw: dict, meta: dict) -> dict:
+    """Validate and store one response. Returns {"ok": True, "response_id", "reference"}."""
+    clean = clean_response(raw)
+    answers = clean["answers"]
+    now = datetime.now(timezone.utc)
+    try:
+        started_dt = datetime.fromisoformat(str(raw.get("started_at")).replace("Z", "+00:00"))
         duration = max(0, int((now - started_dt).total_seconds()))
     except (TypeError, ValueError):
-        started_dt, duration = None, None
+        duration = None
     client = re.sub(r"[^A-Za-z0-9-]", "", str(raw.get("client_id") or ""))[:40]
     record = {
         "response_id": uuid.uuid4().hex[:12],
+        "reference_code": new_reference(),     # shown once to the respondent; used only to withdraw
         "survey_version": survey.SURVEY_VERSION,
         "group": answers["group"],
+        "form": clean["form"],
         "key_verified": answers["group"] in survey.KEYED_GROUPS,
-        "submitted_utc": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "started_utc": started_dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") if started_dt else None,
+        "submitted_date": now.strftime("%Y-%m-%d"),
         "duration_s": duration,
-        "client_id": client or None,          # random id kept in the browser: flags repeat submissions
+        "client_id": client or None,          # random survey code kept in the browser: flags repeat submissions
         "device": meta.get("device"),
+        "orders": clean["orders"],
         "answers": answers,
     }
     line = json.dumps(record, ensure_ascii=False) + "\n"
-    path = responses_path()
-    with _LOCK:
-        with path.open("a", encoding="utf-8") as fh:
-            if fcntl:
-                fcntl.flock(fh, fcntl.LOCK_EX)
-            try:
-                fh.write(line)
-                fh.flush()
-                os.fsync(fh.fileno())
-            finally:
-                if fcntl:
-                    fcntl.flock(fh, fcntl.LOCK_UN)
+    purge_expired_codes()
+    with _FileLock():
+        with responses_path().open("a", encoding="utf-8") as fh:
+            fh.write(line)
+            fh.flush()
+            os.fsync(fh.fileno())
     _SUMMARY_CACHE["t"] = 0
-    return {"ok": True, "response_id": record["response_id"]}
+    return {"ok": True, "response_id": record["response_id"], "reference": record["reference_code"]}
 
 
 def load_responses() -> list[dict]:
+    purge_expired_codes()
     path = responses_path()
     if not path.exists():
         return []
@@ -283,46 +457,70 @@ def load_responses() -> list[dict]:
             except ValueError:
                 continue                        # a damaged line never blocks the rest
             r.setdefault("group", (r.get("answers") or {}).get("group") or "public")
+            r.setdefault("submitted_date", (r.get("submitted_utc") or "")[:10] or None)
             out.append(r)
     return out
 
 
 # ---------------------------------------------------------------------------
-# Results for the dashboard (keyed groups only): counts by group, never single answers
+# Results (professional groups, once fieldwork has closed): counts by group, never single answers
 # ---------------------------------------------------------------------------
 _SUMMARY_CACHE = {"t": 0, "data": None}
+
+
+def _counts(vals):
+    """{c: substantive counts, ns: non-substantive counts, a: answered}"""
+    c, ns = Counter(), Counter()
+    for v in vals:
+        if isinstance(v, str) and v in survey.NS:
+            ns[v] += 1
+        else:
+            c[str(v)] += 1
+    out = {"c": dict(c), "a": len(vals)}
+    if ns:
+        out["ns"] = dict(ns)
+    return out
 
 
 def _agg(q, values):
     """Counts for one question over a list of answers (None = not answered)."""
     t = q["type"]
-    vals = [v for v in values if v is not None]
+    vals = [v for v in values if v not in (None, [], {})]
     if t in ("scale", "single"):
-        c = Counter(str(v) for v in vals)
-        out = {"c": {k: n for k, n in c.items() if k != "dk"}, "a": len(vals)}
-        if c.get("dk"):
-            out["dk"] = c["dk"]
-        return out
+        return _counts(vals)
     if t == "multi":
         return {"c": dict(Counter(code for v in vals for code in v)), "a": len(vals)}
     if t == "matrix":
         rows = {}
         for code, _ in q["rows"]:
-            c = Counter(str(v[code]) for v in vals if code in v)
-            if c:
-                rows[code] = {"c": {k: n for k, n in c.items() if k != "dk"}, "dk": c.get("dk", 0)}
+            rv = [v[code] for v in vals if code in v]
+            if rv:
+                rows[code] = _counts(rv)
         return {"rows": rows, "a": len(vals)}
-    if t == "policies":
+    if t == "pickgrid":
+        tech = {}
+        for v in vals:
+            for code in v.get("picked", []):
+                x = tech.setdefault(code, {"n": 0, "rows": defaultdict(list)})
+                x["n"] += 1
+                for row, s in (v.get("ratings", {}).get(code) or {}).items():
+                    x["rows"][row].append(s)
+        return {"t": {k: {"n": x["n"], "rows": {r: _counts(s) for r, s in x["rows"].items()}} for k, x in tech.items()},
+                "a": len(vals)}
+    if t == "policies3":
         pol = {}
-        for items in vals:
-            for it in items:
-                p = pol.setdefault(it["policy"], {"n": 0, "crit": {}})
+        for v in vals:
+            for it in v:
+                key = it.get("ref") or it.get("policy")
+                p = pol.setdefault(key, {"n": 0, "ref": bool(it.get("ref")), "name": it.get("policy"),
+                                         "items": defaultdict(list)})
                 p["n"] += 1
-                for crit, s in (it.get("ratings") or {}).items():
-                    cell = p["crit"].setdefault(crit, {"s": 0, "n": 0})
-                    cell["s"] += s
-                    cell["n"] += 1
-        return {"p": pol, "a": len(vals)}
+                for item in q["items"]:
+                    if item["type"] == "scale" and item["id"] in it:
+                        p["items"][item["id"]].append(it[item["id"]])
+        return {"p": {k: {"n": x["n"], "ref": x["ref"], "name": x["name"],
+                          "items": {i: _counts(s) for i, s in x["items"].items()}} for k, x in pol.items()},
+                "a": len(vals)}
     return None
 
 
@@ -334,14 +532,14 @@ def _median(xs):
 def summary() -> dict:
     if time.time() - _SUMMARY_CACHE["t"] < 60 and _SUMMARY_CACHE["data"]:
         return _SUMMARY_CACHE["data"]
-    rows = load_responses()
+    rows = [r for r in load_responses() if r.get("survey_version") == survey.SURVEY_VERSION]
     by_group = defaultdict(list)
     for r in rows:
         by_group[r["group"]].append(r)
     need = min_cell()
     timeline = defaultdict(Counter)
     for r in rows:
-        timeline[(r.get("submitted_utc") or "")[:10]][r["group"]] += 1
+        timeline[r.get("submitted_date") or ""][r["group"]] += 1
     data = {
         "n": len(rows), "min_cell": need, "version": survey.SURVEY_VERSION,
         "updated_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -356,155 +554,307 @@ def summary() -> dict:
             continue
         A = [r.get("answers", {}) for r in grs]
         for _, q in survey.questions(g):
-            if q["type"] in ("text", "email", "check", "group"):
+            if q["type"] in ("text", "consents", "group"):
                 continue
             agg = _agg(q, [a.get(q["id"]) for a in A])
-            if agg is not None:
+            if agg is not None and agg.get("a"):
                 data["q"].setdefault(q["id"], {})[g] = agg
     _SUMMARY_CACHE.update(t=time.time(), data=data)
     return data
 
 
 # ---------------------------------------------------------------------------
-# Research exports
+# Research export (Appendix A)
 # ---------------------------------------------------------------------------
-def _labels() -> dict:
-    """question id -> {code: label}"""
-    out = {}
-    for _, q, _, _ in survey.variables():
-        m = dict(q.get("options", []))
-        m.update(dict(q.get("rows", [])))
-        if "scale" in q:
-            m.update({str(k): v for k, v in q["scale"]["labels"].items()})
-        if q.get("dk"):
-            m["dk"] = "Don't know"
-        out[q["id"]] = m
-    for g in survey.GROUP_CODES:             # options can differ between groups (e.g. sectors_known)
-        for _, q in survey.questions(g):
-            out[q["id"]].update(dict(q.get("options", [])))
+def _num(n, width):
+    return str(n).zfill(width)
+
+
+def _w(seq):
+    return 2 if len(seq) > 9 else 1
+
+
+def _code_single(q, v):
+    """Numeric code of a single-choice answer: 1..n for substantive options, 92-99 for the others."""
+    if v in survey.NS_NUM:
+        return survey.NS_NUM[v]
+    subst = [c for c, _ in q["options"] if c not in survey.NS_NUM]
+    return subst.index(v) + 1 if v in subst else None
+
+
+def _code_scale(v):
+    return survey.NS_NUM.get(v, v) if isinstance(v, str) else v
+
+
+def _single_labels(q):
+    subst = [(c, l) for c, l in q["options"] if c not in survey.NS_NUM]
+    out = [f"{i + 1} = {l}" for i, (_, l) in enumerate(subst)]
+    out += [f"{survey.NS_NUM[c]} = {l}" for c, l in q["options"] if c in survey.NS_NUM]
+    return "; ".join(out)
+
+
+def _scale_labels(q):
+    s = q["scale"]
+    pts = [f"{k} = {v}" if v else str(k) for k, v in s["labels"].items()]
+    pts += [f"{survey.NS_NUM[c]} = {survey.NS[c]}" for c in q.get("na") or []]
+    return "; ".join(pts)
+
+
+class _Col:
+    __slots__ = ("name", "item", "label", "codes", "get", "groups")
+
+    def __init__(self, name, item, label, codes, get, groups):
+        self.name, self.item, self.label, self.codes, self.get, self.groups = name, item, label, codes, get, groups
+
+
+def _columns():
+    """Every export column, in questionnaire order (Appendix A)."""
+    cols, done = [], set()
+
+    def add(name, item, label, codes, get, groups):
+        if name not in done:
+            done.add(name)
+            cols.append(_Col(name, item, label, codes, get, groups))
+
+    for _, q, groups, wordings in survey.variables():
+        qid, t = q["id"], q["type"]
+        item = qid.split("_")[0]
+        label = " | ".join(survey.fill(w) for w in wordings)
+        g = ", ".join(groups)
+        miss = survey.MISSING_I1 if qid == "I1_int" else (survey.MISSING_NOT_SHOWN, survey.MISSING_NO_ANSWER)
+        if t == "group":
+            continue
+        if t == "single":
+            add(qid, item, label, _single_labels(q), lambda a, q=q: _code_single(q, a.get(q["id"])), g)
+            if q.get("other"):
+                add(qid + "_other", item, label + " (please specify)", "text", lambda a, q=q: a.get(q["id"] + "_other"), g)
+        elif t == "multi":
+            w = _w(q["options"])
+            for i, (code, olab) in enumerate(q["options"], 1):
+                add(f"{qid}_{_num(i, w)}", item, f"{label}: {olab}", "0 = not chosen; 1 = chosen",
+                    lambda a, q=q, code=code: (1 if code in a[q["id"]] else 0) if q["id"] in a else None, g)
+            if q.get("other"):
+                add(qid + "_other", item, label + " (please specify)", "text", lambda a, q=q: a.get(q["id"] + "_other"), g)
+        elif t == "scale":
+            add(qid, item, label, _scale_labels(q), lambda a, q=q: _code_scale(a.get(q["id"])), g)
+        elif t in ("matrix", "consents"):
+            w = _w(q["rows"])
+            for i, (code, rlab) in enumerate(q["rows"], 1):
+                if t == "consents":
+                    add(f"{qid}_{_num(i, w)}", item, f"{label}: {survey.fill(rlab)}", "0 = not ticked; 1 = ticked",
+                        lambda a, q=q, code=code: 1 if code in (a.get(q["id"]) or []) else 0, g)
+                else:
+                    add(f"{qid}_{_num(i, w)}", item, f"{label}: {rlab}", _scale_labels(q),
+                        lambda a, q=q, code=code: _code_scale((a.get(q["id"]) or {}).get(code)), g)
+            if q.get("randomize"):
+                add(qid + "_order", item, label + " (presentation order of the rows)", "row numbers, comma separated",
+                    None, g)
+        elif t == "text":
+            add(qid, item, label, "text", lambda a, q=q: a.get(q["id"]), g)
+        elif t == "pickgrid":
+            for i, (tc, tl) in enumerate(q["options"], 1):
+                for j, (rc, rl) in enumerate(q["rows"], 1):
+                    add(f"{qid}_{i}_{j}", item, f"{label}: {tl}: {rl}", _scale_labels(q),
+                        lambda a, q=q, tc=tc, rc=rc: _code_scale(((a.get(q["id"]) or {}).get("ratings", {})
+                                                                  .get(tc) or {}).get(rc)), g)
+        elif t == "policies3":
+            for p in (1, 2, 3):
+                add(f"C0_policyid_{p}", "C0", "Policy shown (reference code or dashboard title)", "text", None, g)
+                add(f"C0_reference_{p}", "C0", "Reference policy", "1 = reference policy; 0 = own choice", None, g)
+                add(f"C0_order_{p}", "C0", "Presentation order", "1-3", None, g)
+                for it in _all_policy_items():
+                    var = it["var"]
+                    if it["type"] == "multi":
+                        for i, (code, olab) in enumerate(it["options"], 1):
+                            add(f"{var}_{p}_{i}", var.split("_")[0], f"{it['label']}: {olab}",
+                                "0 = not chosen; 1 = chosen", None, it.get("_groups", g))
+                    else:
+                        codes = "text" if it["type"] == "text" else _scale_labels(it)
+                        add(f"{var}_{p}", var.split("_")[0], it["label"], codes, None, it.get("_groups", g))
+    return cols
+
+
+def _all_policy_items():
+    """The Module C items of every group, each once (the five C10 versions are separate variables)."""
+    seen, out = set(), []
+    for g in survey.GROUP_CODES:
+        for it in survey.module_c(g)["items"]:
+            if it["var"] not in seen:
+                seen.add(it["var"])
+                it = dict(it)
+                it["_groups"] = g if it["var"].startswith("C10") else (
+                    ", ".join(survey.PRO_GROUPS) if it["var"] == "C9_costeff" else "all")
+                out.append(it)
     return out
 
 
-def _tables(rows: list[dict]) -> dict[str, tuple[list, list]]:
-    """Every export table as (header, rows)."""
-    variables = survey.variables()
-    labels = _labels()
-    policies = _policy_index()
-    meta_cols = ["response_id", "survey_version", "group", "key_verified", "submitted_utc", "started_utc",
-                 "duration_s", "client_id", "device"]
-    wide_q = [q for _, q, _, _ in variables if q["type"] in ("single", "scale", "text", "check")]
-    multi_q = [q for _, q, _, _ in variables if q["type"] == "multi"]
-    matrix_q = [q for _, q, _, _ in variables if q["type"] == "matrix"]
-    head = meta_cols + [q["id"] for q in wide_q] + [f"{q['id']}_count" for q in multi_q] + \
-        ["policies_rated", "followup_email_given"]
-    T = {"Responses": (head, []),
-         "MultiSelect": (["response_id", "group", "question", "option_code", "option_label"], []),
-         "MatrixRatings": (["response_id", "group", "question", "row_code", "row_label", "score", "dont_know"], []),
-         "PolicyRatings": (["response_id", "group", "policy", "policy_year", "policy_level", "policy_sector",
-                            "criterion", "score"], []),
-         "PolicyComments": (["response_id", "group", "policy", "comment"], []),
-         "Contacts": (["response_id", "group", "submitted_utc", "email"], [])}
-    crit_by_group = {g: next((q["criteria"] for _, q in survey.questions(g) if q["type"] == "policies"), [])
-                     for g in survey.GROUP_CODES}
-    for r in rows:
-        a, rid, g = r.get("answers", {}), r.get("response_id"), r.get("group")
-        line = [("yes" if r.get(c) else "no") if c == "key_verified" else r.get(c) for c in meta_cols]
-        for q in wide_q:
-            v = a.get(q["id"])
-            line.append(("yes" if v else "no") if q["type"] == "check" else v)
-        line += [len(a.get(q["id"]) or []) if q["id"] in a else None for q in multi_q]
-        line += [len(a.get("policy_ratings") or []), "yes" if a.get("followup_email") else "no"]
-        T["Responses"][1].append(line)
-        for q in multi_q:
-            for code in a.get(q["id"]) or []:
-                T["MultiSelect"][1].append([rid, g, q["id"], code, labels[q["id"]].get(code, code)])
-        for q in matrix_q:
-            for code, v in (a.get(q["id"]) or {}).items():
-                T["MatrixRatings"][1].append([rid, g, q["id"], code, labels[q["id"]].get(code, code),
-                                              v if isinstance(v, int) else None, "yes" if v == "dk" else "no"])
-        for item in a.get("policy_ratings") or []:
-            p = policies.get(item["policy"], {})
-            for c, _, _ in crit_by_group.get(g, []):
-                T["PolicyRatings"][1].append([rid, g, item["policy"], p.get("year"), p.get("level"), p.get("sector"),
-                                              c, item.get("ratings", {}).get(c)])
-            if item.get("comment"):
-                T["PolicyComments"][1].append([rid, g, item["policy"], item["comment"]])
-        if a.get("followup_email"):
-            T["Contacts"][1].append([rid, g, r.get("submitted_utc"), a["followup_email"]])
-    # Codebook
-    meta_text = {"response_id": "Random id of the response",
-                 "survey_version": "Questionnaire version answered",
-                 "group": "Respondent group: " + "; ".join(f"{c} = {l}" for c, l, *_ in survey.GROUPS),
-                 "key_verified": "yes = the group's access key was checked before the response was accepted",
-                 "submitted_utc": "Submission time (UTC)",
-                 "started_utc": "Time the respondent started the questionnaire (UTC)",
-                 "duration_s": "Seconds from start to submission",
-                 "client_id": "Random id stored in the respondent's browser (flags repeat submissions)",
-                 "device": "mobile / desktop (from screen width)"}
-    cb = [["metadata", c, meta_text[c], "all", "", ""] for c in meta_cols]
-    for step_id, q, groups, wordings in survey.variables():
-        if q["type"] == "group":
+def _row(r, cols):
+    """One export row: Appendix A codes, with -1 / -2 missing codes from the routing."""
+    a, g, form = r.get("answers", {}), r.get("group"), r.get("form")
+    shown = {}
+    for _, q in survey.questions(g):
+        shown[q["id"]] = (q, survey.visible(q, a, form))
+    out = {}
+    for c in cols:
+        out[c.name] = None
+    # simple questions
+    for c in cols:
+        if c.get is None:
             continue
-        codes = ""
-        opts = {}
-        for g in survey.GROUP_CODES:
-            for _, q2 in survey.questions(g):
-                if q2["id"] == q["id"]:
-                    opts.update(dict(q2.get("options", [])))
-        if opts:
-            codes = "; ".join(f"{c} = {l}" for c, l in opts.items())
-        elif q.get("rows"):
-            codes = "rows: " + "; ".join(f"{c} = {l}" for c, l in q["rows"])
-        if "scale" in q:
-            sc = "; ".join(f"{k} = {v}" for k, v in q["scale"]["labels"].items())
-            codes = (codes + " | " if codes else "") + "scale: " + sc + ("; dk = Don't know" if q.get("dk") else "")
-        if q["type"] == "policies":
-            codes += " | criteria: " + "; ".join(f"{c} = {l} ({h})" for c, l, h in q["criteria"])
-        cb.append([step_id, q["id"], "\n".join(wordings), ", ".join(groups),
-                   q["type"] + (f" (max {q['max']})" if q.get("max") else ""), codes])
-    T["Codebook"] = (["section", "variable", "question", "asked_to", "type", "codes"], cb)
-    return T
+        qid = re.sub(r"(_\d+){1,2}$|_other$", "", c.name)
+        q, vis = shown.get(qid, (None, False))
+        if q is None:
+            q2 = next((q for _, q, _, _ in survey.variables() if q["id"] == qid), None)
+        miss = survey.MISSING_I1 if qid == "I1_int" else (survey.MISSING_NOT_SHOWN, survey.MISSING_NO_ANSWER)
+        if q is None or not vis:
+            out[c.name] = None if c.name.endswith("_other") or c.codes == "text" else miss[0]
+            continue
+        if q["type"] == "matrix" and q.get("rows_from"):
+            m = re.search(r"_(\d+)$", c.name)
+            idx = int(m.group(1)) - 1
+            if q["rows"][idx][0] not in [x for x, _ in survey.dynamic_rows(q, a)]:
+                out[c.name] = miss[0]
+                continue
+        if q["type"] == "pickgrid":
+            m = re.search(r"_(\d+)_(\d+)$", c.name)
+            tc = q["options"][int(m.group(1)) - 1][0]
+            picked = (a.get(qid) or {}).get("picked", [])
+            if tc not in picked:
+                out[c.name] = miss[0]
+                continue
+        v = c.get(a)
+        if v is None and not (c.name.endswith("_other") or c.codes == "text"):
+            v = miss[1]
+        out[c.name] = v
+    # presentation orders
+    for qid, order in (r.get("orders") or {}).items():
+        if qid + "_order" in out and order:
+            q = shown.get(qid, (None,))[0]
+            codes = [c for c, _ in q["rows"]] if q else []
+            out[qid + "_order"] = ",".join(str(codes.index(x) + 1) for x in order if x in codes)
+    # Module C
+    pol = a.get("C_policies") or []
+    for p in (1, 2, 3):
+        it = pol[p - 1] if p - 1 < len(pol) else None
+        items = _all_policy_items()
+        if not it:
+            out[f"C0_policyid_{p}"] = None
+            out[f"C0_reference_{p}"] = survey.MISSING_NOT_SHOWN
+            out[f"C0_order_{p}"] = survey.MISSING_NOT_SHOWN
+        else:
+            out[f"C0_policyid_{p}"] = it.get("ref") or it.get("policy")
+            out[f"C0_reference_{p}"] = 1 if it.get("ref") else 0
+            out[f"C0_order_{p}"] = p
+        mine = {x["var"]: x for x in survey.module_c(g)["items"]} if g in survey.GROUP_CODES else {}
+        fam = it.get("fam") if it else None
+        for item in items:
+            var, key = item["var"], item["id"]
+            asked = bool(it) and var in mine and (key == "fam" or (fam is not None and fam != 1))
+            if item["type"] == "multi":
+                for i, (code, _) in enumerate(item["options"], 1):
+                    name = f"{var}_{p}_{i}"
+                    if not asked:
+                        out[name] = survey.MISSING_NOT_SHOWN
+                    elif key in it:
+                        out[name] = 1 if code in it[key] else 0
+                    else:
+                        out[name] = survey.MISSING_NO_ANSWER
+            elif item["type"] == "text":
+                out[f"{var}_{p}"] = it.get(key) if asked else None
+            else:
+                out[f"{var}_{p}"] = (_code_scale(it[key]) if key in it else survey.MISSING_NO_ANSWER) if asked \
+                    else survey.MISSING_NOT_SHOWN
+    return out
 
 
-SHEETS = ["Responses", "MultiSelect", "MatrixRatings", "PolicyRatings", "PolicyComments", "Codebook", "Contacts"]
+META = [
+    ("response_id", "Random id of the response"),
+    ("survey_version", "Questionnaire version answered"),
+    ("submitted_date", "Date of submission (no time is stored)"),
+    ("duration_s", "Completion time in seconds"),
+    ("device", "mobile / desktop (from screen width)"),
+    ("group", "Respondent group (W1): " + "; ".join(f"{c} = {l}" for c, l, *_ in survey.GROUPS)),
+    ("FORM", "Public split-ballot form: A = Module G, B = K2 (empty for the other groups)"),
+    ("key_verified", "1 = the group's access key was checked before the response was accepted"),
+    ("survey_code", "Random code stored in the respondent's browser (duplicate check); deleted one week after submission"),
+    ("reference_code", "Code shown to the respondent for withdrawal; deleted one week after submission"),
+]
+
+
+def _tables(rows: list[dict]):
+    cols = _columns()
+    current = [r for r in rows if r.get("survey_version") == survey.SURVEY_VERSION]
+    earlier = [r for r in rows if r.get("survey_version") != survey.SURVEY_VERSION]
+    head = [m for m, _ in META] + [c.name for c in cols]
+    data = []
+    for r in current:
+        vals = _row(r, cols)
+        data.append([r.get("response_id"), r.get("survey_version"), r.get("submitted_date"), r.get("duration_s"),
+                     r.get("device"), r.get("group"), r.get("form"), 1 if r.get("key_verified") else 0,
+                     r.get("client_id"), r.get("reference_code")] + [vals.get(c.name) for c in cols])
+    cb = [["metadata", m, "", txt, "all", ""] for m, txt in META]
+    for c in cols:
+        cb.append([c.item, c.name, c.label, "", c.groups, c.codes])
+    for row in cb:
+        if row[0] == "metadata":
+            row[2], row[3] = row[3], ""
+    T = {
+        "Data": (head, data),
+        "Codebook": (["item", "variable", "question / label", "", "shown to", "codes"], cb),
+        "Earlier": (["response_id", "survey_version", "group", "submitted", "answers (JSON)"],
+                    [[r.get("response_id"), r.get("survey_version"), r.get("group"),
+                      r.get("submitted_date") or r.get("submitted_utc"),
+                      json.dumps(r.get("answers", {}), ensure_ascii=False)] for r in earlier]),
+    }
+    T["Codebook"] = (["item", "variable", "question / label", "shown to", "codes"],
+                     [[x[0], x[1], x[2], x[4], x[5]] for x in cb])
+    return T, len(current), len(earlier)
+
+
+SHEETS = ["Data", "Codebook", "Earlier"]
 
 
 def export_xlsx() -> bytes:
     rows = load_responses()
-    T = _tables(rows)
+    T, n_cur, n_old = _tables(rows)
     wb = Workbook()
     ws = wb.active
     ws.title = "README"
-    counts = Counter(r["group"] for r in rows)
+    counts = Counter(r["group"] for r in rows if r.get("survey_version") == survey.SURVEY_VERSION)
     info = [
         [survey.SURVEY_TITLE],
         [],
         ["Questionnaire version", survey.SURVEY_VERSION],
         ["Exported (UTC)", datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")],
-        ["Responses", len(rows)],
+        ["Responses (this version)", n_cur],
     ] + [[f"  {label}", counts.get(code, 0)] for code, label, *_ in survey.GROUPS] + [
+        ["Responses to earlier versions", f"{n_old} (sheet Earlier, raw answers)"],
         [],
         ["Sheets"],
-        ["Responses", "One row per response: metadata, group and single-answer questions (codes; see Codebook). "
-                      "Empty = not asked to this group or not answered."],
-        ["MultiSelect", "Long format: one row per option chosen in a multiple-choice question."],
-        ["MatrixRatings", "Long format: one row per rated row of a grid question (score, or don't know)."],
-        ["PolicyRatings", "Long format: one row per policy x criterion (score 1-5; empty = not rated). "
-                          "Criteria differ by group."],
-        ["PolicyComments", "Free-text comments on individual policies."],
-        ["Codebook", "Question wording (per group where it differs), groups asked, and answer codes."],
-        ["Contacts", "Follow-up e-mails. Personal data: keep separate from the analysis files and delete after use."],
+        ["Data", "One row per response, one column per variable (Appendix A of the instrument)."],
+        ["Codebook", "Each column: item, wording (per group where it differs), groups shown and codes."],
+        ["Earlier", "Responses to earlier questionnaire versions, with their raw answers."],
         [],
-        ["Notes", "Answers are self-reported perceptions, not measured outcomes. Respondents are self-selected, "
-                  "so results are not a representative sample. Stakeholder, researcher, expert and policy-maker "
-                  "responses were accepted only with that group's access key. client_id identifies a browser, "
-                  "not a person."],
+        ["Codes", "Substantive answers 1..n from the lowest or least favourable category (I1: -3..+3). "
+                  "92 = Not sure; 93 = Outside my expertise; 94 = Not applicable to me; 95 = Insufficient "
+                  "information; 96 = Cannot judge; 97 = Too early to assess; 98 = Don't know; 99 = Prefer not "
+                  "to say. -1 = not shown (routing or form); -2 = shown, not answered. I1 uses 91 and 90 for "
+                  "these, since negative values are valid scores."],
+        ["Policies", "C*_[p]: p = 1-3 in presentation order; the two reference policies come first, in random "
+                     "order (C0_reference = 1), then the respondent's own choice."],
+        ["Code deletion", "survey_code and reference_code are deleted automatically one week after submission (the "
+                  "withdrawal period); the data are anonymised from then on."],
+        ["Scope", "Survey responses record how participants understand and assess policies. They cannot, on "
+                  "their own, show that a policy caused a change in greenhouse gas emissions."],
     ]
     for line in info:
         ws.append(line)
     ws["A1"].font = Font(bold=True, size=13)
-    ws.column_dimensions["A"].width = 24
-    ws.column_dimensions["B"].width = 110
+    ws.column_dimensions["A"].width = 28
+    ws.column_dimensions["B"].width = 120
+    for row in ws.iter_rows(min_row=2):
+        for cell in row:
+            cell.alignment = Alignment(wrap_text=True, vertical="top")
     head_fill = PatternFill("solid", fgColor="16324F")
     for name in SHEETS:
         header, data = T[name]
@@ -515,11 +865,11 @@ def export_xlsx() -> bytes:
         for cell in s[1]:
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = head_fill
-        s.freeze_panes = "A2"
+        s.freeze_panes = "B2" if name == "Data" else "A2"
         for i, h in enumerate(header):
-            width = max([len(str(h))] + [len(str(r[i])) for r in data[:300] if r[i] is not None])
-            s.column_dimensions[s.cell(1, i + 1).column_letter].width = min(max(width + 2, 10), 70)
-        if name in ("Codebook", "PolicyComments"):
+            width = max([len(str(h))] + [len(str(r[i])) for r in data[:200] if r[i] is not None])
+            s.column_dimensions[s.cell(1, i + 1).column_letter].width = min(max(width + 2, 8), 70)
+        if name == "Codebook":
             for row in s.iter_rows(min_row=2):
                 for cell in row:
                     cell.alignment = Alignment(wrap_text=True, vertical="top")
@@ -529,7 +879,7 @@ def export_xlsx() -> bytes:
 
 
 def export_csv_zip() -> bytes:
-    T = _tables(load_responses())
+    T, _, _ = _tables(load_responses())
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for name, (header, data) in T.items():

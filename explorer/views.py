@@ -434,8 +434,9 @@ _FB_RATE_MAX, _FB_RATE_WINDOW = 5, 3600
 _FB_KEYFAIL = {}                   # client address -> recent wrong-key times
 _FB_KEYFAIL_MAX, _FB_KEYFAIL_WINDOW = 8, 900
 ACCESS_SALT, ACCESS_HOURS = "inpact.feedback.access", 12
-# A key holder who submits gets a results pass: the results open only after completing the questionnaire
-RESULTS_SALT, RESULTS_DAYS = "inpact.feedback.results", 90
+# A key holder who submits gets a results pass. The results themselves are shown only once fieldwork has
+# closed (FEEDBACK_RESULTS_OPEN=1, Section 11.3 of the instrument), so the pass lasts a year.
+RESULTS_SALT, RESULTS_DAYS = "inpact.feedback.results", 365
 # The whole Feedback section is closed until the visitor enters the section code (while the
 # consultation is revised for GDPR). The code is FEEDBACK_GATE_CODE in /etc/inpact/inpact.env
 # (never in Git); while it is unset the section cannot be opened. The code is exchanged at /api/feedback/gate/ for a signed token (valid GATE_HOURS) that the
@@ -540,6 +541,8 @@ def feedback_schema(request):
     schema = feedback_survey.public_schema()
     for g in schema["groups"]:                       # a keyed group without a key on the server is closed
         g["open"] = (not g["keyed"]) or bool(feedback_store.group_key(g["code"]))
+    schema["results_open"] = feedback_store.results_open()
+    schema["min_cell"] = feedback_store.min_cell()
     resp = JsonResponse(schema)
     resp["Cache-Control"] = "no-cache"
     resp["Vary"] = "X-Feedback-Gate"
@@ -590,6 +593,9 @@ def feedback_summary(request):
         return JsonResponse({"ok": False, "detail": "The results are shown to stakeholders, researchers, experts "
                                                     "and policy makers after they complete the questionnaire."},
                             status=403)
+    if not feedback_store.results_open():
+        return JsonResponse({"ok": False, "code": "closed",
+                             "detail": "The aggregated results will be shown here once fieldwork has closed."})
     try:
         data = feedback_store.summary()
     except Exception:
