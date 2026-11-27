@@ -37,8 +37,8 @@
     inited: false, data: null, gd: null,
     gas: null, sector: null, method: "ols", conf: 0.95,
     bps: [2001],
-    opt: { band: true, pred: false, bp: true, log: false, mk: true, proj: 2030, pol: true },
-    hidden: new Set(),        // series hidden from the legend: "obs", "seg:<n>", "proj", "bp", "pol:<group>"
+    opt: { band: true, pred: false, bp: true, log: false, mk: true, pol: true },
+    hidden: new Set(),        // series hidden from the legend: "obs", "seg:<n>", "bp", "pol:<group>"
     mode: "breakpoint", result: null, drag: null, raf: 0, hashTimer: 0,
     pins: new Set(),          // policies drawn on the chart: "c|<year>|<name>" or "s|<slug>"
     card: null, cardTimer: 0, cardKey: null,
@@ -193,18 +193,12 @@
       el.checked = !!T.opt[key];
       el.addEventListener("change", () => { T.opt[key] = el.checked; syncSettingsOpts(); recompute(); });
     }
-    $("trProjYear").value = T.opt.proj || "";
 
     // a new gas or sector re-targets the policy panel: the sector list goes back to
     // "same as the chart" and the panel shows the policies ranked for the new series
     gasSel.addEventListener("change", () => { T.gas = gasSel.value; fillSectors(); seriesChanged(); });
     $("trSector").addEventListener("change", e => { T.sector = e.target.value; seriesChanged(); });
     $("trMethod").addEventListener("change", e => { T.method = e.target.value; recompute(); });
-    $("trProjYear").addEventListener("input", e => {
-      const v = parseInt(e.target.value, 10);
-      T.opt.proj = isNum(v) && v > 0 ? v : null;
-      recompute();
-    });
 
     const bpIn = $("trBpInput");
     const addFromInput = () => {
@@ -386,7 +380,7 @@
     const n = parseInt(hex.slice(1), 16);
     return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`;
   };
-  // meta: which part of the chart a trace is (Edit plot), e.g. "obs", "seg:0", "band:0", "proj"
+  // meta: which part of the chart a trace is (Edit plot), e.g. "obs", "seg:0", "band:0"
   function bandTraces(lo, hi, xs, color, name, alpha, meta) {
     return [
       { x: xs, y: lo, type: "scatter", mode: "lines", line: { width: 0 }, hoverinfo: "skip", showlegend: false, meta },
@@ -473,23 +467,6 @@
         hovertemplate: `Seg ${seg.index} fit: %{y:,.1f}<extra>${fmtSigned(seg.slope)} /yr</extra>`, meta: `seg:${i}`,
       });
     });
-
-    // Projection of the last segment
-    const P = PS.proj;
-    const last = R.pw && R.pw.segments[R.pw.segments.length - 1];
-    if (last && T.opt.proj && T.opt.proj > last.end && T.opt.proj <= last.end + 50) {
-      const label = L("proj", `Projection to ${T.opt.proj}`);
-      legend.push({ key: "proj", label, sub: `${Math.round(T.conf * 100)}% prediction interval`,
-        color: P.color, style: P.dash, band: true, bandColor: P.bandColor, bandOpacity: P.bandOpacity });
-      if (shown("proj")) {
-        const g = lineGrid(last.end, T.opt.proj), bd = S.bands(last, g, T.conf);
-        traces.push(...bandTraces(bd.map(p => p.predLo), bd.map(p => p.predHi), g, P.bandColor, "Projection interval", P.bandOpacity, "proj"));
-        traces.push({
-          x: g, y: bd.map(p => p.y), type: "scatter", mode: "lines", line: { color: rgba(P.color, P.opacity), width: P.width, dash: P.dash },
-          name: label, showlegend: inLegend("proj"), hovertemplate: `Projection: %{y:,.1f}<extra></extra>`, meta: "proj",
-        });
-      }
-    }
 
     // Breakpoints (each one can hide its line or its year label)
     const B = PS.bp;
@@ -1258,7 +1235,7 @@
   // Hovering a part outlines it and names it; clicking it opens a small box
   // with only that part's settings (TrendPlotStyle.editPart, plot-style.js).
   // Parts: title, axis titles, axes, plot area, figure, observed data, trend
-  // segments, bands, projection, breakpoint and policy lines, legend (entries).
+  // segments, bands, breakpoint and policy lines, legend (entries).
   // ------------------------------------------------------------------
   const ED = { sel: null, hl: null, selBox: null, chip: null };
   const box4 = r => r && { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
@@ -1324,7 +1301,7 @@
       const pal = (PSget().trend.palette || []).length || 8;
       return { part: "trend", info: { meta, pal: +n % pal, label: seg ? `Trend ${seg.start}–${seg.end}` : "Trend line" } };
     }
-    return { part: { obs: "obs", band: "band", pred: "pred", proj: "proj" }[k] || "plot", info: { meta } };
+    return { part: { obs: "obs", band: "band", pred: "pred" }[k] || "plot", info: { meta } };
   }
   function shapePart(s) {
     const i = s.name.indexOf(":"), k = s.name.slice(0, i), v = s.name.slice(i + 1);
@@ -1466,10 +1443,6 @@
       ["Current trend", last ? `${fmtSigned(last.slope)} /yr` : "–", last ? `${last.start}–${last.end} · CI ${fmtSigned(last.ciLow)} to ${fmtSigned(last.ciHigh)}` : "", last ? (last.slope <= 0 ? "good" : "bad") : ""],
       ["Fit (last segment)", last && isNum(last.r2) ? `R² ${last.r2.toFixed(3)}` : "–", last ? `p ${fmtP(last.p)} ${stars(last.p)}` : ""],
     ];
-    if (last && T.opt.proj && T.opt.proj > last.end) {
-      const pj = S.bands(last, [T.opt.proj], T.conf)[0];
-      kpis.push([`Projection ${T.opt.proj}`, fmt(pj.y), `${Math.round(T.conf * 100)}% PI ${fmt(pj.predLo)} to ${fmt(pj.predHi)}`]);
-    }
     $("trKpis").innerHTML = kpis.map(([l, v, s, cls]) =>
       `<div class="tr-kpi ${cls || ""}"><div class="lbl">${esc(l)}</div><div class="val">${esc(v)}</div><div class="sub">${esc(s)}</div></div>`).join("");
 

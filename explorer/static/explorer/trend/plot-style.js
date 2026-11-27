@@ -72,7 +72,6 @@
     trend: { palette: PALETTES.matlab.slice(), paletteName: "matlab", width: 2.6, dash: "dash", opacity: 1 },
     band: { color: "", opacity: 0.18 },          // "" = segment colour
     pred: { color: "", opacity: 0.08 },
-    proj: { color: "#16324F", width: 2, dash: "dash", opacity: 1, bandColor: "#16324F", bandOpacity: 0.10 },
     bp: { color: "#1a33ea", width: 2, dash: "dash", opacity: 0.4,
       label: { show: true, family: "", size: 14, weight: "bold", color: "#16324F", position: "end", angle: -90 },
       hidden: [], hiddenLabel: [] },
@@ -120,7 +119,6 @@
       obs: { line: { color: "#000000", width: 1, opacity: 0.5 }, marker: { symbol: "circle-open", size: 6, color: "#000000", edgeWidth: 0 } },
       trend: { palette: PALETTES.okabe.slice(), paletteName: "okabe", width: 2.2 },
       band: { opacity: 0.12 }, pred: { opacity: 0.06 },
-      proj: { color: "#000000", bandColor: "#888888", bandOpacity: 0.12 },
       bp: { color: "#000000", width: 1.2, dash: "dash", opacity: 0.9, label: { color: "#000000", family: "Times New Roman, Times, serif" } },
       pol: { width: 1.4, label: { family: "Times New Roman, Times, serif", style: "italic", size: 10 } },
       xaxis: axisPub, yaxis: axisPub,
@@ -132,7 +130,6 @@
       obs: { line: { color: "#0072BD", width: 0.75, opacity: 0.6 }, marker: { symbol: "circle", size: 5, color: "#0072BD" } },
       trend: { palette: PALETTES.matlab.slice(1).concat(["#0072BD"]), paletteName: "matlab", width: 2 },
       band: { opacity: 0.15 },
-      proj: { color: "#262626" },
       bp: { color: "#262626", width: 1, dash: "dash", opacity: 1, label: { color: "#262626" } },
       xaxis: { tick: { dir: "inside", color: "#262626", minor: true }, line: { show: true, color: "#262626", width: 0.75 }, grid: { show: true, color: "#e6e6e6" } },
       yaxis: { tick: { dir: "inside", color: "#262626", minor: true }, line: { show: true, color: "#262626", width: 0.75 }, grid: { show: true, color: "#e6e6e6" } },
@@ -152,7 +149,6 @@
       obs: { line: { color: "#000000", width: 2, opacity: 1 }, marker: { size: 8, color: "#000000" } },
       trend: { palette: PALETTES.contrast.slice(), paletteName: "contrast", width: 4 },
       band: { opacity: 0.25 },
-      proj: { color: "#000000", width: 3, bandColor: "#000000", bandOpacity: 0.15 },
       bp: { color: "#000000", width: 3, opacity: 1, label: { color: "#000000", size: 13, weight: "bold" } },
       pol: { width: 3, label: { size: 13, weight: "bold" } },
       xaxis: { title: { weight: "bold", color: "#000000", size: 14 }, tick: { color: "#000000", size: 13, weight: "bold" },
@@ -289,11 +285,6 @@
       { title: "Prediction interval", fields: [
         f("checkOpt", "pred", "Show"), f("colorAuto", "pred.color", "Fill colour", { autoLabel: "Segment colour" }),
         f("range", "pred.opacity", "Opacity", { min: 0, max: 0.8, step: 0.02, pct: true }),
-      ] },
-      { title: "Projection", fields: [
-        f("color", "proj.color", "Line colour"), f("num", "proj.width", "Width", { min: 0.5, max: 8, step: 0.25, unit: "px" }),
-        f("select", "proj.dash", "Style", { options: DASHES }), f("range", "proj.opacity", "Opacity", { min: 0.1, max: 1, step: 0.05, pct: true }),
-        f("color", "proj.bandColor", "Interval fill"), f("range", "proj.bandOpacity", "Interval opacity", { min: 0, max: 0.8, step: 0.02, pct: true }),
       ] },
     ] },
     { id: "bp", title: "Breakpoints", icon: "bi-signpost-split", groups: [
@@ -556,7 +547,6 @@
       grp("trend", "Confidence band (mean)"), grp("trend", "Prediction interval")] },
     band: { name: () => "Confidence band", icon: "bi-bezier2", tab: "trend", groups: () => [grp("trend", "Confidence band (mean)")] },
     pred: { name: () => "Prediction interval", icon: "bi-bezier2", tab: "trend", groups: () => [grp("trend", "Prediction interval")] },
-    proj: { name: () => "Projection", icon: "bi-graph-up-arrow", tab: "trend", groups: () => [grp("trend", "Projection")] },
     bp: { name: x => `Breakpoint ${x.year}`, icon: "bi-signpost-split", tab: "bp", groups: () => [
       { title: "This breakpoint", custom: "bp" }, grp("bp", "Lines", "All breakpoint lines"), grp("bp", "Year labels", "All year labels")] },
     pol: { name: x => x.name || "Policy line", icon: "bi-flag", tab: "pol", groups: () => [

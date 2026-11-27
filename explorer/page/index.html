@@ -3972,8 +3972,6 @@ a.ug-go.alt:hover{color:var(--navy)}
         <input class="form-check-input" type="checkbox" id="trEnableMk">
         <label class="form-check-label side-check" for="trEnableMk">Mann&ndash;Kendall per segment</label>
       </div>
-      <label class="side-label" for="trProjYear">Project last trend to</label>
-      <input id="trProjYear" type="number" class="form-control form-control-sm mb-3" min="1990" max="2100" step="1" placeholder="year, e.g. 2030">
 
       <div class="d-flex gap-2 mb-2">
         <button id="trCsvBtn" class="btn btn-outline-secondary btn-sm flex-fill" disabled>
@@ -5793,7 +5791,7 @@ a.ug-go.alt:hover{color:var(--navy)}
       <div class="ug-card">
         <h3 class="ug-card-title"><i class="bi bi-layout-three-columns"></i>The screen at a glance</h3>
         <div class="ug-ideas">
-          <div class="ug-idea"><b><i class="bi bi-sliders"></i> Left: controls</b><span><b>1 Series &amp; Model</b> (gas, sector, regression method, confidence level), <b>2 Breakpoints</b> (add, remove or auto-detect) and <b>3 Display</b> (bands, scale, tests, projection), with the CSV, PNG and Link buttons at the bottom.</span></div>
+          <div class="ug-idea"><b><i class="bi bi-sliders"></i> Left: controls</b><span><b>1 Series &amp; Model</b> (gas, sector, regression method, confidence level), <b>2 Breakpoints</b> (add, remove or auto-detect) and <b>3 Display</b> (bands, scale, tests), with the CSV, PNG and Link buttons at the bottom.</span></div>
           <div class="ug-idea"><b><i class="bi bi-graph-up"></i> Centre: results</b><span>The headline figures, the chart toolbar, the chart and its legend, the <b>Direction of trend</b> summary, and two folding panels: <b>Advanced Plot Settings</b> and <b>Advanced Statistics</b>.</span></div>
           <div class="ug-idea"><b><i class="bi bi-flag"></i> Right: Policy overlay</b><span>Lists of policies to draw on the chart: the most relevant policies for the series, the sector&rsquo;s policies, and the core national, EU and international milestones. On smaller screens this panel moves below the controls.</span></div>
         </div>
@@ -5855,7 +5853,6 @@ a.ug-go.alt:hover{color:var(--navy)}
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="The change from the first year of the series (usually 1990) to the latest year, in per cent and in kt."><i class="bi bi-hourglass-split"></i>Since 1990</button>
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="The slope of the last segment, in kt per year, with its period and confidence interval. A negative slope means emissions are falling."><i class="bi bi-graph-down-arrow"></i>Current trend</button>
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="R&sup2; and the p-value of the last segment&rsquo;s slope. Stars mark significance: * p &lt; 0.05, ** p &lt; 0.01, *** p &lt; 0.001."><i class="bi bi-bullseye"></i>Fit (last segment)</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="Shown when a year is set in &lsquo;Project last trend to&rsquo; (2030 by default): the value the last segment&rsquo;s trend reaches in that year, with its prediction interval."><i class="bi bi-forward"></i>Projection</button>
             </div>
             <div class="ug-explain" aria-live="polite">Select a figure above.</div>
             <div class="ug-actions">
@@ -6032,7 +6029,7 @@ a.ug-go.alt:hover{color:var(--navy)}
         <div class="ug-step" data-step="tr-display">
           <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugT7">
             <span class="ug-step-num">7</span><i class="bi bi-eye ug-step-ic" aria-hidden="true"></i>
-            <span class="ug-step-txt"><b>Use the chart tools and display options</b><span>Zoom, legend, bands, log scale, Mann&ndash;Kendall and projection.</span></span>
+            <span class="ug-step-txt"><b>Use the chart tools and display options</b><span>Zoom, legend, bands, log scale and Mann&ndash;Kendall.</span></span>
             <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
           </button>
           <div class="ug-step-body" id="ugT7">
@@ -6043,7 +6040,7 @@ a.ug-go.alt:hover{color:var(--navy)}
               <li><b>Zoom in</b> (<kbd>Z</kbd>): drag a box around the years and values to enlarge them.</li>
               <li><b>Edit plot</b> (<kbd>E</kbd>): click any part of the chart to change its look in a small settings box (step 8).</li>
               <li><b>Reset view</b>, or a double-click on the chart, shows all years again.</li>
-              <li><b>Legend</b> (below the chart by default): click any entry (observed data, a segment, the projection, breakpoints or a policy group) to hide or show it.</li>
+              <li><b>Legend</b> (below the chart by default): click any entry (observed data, a segment, breakpoints or a policy group) to hide or show it.</li>
             </ul>
             <p><b>3 Display</b> switches. Tap one to learn more:</p>
             <div class="ug-chips" role="group" aria-label="Display options">
@@ -6052,13 +6049,12 @@ a.ug-go.alt:hover{color:var(--navy)}
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="Show or hide the dashed breakpoint lines and their year labels. The segments are still fitted when the lines are hidden."><i class="bi bi-signpost"></i>Breakpoint lines</button>
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="A logarithmic Y axis. Equal distances then show equal percentage changes, which helps when comparing a large and a small period of the series."><i class="bi bi-graph-up-arrow"></i>Log scale</button>
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="Adds the Mann&ndash;Kendall trend test for each segment (Advanced Statistics) and uses it for the Direction of trend pills. It checks for a consistent rise or fall without assuming a straight line. On by default."><i class="bi bi-sort-numeric-down"></i>Mann&ndash;Kendall</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The default is 2030. Type another future year to extend the last segment&rsquo;s trend as a dashed line with a shaded prediction interval. A Projection figure appears in the headline row. Clear the box to remove it."><i class="bi bi-forward"></i>Project last trend to</button>
             </div>
             <div class="ug-explain" aria-live="polite">Select an option above.</div>
             <div class="ug-formula" role="math" aria-label="Confidence band and prediction interval">
               <div class="ug-eq"><i>&#375;</i>(<i>t</i>) &plusmn; <i>t</i><sub>1&minus;&alpha;/2,&thinsp;<i>n</i>&minus;2</sub> &middot; <i>s</i> &middot; <span class="ug-sqrt">&radic;<span><span class="ug-frac"><span>1</span><span><i>n</i></span></span> + <span class="ug-frac"><span>(<i>t</i> &minus; <i>t&#772;</i>)<sup>2</sup></span><span>&Sigma;(<i>t</i> &minus; <i>t&#772;</i>)<sup>2</sup></span></span></span></span> &nbsp;&nbsp;(confidence band)</div>
               <div class="ug-eq"><i>&#375;</i>(<i>t</i>) &plusmn; <i>t</i><sub>1&minus;&alpha;/2,&thinsp;<i>n</i>&minus;2</sub> &middot; <i>s</i> &middot; <span class="ug-sqrt">&radic;<span>1 + <span class="ug-frac"><span>1</span><span><i>n</i></span></span> + <span class="ug-frac"><span>(<i>t</i> &minus; <i>t&#772;</i>)<sup>2</sup></span><span>&Sigma;(<i>t</i> &minus; <i>t&#772;</i>)<sup>2</sup></span></span></span></span> &nbsp;&nbsp;(prediction interval)</div>
-              <div class="ug-formula-key">Both widen away from the middle of the segment, and the projection&rsquo;s interval grows the further ahead you project. A projection assumes the last trend simply continues; it is not a forecast of future policy.</div>
+              <div class="ug-formula-key">Both widen away from the middle of the segment, where the data give the least support. They describe the fitted period only and are not a forecast of future emissions.</div>
             </div>
             <div class="ug-actions">
               <button type="button" class="ug-go" data-go="trend" data-spot="#trShowBand"><i class="bi bi-box-arrow-up-right"></i>Show me</button>
@@ -6079,7 +6075,7 @@ a.ug-go.alt:hover{color:var(--navy)}
             <p><b>Quick way: Edit plot.</b> Edit the chart directly, one part at a time.</p>
             <ol class="ug-list">
               <li>Press <b>Edit plot</b> in the chart toolbar (or the <kbd>E</kbd> key). The chart gets a dashed frame; it no longer zooms, adds breakpoints or shows hover values.</li>
-              <li>Move the pointer over the chart. Each part is outlined and named: the <b>chart title</b>, the <b>axis titles</b>, the <b>X</b> and <b>Y axes</b> (tick labels), the <b>plot area</b> (background, gridlines, border), the <b>observed emissions</b>, each <b>trend line</b>, a <b>band</b>, the <b>projection</b>, a <b>breakpoint</b> or <b>policy line</b> (or its label), the margin around the plot (<b>figure</b>), the <b>legend</b> and each <b>legend entry</b>.</li>
+              <li>Move the pointer over the chart. Each part is outlined and named: the <b>chart title</b>, the <b>axis titles</b>, the <b>X</b> and <b>Y axes</b> (tick labels), the <b>plot area</b> (background, gridlines, border), the <b>observed emissions</b>, each <b>trend line</b>, a <b>band</b>, a <b>breakpoint</b> or <b>policy line</b> (or its label), the margin around the plot (<b>figure</b>), the <b>legend</b> and each <b>legend entry</b>.</li>
               <li>Click the part. A small box opens beside it with only that part&rsquo;s settings: for example the colour, width, style and opacity of a line, the text and font of a title, or the limits and tick labels of an axis. A breakpoint, policy line or legend entry also has its own settings first (show or hide it, its colour, its label text).</li>
               <li>Change a setting: the chart updates at once. Drag the box by its header if it covers what you are editing.</li>
               <li><b>Reset this part</b> puts that part back to its default look. <b>All settings</b> opens Advanced Plot Settings at the matching section. Close the box with &times; or <kbd>Esc</kbd>.</li>
@@ -6096,7 +6092,7 @@ a.ug-go.alt:hover{color:var(--navy)}
             <p>The settings are arranged in tabs. Tap one to see what it controls:</p>
             <div class="ug-chips" role="group" aria-label="Plot settings tabs">
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="The line joining the yearly values (show, colour, width, style, opacity) and the markers (show, symbol, size, colour, opacity, edge colour and width)."><i class="bi bi-graph-up"></i>Observed data</button>
-              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The colour palette for the segments (INPACT, MATLAB, Okabe&ndash;Ito colour-blind safe, Tableau, greyscale, high contrast), trend line width, style and opacity; the fill colour and opacity of the confidence band and prediction interval; and the projection line and its interval."><i class="bi bi-bezier2"></i>Trends &amp; intervals</button>
+              <button type="button" class="ug-chip" aria-pressed="false" data-explain="The colour palette for the segments (INPACT, MATLAB, Okabe&ndash;Ito colour-blind safe, Tableau, greyscale, high contrast), trend line width, style and opacity; and the fill colour and opacity of the confidence band and prediction interval."><i class="bi bi-bezier2"></i>Trends &amp; intervals</button>
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="The breakpoint lines (show, colour, width, style, opacity), their year labels (font, size, weight, colour, position, rotation), and settings for each breakpoint on its own."><i class="bi bi-signpost-split"></i>Breakpoints</button>
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="All policy lines (width, core and sector line styles, opacity), their labels (show, font, size, weight, colour, vertical, horizontal or diagonal orientation, position, alignment, offset, maximum length), and settings for each policy on the chart on its own."><i class="bi bi-flag"></i>Policy overlays</button>
               <button type="button" class="ug-chip" aria-pressed="false" data-explain="Each axis has its own tab: title text and font; tick label font, size, colour and rotation; tick direction, length, interval and custom positions; minor ticks; minimum and maximum; linear or logarithmic scale and zero line (Y axis); axis line; and major and minor gridlines."><i class="bi bi-arrows"></i>X axis / Y axis</button>
@@ -6193,7 +6189,7 @@ a.ug-go.alt:hover{color:var(--navy)}
           <li>Choose <b>CO&#8322;</b> and <b>Road transportation</b>. The Policy overlay panel switches to the most relevant transport policies.</li>
           <li>Set <b>up to 2 breaks</b> and press <b>Auto-detect</b>. Open <b>Advanced Statistics</b> and check the Break detection table and the Chow test for each break.</li>
           <li>In the panel, press <b>Top 5 on chart</b>. Hover over the lines near each break to read the policies, and open a profile with <b>Open policy profile</b>.</li>
-          <li>Compare the slopes before and after each break in <b>Segment statistics</b>, and read the <b>Projection 2030</b> figure to see where the current trend leads.</li>
+          <li>Compare the slopes before and after each break in <b>Segment statistics</b>, and read <b>Current trend</b> in the headline row for the direction and pace of the latest period.</li>
           <li>Choose the <b>Scientific publication</b> preset in Advanced Plot Settings, then export the <b>PNG</b> and <b>CSV</b>, and copy the <b>Link</b> for colleagues.</li>
         </ol>
       </div>
@@ -6345,8 +6341,8 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <!-- Trend Analysis tab (Plotly itself is loaded on first visit to the tab) -->
 <script src="/static/explorer/trend/stats.js"></script>
-<script src="/static/explorer/trend/plot-style.js?v=20261128d"></script>
-<script src="/static/explorer/trend/trend-chart.js?v=20261128d"></script>
+<script src="/static/explorer/trend/plot-style.js?v=20261128e"></script>
+<script src="/static/explorer/trend/trend-chart.js?v=20261128e"></script>
 <script src="/static/explorer/settings-io.js?v=20261128a"></script>
 <script src="/static/explorer/tour/tour.js?v=20261127h" defer></script>
 <script>
