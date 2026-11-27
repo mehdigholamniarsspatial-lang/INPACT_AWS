@@ -149,6 +149,7 @@
       arr = shuffle(refs).map(ref => ({ ref })).concat(arr && arr[2] && arr[2].policy ? [arr[2]] : []);
       S.answers[q.id] = arr;
     }
+    if (q.own === false && S.answers[q.id].length > 2) S.answers[q.id] = S.answers[q.id].slice(0, 2);
   }
 
   /* ---------------- Draft (answers stay on this device until submitted) ---------------- */
@@ -344,7 +345,8 @@
   }
   function policiesQ(q){
     const arr = polArr(q), own = arr[2] && arr[2].policy;
-    return `<div class="fb-cwrap" data-q="${q.id}">${[0, 1].map(i => polCardHtml(q, i)).join("")}${own ? polCardHtml(q, 2) : ownPickerHtml(q)}</div>`;
+    const third = q.own === false ? "" : own ? polCardHtml(q, 2) : ownPickerHtml(q);
+    return `<div class="fb-cwrap" data-q="${q.id}">${[0, 1].map(i => polCardHtml(q, i)).join("")}${third}</div>`;
   }
   function refreshPolCard(q, idx){
     const card = body.querySelector(`[data-card="${idx}"]`); if (card) card.outerHTML = polCardHtml(q, idx);

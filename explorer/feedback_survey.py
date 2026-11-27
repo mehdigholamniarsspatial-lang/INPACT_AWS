@@ -46,7 +46,7 @@ from __future__ import annotations
 
 import copy
 
-SURVEY_VERSION = "2026.12-v4.2"
+SURVEY_VERSION = "2026.12-v4.3"
 SURVEY_TITLE = "INPACT Multi-Stakeholder Climate Policy Consultation"
 
 # ---------------------------------------------------------------------------
@@ -59,8 +59,8 @@ CONFIRM = {
     "team_email": "mehgholamnia@gmail.com",
     "hosting": "Amazon Web Services (AWS), which hosts this platform,",
     "log_until": "May 2029",
-    "minutes_public": "12–17",
-    "minutes_pro": "18–23",
+    "minutes_public": "8–10",
+    "minutes_pro": "10–12",
 }
 
 # ---------------------------------------------------------------------------
@@ -251,7 +251,7 @@ INFO = {
          "makers what they think holds back climate policy, where policies pull against each other, and how "
          "fair and acceptable they find them. It also asks how useful you find this platform."),
         ("What we ask",
-         "Everyone answers some common questions, then questions for their group, and then rates three "
+         "Everyone answers some common questions, then questions for their group, and then rates two "
          "policies. Some questions ask whether statements about climate policy are true or false; the correct "
          "answers are shown, with sources, at the end. The survey takes about {minutes_public} minutes for "
          "members of the public and {minutes_pro} minutes for the other groups. All written answers and many "
@@ -360,7 +360,7 @@ W_ITEMS = [
                ("no", "No, please use my answers only within the research team")]),
 ]
 START_STEP = STEP("start", "Before you start", "bi-clipboard2-check",
-                  "A few questions about how you came to the survey, then your consent.", W_ITEMS)
+                  "Your consent to take part, and two optional permissions.", W_ITEMS)
 
 
 # ---------------------------------------------------------------------------
@@ -1037,7 +1037,63 @@ def module_f(group):
 WELCOME = STEP("welcome", "Welcome", "bi-clipboard2-check", "", [W1])
 
 
+# ---------------------------------------------------------------------------
+# Short form (version 2026.12-v4.3, 27 November 2026): at most 40 questions per respondent
+# (a grid counts as one question; each item of a rated policy counts once per policy).
+# It keeps the primary outcomes of Section 16.1 (A10-A12, I1, A13, A16, P9 with G1-G3 and
+# A9, K2, K3), the items needed to compare groups, weight the public sample and model
+# support, and consent. The full v4.2 definitions above are kept; these items are left out:
+# ---------------------------------------------------------------------------
+SHORT_DROP = {
+    # W: screening covariates (consent W6 and permissions W7-W8 stay)
+    "W2_role", "W3_channel", "W4_prior_use", "W5_exposure",
+    # A: secondary common-core items
+    "A3_conf_overall", "A4_basis", "A6_pace", "A8_trust_inventory", "A14_costs", "A15_benefits", "A17_strengthen",
+    # B: covariates and secondary items of the group modules
+    "P10_action", "P12_hh_impact",
+    "S2_relationship", "S4_size", "S5_region", "S6_perspective", "S7_econ", "S8_sector_impact",
+    "R2_career", "R4_years", "R5_policy_involvement", "R6_dataq", "R9_method", "R10_data_access",
+    "E3_years", "E4_perspective", "E7_feas",
+    "M2_role", "M4_years", "M5_perspective", "M5b_knowledge_basis", "M8_evid_limit",
+    # K, D, F: trust in sources (a removable item), most of the platform evaluation, extra open questions
+    "K1_trust_src", "D4_useful", "D5_clarity_policy", "D6_clarity_topdown", "D7_clarity_uncert", "D9_new_questions",
+    "D11_needs", "D12_improve", "F2_group_open", "F3_other", "F4_survey_feedback",
+}
+SHORT_DROP_PUBLIC = {"A7_eff_sector", "I2_conflict_open"}
+# Module C: the two reference policies only (no policy of the respondent's own choice), with these items
+SHORT_C_ITEMS = {"public": ["fam", "obs", "fair", "grp"], "pro": ["fam", "obs", "impl", "fair", "cost", "grp"]}
+
+
+def _short(group, steps):
+    drop = SHORT_DROP | (SHORT_DROP_PUBLIC if group == "public" else set())
+    keep_c = SHORT_C_ITEMS["public" if group == "public" else "pro"]
+    for st in steps:
+        st["questions"] = [q for q in st["questions"] if q["id"] not in drop]
+        for q in st["questions"]:
+            if q["type"] == "policies3":
+                q["items"] = [it for it in q["items"] if it["id"] in keep_c]
+                q["own"] = False
+    steps = [st for st in steps if st["questions"]]
+    # the barrier and fairness steps of Module A are short now: show them as one
+    core2 = next((st for st in steps if st["id"] == "core2"), None)
+    core3 = next((st for st in steps if st["id"] == "core3"), None)
+    if core2 and core3:
+        core2["questions"] += core3["questions"]
+        core2["title"] = "Barriers and fairness"
+        core2["intro"] = "What holds climate policy back, how often policies pull in different directions, and how fair "                          "climate policy is."
+        steps.remove(core3)
+    fin = next((st for st in steps if st["id"] == "final"), None)
+    if fin:
+        fin["title"] = "Final question"
+        fin["intro"] = "One last, optional question."
+    return steps
+
+
 def _flow(group):
+    return _short(group, _flow_full(group))
+
+
+def _flow_full(group):
     pro = group in PRO_GROUPS
     steps = [copy.deepcopy(START_STEP)] + module_a(pro) + copy.deepcopy(MODULE_B[group])
     inter = ([] if not pro else [I1]) + [I2]
@@ -1049,7 +1105,7 @@ def _flow(group):
                       (" We would like your view on six pairs of Irish policies." if pro else ""),
                       copy.deepcopy(inter)))
     steps.append(STEP("policies", "Policies", "bi-journal-check",
-                      "For each policy, please tell us how well you know it, and then what you think of it. If a "
+                      "For each of two policies, please tell us how well you know it, and then what you think of it. If a "
                       "policy is recent and its effects cannot yet be seen, choose “Too early to assess”.",
                       [module_c(group)]))
     steps.append(STEP("information", "Information", "bi-newspaper",

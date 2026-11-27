@@ -282,7 +282,8 @@ def _clean_policies3(q, v, missing):
         item = {"ref": code, "policy": refs[code]["title"]}
         item.update(_clean_policy_items(q, entry, missing, refs[code]["title"]))
         out.append(item)
-    own = next((e for e in entries[2:] if isinstance(e, dict) and e.get("policy")), None)
+    own = None if q.get("own") is False else \
+        next((e for e in entries[2:] if isinstance(e, dict) and e.get("policy")), None)
     if own:
         index = _policy_index()
         prefixes = tuple(r.get("exclude_prefix") or r["timeline"] for r in q["refs"])
@@ -658,7 +659,7 @@ def _columns():
                         lambda a, q=q, tc=tc, rc=rc: _code_scale(((a.get(q["id"]) or {}).get("ratings", {})
                                                                   .get(tc) or {}).get(rc)), g)
         elif t == "policies3":
-            for p in (1, 2, 3):
+            for p in range(1, N_POLICIES + 1):
                 add(f"C0_policyid_{p}", "C0", "Policy shown (reference code or dashboard title)", "text", None, g)
                 add(f"C0_reference_{p}", "C0", "Reference policy", "1 = reference policy; 0 = own choice", None, g)
                 add(f"C0_order_{p}", "C0", "Presentation order", "1-3", None, g)
@@ -674,11 +675,19 @@ def _columns():
     return cols
 
 
+def _n_policies():
+    q = next(q for _, q in survey.questions("public") if q["type"] == "policies3")
+    return len(q["refs"]) + (0 if q.get("own") is False else 1)
+
+
+N_POLICIES = _n_policies()
+
+
 def _all_policy_items():
     """The Module C items of every group, each once (the five C10 versions are separate variables)."""
     seen, out = set(), []
     for g in survey.GROUP_CODES:
-        for it in survey.module_c(g)["items"]:
+        for it in next(q for _, q in survey.questions(g) if q["type"] == "policies3")["items"]:
             if it["var"] not in seen:
                 seen.add(it["var"])
                 it = dict(it)
@@ -734,7 +743,7 @@ def _row(r, cols):
             out[qid + "_order"] = ",".join(str(codes.index(x) + 1) for x in order if x in codes)
     # Module C
     pol = a.get("C_policies") or []
-    for p in (1, 2, 3):
+    for p in range(1, N_POLICIES + 1):
         it = pol[p - 1] if p - 1 < len(pol) else None
         items = _all_policy_items()
         if not it:
@@ -745,7 +754,8 @@ def _row(r, cols):
             out[f"C0_policyid_{p}"] = it.get("ref") or it.get("policy")
             out[f"C0_reference_{p}"] = 1 if it.get("ref") else 0
             out[f"C0_order_{p}"] = p
-        mine = {x["var"]: x for x in survey.module_c(g)["items"]} if g in survey.GROUP_CODES else {}
+        mine = {x["var"]: x for x in next(q for _, q in survey.questions(g) if q["type"] == "policies3")["items"]} \
+            if g in survey.GROUP_CODES else {}
         fam = it.get("fam") if it else None
         for item in items:
             var, key = item["var"], item["id"]
@@ -840,8 +850,8 @@ def export_xlsx() -> bytes:
                   "information; 96 = Cannot judge; 97 = Too early to assess; 98 = Don't know; 99 = Prefer not "
                   "to say. -1 = not shown (routing or form); -2 = shown, not answered. I1 uses 91 and 90 for "
                   "these, since negative values are valid scores."],
-        ["Policies", "C*_[p]: p = 1-3 in presentation order; the two reference policies come first, in random "
-                     "order (C0_reference = 1), then the respondent's own choice."],
+        ["Policies", "C*_[p]: p = 1-2 in presentation order: the two reference policies, in random order "
+                     "(short form v4.3: no policy of the respondent's own choice)."],
         ["Code deletion", "survey_code and reference_code are deleted automatically one week after submission (the "
                   "withdrawal period); the data are anonymised from then on."],
         ["Scope", "Survey responses record how participants understand and assess policies. They cannot, on "
