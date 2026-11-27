@@ -108,8 +108,15 @@
     fire
   };
 
+  // The layer selected in the left panel is in the time series plot: its "Add to plot" button then
+  // reads "Already in the plot" (a layer of another gas, or none, does not count)
+  const inPlot = c => { const b = c.q("#tsAdd"); return !!b && /already/i.test(b.textContent); };
+  // Time series analysis on (the tab above step 1 works as a switch: clicking it when ON closes it)
+  const tsOn = c => c.pressed("#msTabTs");
+
   /* =====================================================================
      TOURS
+     A tour with requireTs keeps the Time series analysis on during its map steps.
      ===================================================================== */
   const TOURS = {};
 
@@ -120,6 +127,7 @@
     eyebrow: "Time series tour",
     summary: "A complete analysis with a real example, methane from livestock in the EPA MapEIre inventory: select a layer, plot it, style and download the map, then export a grid of maps for one county.",
     minutes: 6,
+    requireTs: true,
     steps: [
       {
         id: "intro", phase: "Overview",
@@ -147,13 +155,15 @@
       },
       {
         id: "analysis", phase: "Getting started", where: "map",
-        title: "Choose the Time series analysis",
+        title: "Check that the Time series analysis is on",
+        summary: "Time series opens by default (its tab shows ON). Leave it on: clicking an open analysis again closes it and hides the time series panel.",
         text: `<p>The workspace offers two analyses. <b>Time series</b> follows a layer through every year in which it is available, for a single grid cell, a region you define or the whole map. <b>Compare</b> maps the difference between two layers.</p>
-               <p>Select <b>Time series</b>. Two extra steps, for the area and the plot, are added to the panel and the graph panel opens on the right of the map.</p>`,
+               <p><b>Time series</b> opens by default: its tab shows <b>ON</b>, the panel lists six steps and the time series panel is open on the right of the map. If it does not show ON, select it.</p>`,
+        warn: `Do not click <b>Time series</b> when it already shows ON. The tab works as a switch: clicking an open analysis closes it, which hides the time series panel and steps 3 and 4. If this happens, the tour switches it back on for you.`,
         target: "#msModes", place: "right",
-        task: "Select Time series.",
-        done: c => c.pressed("#msTabTs"),
-        auto: async c => { if (!c.pressed("#msTabTs")) await c.click("#msTabTs"); }
+        task: "Make sure Time series shows ON.",
+        done: tsOn,
+        auto: async c => { if (!tsOn(c)) await c.click("#msTabTs"); }
       },
       {
         id: "dataset", phase: "Select the data", where: "map",
@@ -172,7 +182,7 @@
       },
       {
         id: "year", phase: "Select the data", where: "map",
-        title: "Step 2 · Choose the year",
+        title: "Step 2 · Select the layer: year",
         text: `<p>The drop-downs in <b>Select the layer</b> narrow the dataset down to a single map. They unlock one after another, from left to right.</p>
                <p>Start with the <b>Year</b> and choose <b>2019</b>, the most recent MapEIre year.</p>`,
         tip: `The year chosen here sets only the map. The time series always uses <b>every year</b> of the layer.`,
@@ -184,22 +194,22 @@
       },
       {
         id: "sector", phase: "Select the data", where: "map",
-        title: "Choose the emission sector",
-        text: `<p>Sectors follow the <b>GNFR</b> classification used in European emission reporting. Choose <b>Agriculture &ndash; Livestock</b> (sector K): emissions from farmed animals, mainly digestion in cattle (enteric fermentation) and the storage of manure.</p>`,
+        title: "Step 2 · Select the layer: sector",
+        text: `<p>Sectors follow the <b>GNFR</b> classification used in European emission reporting. Choose <b>Agriculture &ndash; livestock &middot; GNFR K</b>: emissions from farmed animals, mainly digestion in cattle (enteric fermentation) and the storage of manure.</p>`,
         target: c => { const e = c.q("#rasterSector"); return e && e.closest(".raster-field"); }, place: "right",
         prepare: c => c.openStep("msStep2Btn"),
-        task: "Set Sector to Agriculture – Livestock.",
+        task: "Set Sector to Agriculture – livestock · GNFR K.",
         done: c => { const s = c.q("#rasterSector"); return !!s && s.value === "K_AgriLivestock"; },
         auto: c => c.select("#rasterSector", "K_AgriLivestock")
       },
       {
         id: "pollutant", phase: "Select the data", where: "map",
-        title: "Choose the pollutant",
-        text: `<p>Choose <b>CH&#8324; (methane)</b>. Livestock is Ireland&rsquo;s largest source of methane, so the map shows a clear pattern across the farming regions of the country.</p>
+        title: "Step 2 · Select the layer: pollutant",
+        text: `<p>Choose <b>Methane (CH&#8324;)</b>. Pollutants marked &ldquo;no emission&rdquo; have no values for this sector. Livestock is Ireland&rsquo;s largest source of methane, so the map shows a clear pattern across the farming regions of the country.</p>
                <p>As soon as the selection is complete, the layer is drawn on the map. Hover over any cell to read its value.</p>`,
         target: c => { const e = c.q("#rasterParam"); return e && e.closest(".raster-field"); }, place: "right",
         prepare: c => c.openStep("msStep2Btn"),
-        task: "Set Pollutant to CH4.",
+        task: "Set Pollutant to Methane (CH₄).",
         done: c => { const s = c.q("#rasterParam"); return !!s && s.value === "CH4"; },
         auto: c => c.select("#rasterParam", "CH4")
       },
@@ -221,9 +231,16 @@
         text: `<p>This step summarises the layer you have selected. Press <b>Add to plot</b> to calculate its time series. The graph appears in the panel to the right of the map.</p>`,
         target: '[data-step="add"]', place: "right",
         prepare: c => c.openStep("msStepAddBtn"),
+        tip: `Only layers of the same gas can share a graph. If the plot already holds another gas, a warning appears here: press <b>Remove all</b> under <b>Layers in the plot</b> first.`,
         task: "Press Add to plot.",
-        done: c => { const n = c.q("#tsCount"); return !!n && +n.textContent > 0; },
-        auto: async c => { if (!(+(c.q("#tsCount") || {}).textContent > 0)) await c.click("#tsAdd"); await c.wait(() => +c.q("#tsCount").textContent > 0, 15000); }
+        done: inPlot,
+        auto: async c => {
+          if (inPlot(c)) return;
+          const warn = c.q("#tsGasWarn");                      // another gas in the plot: clear it first
+          if (warn && !warn.hidden && c.q("#tsClear")) { c.q("#tsClear").click(); await sleep(400); }
+          await c.click("#tsAdd");
+          if (!await c.wait(() => inPlot(c), 15000)) throw new Error("The layer could not be added. Check the message above the Add to plot button.");
+        }
       },
       {
         id: "graph", phase: "Plot the time series", where: "map",
@@ -236,19 +253,19 @@
       },
       {
         id: "filter", phase: "Style the map", where: "map",
-        title: "Map style · Set the value filter",
-        text: `<p><b>Map style</b> controls how the layer is drawn. The <b>Filter</b> has two handles that set the lowest and the highest value shown. Cells outside the range are hidden, while the colour scale stays the same.</p>
-               <p>Drag the left handle fully to the left, so that every value from the minimum upwards is shown.</p>`,
-        tip: `Raising the left handle removes the many low-value cells around the coast and offshore, and focuses the map on the main sources. Cells with a value of zero are always left uncoloured.`,
+        title: "Step 5 · Map style: the value filter",
+        text: `<p><b>Map style</b> controls how the layer is drawn. The <b>Filter</b> has two handles that set the lowest and the highest value shown, with the values at each end. Cells outside the range are hidden, while the colour scale stays the same.</p>
+               <p>For this example, show every value: the left handle should sit at the far left, which is where it starts. If you have moved it, drag it back to the left.</p>`,
+        tip: `Dragging the left handle to the right hides the many low-value cells around the coast and offshore, and focuses the map on the main sources. Cells with a value of zero are always left uncoloured.`,
         target: c => { const e = c.q("#msRs"); return e && e.closest(".ms-bgrow"); }, place: "right",
         prepare: c => c.openStep("msStep3Btn"),
-        task: "Move the left handle of the Filter to the minimum.",
+        task: "Check that the left handle of the Filter is at the far left.",
         done: c => { const s = c.q("#msRsMin"); return !!s && +s.value === +s.min; },
         auto: async c => { const s = c.q("#msRsMin"); if (!s) throw new Error("Show a layer on the map first."); s.value = s.min; c.fire(s, "input"); c.fire(s, "change"); await sleep(200); }
       },
       {
         id: "palette", phase: "Style the map", where: "map",
-        title: "Map style · Choose a colour palette",
+        title: "Step 5 · Map style: colour palette",
         text: `<p>Click the bar that shows the current palette to open the list. Palettes are grouped and can be searched by name.</p>
                <p>Choose <b>Jet</b> in the Rainbow group. The map and its legend are recoloured immediately, and the downloaded map will use the same colours.</p>`,
         tip: `The small box to the right of the palette <b>reverses</b> it, so that low and high values swap colours.`,
@@ -266,7 +283,7 @@
       },
       {
         id: "format", phase: "Download the map", where: "map",
-        title: "Download the map · Choose a file format",
+        title: "Step 6 · Download the map: file format",
         summary: "Save the map as a JPEG image with legend, as GeoTIFF cell values for GIS software, or both in one ZIP file. Select JPEG.",
         text: `<p>The map on screen can be saved in three formats:</p>
                <ul><li><b>JPEG</b>: a map image with title, legend and source, ready for reports and presentations.</li>
@@ -281,7 +298,7 @@
       },
       {
         id: "download", phase: "Download the map", where: "map", noReplay: true,
-        title: "Download the JPEG map",
+        title: "Step 6 · Download the map: save the JPEG",
         text: `<p>Press <b>Download JPEG map</b>. The image is prepared with the colour palette and filter you chose and saved to your computer, normally in the Downloads folder.</p>`,
         target: "#msDlGo", place: "right",
         prepare: c => c.openStep("msStep4Btn"),
@@ -290,10 +307,10 @@
         auto: c => c.click("#msDlGo")
       },
       {
-        id: "about", phase: "Download the map", where: "map",
-        title: "Check the dataset&rsquo;s metadata",
-        text: `<p>Before you interpret a map, check what the data represent. <b>About this dataset</b> summarises the provider, resolution, projection, coverage, years and contents of MapEIre, with notes on interpretation and links to the original report.</p>
-               <p>Click it to open the summary. Click it again to fold it away.</p>`,
+        id: "about", phase: "Check the source", where: "map",
+        title: "About this dataset: check the metadata",
+        text: `<p>Before you interpret a map, check what the data represent. <b>About this dataset</b>, at the bottom of the left panel, summarises the provider, resolution, projection, coverage, years and contents of MapEIre, with notes on interpretation and links to the original report.</p>
+               <p>Click it to open the summary. While it is open, the numbered steps above fold away to make room; click it again and they come back.</p>`,
         target: '[data-step="about"]', place: "right",
         task: "Open About this dataset.",
         done: c => { const b = c.q("#msAboutBtn"); return !!b && b.getAttribute("aria-expanded") === "true"; },
@@ -590,7 +607,7 @@
   function tick(ts) {
     if (!st.tour) return;
     layout();
-    if (ts - st.lastCheck > 300) { st.lastCheck = ts; checkDone(); bindFrameKeys(); }
+    if (ts - st.lastCheck > 300) { st.lastCheck = ts; watchTs(); checkDone(); bindFrameKeys(); }
     st.raf = requestAnimationFrame(tick);
   }
 
@@ -620,7 +637,7 @@
     ui.text.innerHTML = step.text || "";
     ui.tip.innerHTML = (step.tip ? `<div class="gt-tip"><i class="bi bi-lightbulb" aria-hidden="true"></i><span>${step.tip}</span></div>` : "") +
                        (step.warn ? `<div class="gt-tip warn"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i><span>${step.warn}</span></div>` : "");
-    ui.msg.textContent = "";
+    ui.msg.textContent = ""; ui.msg.classList.remove("info");
     ui.back.hidden = st.i === 0;
     ui.auto.hidden = !step.auto;
     ui.auto.disabled = false;
@@ -656,8 +673,30 @@
     else ui.auto.innerHTML = `<i class="bi bi-magic"></i><span>${esc((st.steps[st.i] || {}).autoLabel || "Do it for me")}</span>`;
   }
 
+  // Time series tours: switch the analysis back on if it was closed (true when it had to be)
+  async function keepTsOn(step) {
+    if (!st.tour || !st.tour.requireTs || step.where !== "map" || !mapDoc() || tsOn(ctx)) return false;
+    const tab = ctx.q("#msTabTs");
+    if (!tab || tab.disabled) return false;
+    tab.click(); await sleep(350);
+    return true;
+  }
+  let tsFixing = false;
+  async function watchTs() {
+    const step = st.steps[st.i];
+    if (tsFixing || st.busy || !step) return;
+    tsFixing = true;
+    try {
+      if (await keepTsOn(step)) {
+        ui.msg.classList.add("info");
+        ui.msg.textContent = "Time series was switched off, which closes its panel. The tour has switched it back on, as the next steps need it.";
+        st.last = "";
+      }
+    } finally { tsFixing = false; }
+  }
+
   async function prepareStep(step) {
-    if (step.where === "map") await ensureMapping();
+    if (step.where === "map") { await ensureMapping(); await keepTsOn(step); }
     else if (step.where === "page" && !STANDALONE && step.tab && window.activateTab && !tabActive(step.tab)) window.activateTab(step.tab);
     if (step.prepare) await step.prepare(ctx);
     const els = resolveTargets(step);
@@ -697,7 +736,7 @@
     setBusy(true, "Preparing…");
     ui.auto.hidden = false;
     try { await prepareStep(step); }
-    catch (e) { if (gen === st.gen) ui.msg.textContent = e.message || String(e); }
+    catch (e) { if (gen === st.gen) { ui.msg.classList.remove("info"); ui.msg.textContent = e.message || String(e); } }
     if (gen !== st.gen) return;
     setBusy(false);
     ui.auto.hidden = !step.auto;
@@ -710,12 +749,12 @@
     const step = st.steps[st.i];
     if (!step || !step.auto || st.busy) return;
     setBusy(true);
-    ui.msg.textContent = "";
+    ui.msg.textContent = ""; ui.msg.classList.remove("info");
     try {
       await prepareStep(step);
       await step.auto(ctx);
       await sleep(250);
-    } catch (e) { ui.msg.textContent = e.message || String(e); }
+    } catch (e) { { ui.msg.classList.remove("info"); ui.msg.textContent = e.message || String(e); } }
     setBusy(false);
     st.doneNow = null; checkDone();
     // Steps without a "done" check (downloads) move on by themselves once performed
@@ -753,7 +792,7 @@
     from = Math.max(0, Math.min(st.steps.length - 1, from | 0));
     if (from > 1) {
       st.i = from; render(); setBusy(true, "Preparing…");
-      try { await fastForward(from); } catch (e) { ui.msg.textContent = e.message || String(e); }
+      try { await fastForward(from); } catch (e) { { ui.msg.classList.remove("info"); ui.msg.textContent = e.message || String(e); } }
       setBusy(false);
     }
     go(from);

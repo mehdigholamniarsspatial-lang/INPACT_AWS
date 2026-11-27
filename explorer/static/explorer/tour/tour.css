@@ -140,3 +140,4 @@
 .ug-side-tours .ug-go{width:100%;justify-content:center}
 .ug-card-lead{font-size:.9rem;line-height:1.6;color:var(--text-main,#1E2B37);margin:0 0 .7rem}
 @media (max-width:900px){ .ug-side-tours{display:none} }
+.gt-msg.info{color:#0A5E5C;background:#E6F4F3;border-radius:8px;padding:.45rem .6rem}

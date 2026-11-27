@@ -23,7 +23,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="/static/explorer/trend/trend.css?v=20261128c" rel="stylesheet">
 <!-- In-app guided walkthroughs (static/explorer/tour/) -->
-<link href="/static/explorer/tour/tour.css?v=20261127f" rel="stylesheet">
+<link href="/static/explorer/tour/tour.css?v=20261127g" rel="stylesheet">
 <!-- Leaflet -->
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <!-- Google Fonts -->
@@ -5132,11 +5132,12 @@ a.ug-go.alt:hover{color:var(--navy)}
           <div class="ug-step" data-step="sm-ts-dataset">
             <button type="button" class="ug-step-head" aria-expanded="false" aria-controls="ugM1">
               <span class="ug-step-num">1</span><i class="bi bi-graph-up ug-step-ic" aria-hidden="true"></i>
-              <span class="ug-step-txt"><b>Switch on Time series and choose a dataset</b><span>Pick the analysis, then one of the three emission datasets.</span></span>
+              <span class="ug-step-txt"><b>Check that Time series is on and choose a dataset</b><span>The analysis opens by default; then pick one of the three emission datasets.</span></span>
               <i class="bi bi-chevron-down ug-chev" aria-hidden="true"></i>
             </button>
             <div class="ug-step-body" id="ugM1">
-              <p>Open <b>Spatial Mapping</b> from the Main Menu. At the top of the left panel, under <b>Choose an analysis</b>, select <b>Time series</b>; the workspace adds the steps for the area and the plot, and the graph panel opens on the right. Then, in <b>Step 1 &middot; Choose a dataset</b>, select one of the three cards. Tap a dataset to see its time span:</p>
+              <p>Open <b>Spatial Mapping</b> from the Main Menu. <b>Time series</b> opens by default: under <b>Choose an analysis</b>, at the top of the left panel, its tab shows <b>ON</b>, the panel lists the steps for the area and the plot, and the graph panel is open on the right. If it does not show ON, select it. Then, in <b>Step 1 &middot; Choose a dataset</b>, select one of the three cards. Tap a dataset to see its time span:</p>
+              <div class="ug-note"><i class="bi bi-exclamation-triangle"></i><span>The analysis tabs work as switches. Clicking <b>Time series</b> while it shows ON closes it: the graph panel and steps 3 and 4 disappear. Click it once more to bring them back.</span></div>
               <div class="ug-chips" role="group" aria-label="Datasets">
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="1 km grid, 2015, 2016 and 2019. Every cell has its value: hover, restyle, compare and plot three-sample time series."><i class="bi bi-grid-3x3"></i>MapEIre</button>
                 <button type="button" class="ug-chip" aria-pressed="false" data-explain="0.1&deg; grid (about 11 &times; 7 km), every year from 2000 to 2024 as annual totals or monthly values. Values are mass of each gas, not CO&#8322;-equivalent."><i class="bi bi-layers"></i>EDGAR</button>
@@ -6346,7 +6347,7 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="/static/explorer/trend/plot-style.js?v=20261128d"></script>
 <script src="/static/explorer/trend/trend-chart.js?v=20261128d"></script>
 <script src="/static/explorer/settings-io.js?v=20261128a"></script>
-<script src="/static/explorer/tour/tour.js?v=20261127f" defer></script>
+<script src="/static/explorer/tour/tour.js?v=20261127g" defer></script>
 <script>
 /* =====================================================================
    Ireland Greenhouse Gas Policy Impact Explorer
