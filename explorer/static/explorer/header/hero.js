@@ -194,14 +194,24 @@
   window.addEventListener("resize", () => { align(); clampAll(); });
   if (window.ResizeObserver && text) new ResizeObserver(align).observe(text);
 
-  /* ---------- Interactive cards: drag them anywhere over the banner ----------
-     A card follows the pointer (mouse, pen or touch) once it has moved a few pixels; a short press
-     is still a click and opens the section. Shift + arrow keys move the focused card. Positions are
-     offsets from the card's place in the grid, kept in this browser (localStorage); "Reset layout"
-     puts every card back. While the pointer is over a card it tilts towards it in 3D. */
+  /* ---------- Movable cards and logo: they stay still until you drag them ----------
+     A card (or the INPACT logo) follows the pointer (mouse, pen or touch) once it has moved a few
+     pixels; a short press is still a click (a card opens its section). Shift + arrow keys move the
+     focused card or logo. Positions are offsets from their places, kept in this browser
+     (localStorage); "Reset layout" puts everything back. Nothing floats or tilts by itself
+     (27 Nov 2026: the slow floating was dizzying). */
   const POS_KEY = "inpact.hero.cards";
   const cards = [...nav.querySelectorAll(".hs-card")];
-  cards.forEach((c, i) => { c.dataset.key = c.dataset.tab || "tours"; c.style.setProperty("--bob-delay", (-i * 0.9).toFixed(1) + "s"); });
+  cards.forEach(c => { c.dataset.key = c.dataset.tab || "tours"; });
+  const brandEl = document.getElementById("brandBtn");
+  const logo = inner.querySelector(".brand-inpact");
+  if (logo) {
+    logo.dataset.key = "logo";
+    // the browser's own image dragging would cancel ours after the first few pixels
+    logo.querySelectorAll("img").forEach(im => { im.draggable = false; });
+    logo.addEventListener("dragstart", e => e.preventDefault());
+  }
+  const items = logo ? [...cards, logo] : cards;                  // everything that can be moved
   let pos = {};
   try { pos = JSON.parse(localStorage.getItem(POS_KEY) || "{}") || {}; } catch (e) { pos = {}; }
   const savePos = () => { try { localStorage.setItem(POS_KEY, JSON.stringify(pos)); } catch (e) { /* storage blocked */ } };
@@ -210,7 +220,7 @@
     if (x || y) pos[c.dataset.key] = [Math.round(x), Math.round(y)]; else delete pos[c.dataset.key];
   };
   const offOf = c => (pos[c.dataset.key] || [0, 0]);
-  // Keep a card inside the banner (its offset is measured from its place in the grid)
+  // Keep an item inside the banner (its offset is measured from its own place)
   function bounds(c) {
     const h = header.getBoundingClientRect(), r = c.getBoundingClientRect(), [ox, oy] = offOf(c);
     const bl = r.left - ox, bt = r.top - oy;
@@ -219,7 +229,7 @@
   const clamp = (v, a, b) => Math.min(Math.max(v, a), b);
   function clampAll() {
     if (!nav.offsetParent) return;
-    cards.forEach(c => { const [x, y] = offOf(c); if (!x && !y) return; const b = bounds(c); setOff(c, clamp(x, b.minX, b.maxX), clamp(y, b.minY, b.maxY)); });
+    items.forEach(c => { const [x, y] = offOf(c); if (!x && !y) return; const b = bounds(c); setOff(c, clamp(x, b.minX, b.maxX), clamp(y, b.minY, b.maxY)); });
     savePos(); syncReset();
   }
 
@@ -227,17 +237,17 @@
   const reset = document.createElement("button");
   reset.type = "button"; reset.className = "hs-reset"; reset.hidden = true;
   reset.innerHTML = `<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>Reset layout`;
-  reset.title = "Put the cards back in their places";
+  reset.title = "Put the cards and the logo back in their places";
   reset.addEventListener("click", () => {
-    nav.classList.add("hs-returning");
-    cards.forEach(c => { setOff(c, 0, 0); c.style.zIndex = ""; }); savePos(); syncReset();
-    setTimeout(() => nav.classList.remove("hs-returning"), 500);
+    header.classList.add("hs-returning");
+    items.forEach(c => { setOff(c, 0, 0); c.style.zIndex = ""; }); savePos(); syncReset();
+    setTimeout(() => header.classList.remove("hs-returning"), 500);
   });
   inner.appendChild(reset);
   const syncReset = () => { reset.hidden = !Object.keys(pos).length; };
   const hint = document.createElement("div");
   hint.className = "hs-hint"; hint.setAttribute("role", "status");
-  hint.innerHTML = `<i class="bi bi-arrows-move" aria-hidden="true"></i>Tip: drag the cards to arrange them on the banner`;
+  hint.innerHTML = `<i class="bi bi-arrows-move" aria-hidden="true"></i>Tip: drag the cards or the logo to arrange the banner`;
   inner.appendChild(hint);
   const HINT_KEY = "inpact.hero.hint";
   let hinted = false; try { hinted = localStorage.getItem(HINT_KEY) === "1"; } catch (e) { hinted = true; }
@@ -247,19 +257,20 @@
   }
   const hintDone = () => { hint.classList.remove("on"); try { localStorage.setItem(HINT_KEY, "1"); } catch (e) { /* storage blocked */ } };
 
-  cards.forEach(c => { const [x, y] = offOf(c); setOff(c, x, y); });
+  items.forEach(c => { const [x, y] = offOf(c); setOff(c, x, y); });
   syncReset();
   requestAnimationFrame(clampAll);
 
   // Dragging
   let drag = null, justDragged = false, zTop = 3;
-  const toFront = c => { c.style.zIndex = String(++zTop); };          // the card moved last stays on top
-  nav.addEventListener("pointerdown", e => {
-    const c = e.target.closest(".hs-card");
+  const toFront = c => { if (c !== logo) c.style.zIndex = String(++zTop); };   // the card moved last stays on top
+  const startDrag = (c, e) => {
     if (!c || e.button > 0) return;
     const [ox, oy] = offOf(c);
     drag = { c, id: e.pointerId, sx: e.clientX, sy: e.clientY, ox, oy, b: bounds(c), moving: false };
-  });
+  };
+  nav.addEventListener("pointerdown", e => startDrag(e.target.closest(".hs-card"), e));
+  if (logo) logo.addEventListener("pointerdown", e => { if (!root.classList.contains("hdr-shrinkable")) startDrag(logo, e); });   // on the banner only
   window.addEventListener("pointermove", e => {
     if (!drag || e.pointerId !== drag.id) return;
     const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
@@ -283,34 +294,28 @@
   };
   window.addEventListener("pointerup", endDrag);
   window.addEventListener("pointercancel", endDrag);
-  // A drag must not also open the section (or the tours) when the button is released
-  nav.addEventListener("click", e => { if (justDragged) { e.preventDefault(); e.stopPropagation(); } }, true);
+  // A drag must not also open the section (or the tours, or the logo's menu) when the button is released
+  const stopAfterDrag = e => { if (justDragged) { e.preventDefault(); e.stopPropagation(); } };
+  nav.addEventListener("click", stopAfterDrag, true);
+  if (brandEl) brandEl.addEventListener("click", stopAfterDrag, true);
 
-  // Keyboard: Shift + arrows move the focused card (10 px a step)
-  nav.addEventListener("keydown", e => {
-    const c = e.target.closest(".hs-card");
+  // Keyboard: Shift + arrows move the focused card, or the logo when the brand is focused (10 px a step)
+  const keyMove = (c, e) => {
     const step = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, -10], ArrowDown: [0, 10] }[e.key];
     if (!c || !step || !e.shiftKey) return;
-    e.preventDefault();
+    e.preventDefault(); e.stopPropagation();
     const [x, y] = offOf(c), b = bounds(c);
     setOff(c, clamp(x + step[0], b.minX, b.maxX), clamp(y + step[1], b.minY, b.maxY)); toFront(c); savePos(); syncReset(); hintDone();
-  });
+  };
+  nav.addEventListener("keydown", e => keyMove(e.target.closest(".hs-card"), e));
+  if (brandEl && logo) brandEl.addEventListener("keydown", e => { if (!root.classList.contains("hdr-shrinkable")) keyMove(logo, e); });
 
-  // 3D tilt towards the pointer while it is over a card (mouse / pen)
-  const fineHover = window.matchMedia("(hover: hover) and (pointer: fine)");
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+  // A soft highlight follows the pointer over a card (light only: the card itself does not move)
   nav.addEventListener("pointermove", e => {
-    if (!fineHover.matches || reduce.matches) return;
     const c = e.target.closest(".hs-card"); if (!c) return;
     const r = c.getBoundingClientRect();
-    c.style.setProperty("--ty", (((e.clientX - r.left) / r.width - 0.5) * 16).toFixed(1) + "deg");
-    c.style.setProperty("--tx", (-((e.clientY - r.top) / r.height - 0.5) * 16).toFixed(1) + "deg");
     c.style.setProperty("--gx", ((e.clientX - r.left) / r.width * 100).toFixed(0) + "%");
     c.style.setProperty("--gy", ((e.clientY - r.top) / r.height * 100).toFixed(0) + "%");
-  });
-  nav.addEventListener("pointerout", e => {
-    const c = e.target.closest(".hs-card");
-    if (c && !c.contains(e.relatedTarget)) { c.style.setProperty("--tx", "0deg"); c.style.setProperty("--ty", "0deg"); }
   });
 
   // Scrolled past the banner (landing page): the menu slides in as a bar at the top (hero.css)

@@ -77,22 +77,17 @@ html:not(.hdr-shrinkable):not(.map-standalone) .header-inner{height:100%;align-i
 @keyframes hsBlink{0%,100%{opacity:.3}50%{opacity:1}}
 
 /* ---------- Logos and title on the bright sky ---------- */
-@property --idle-rx{syntax:"<angle>";inherits:true;initial-value:0deg}
-@property --idle-ry{syntax:"<angle>";inherits:true;initial-value:0deg}
-@property --idle-y{syntax:"<length>";inherits:true;initial-value:0px}
-/* The INPACT logo (transparent PNG) turns slowly in 3D and follows the pointer on hover */
+/* The INPACT logo (transparent PNG) stays still; it can be dragged anywhere on the banner (--dx/--dy, hero.js) */
 html:not(.hdr-shrinkable):not(.map-standalone) .brand-inpact{
   background:transparent;border:0;box-shadow:none;padding:0;overflow:visible;transition:none;
-  transform:perspective(650px) translateY(var(--idle-y)) rotateX(calc(var(--atm-rx,0deg) + var(--idle-rx))) rotateY(calc(var(--atm-ry,0deg) + var(--idle-ry)));
-  animation:hsLogo3d 10s ease-in-out infinite;
+  transform:none;animation:none;translate:var(--dx,0px) var(--dy,0px);cursor:grab;touch-action:none;position:relative;z-index:4;
+  user-select:none;-webkit-user-select:none;-webkit-user-drag:none;
 }
-html:not(.hdr-shrinkable):not(.map-standalone) .brand:hover .brand-inpact{animation-play-state:paused}
+html:not(.hdr-shrinkable):not(.map-standalone) .brand-inpact.hs-dragging{cursor:grabbing}
+html:not(.hdr-shrinkable):not(.map-standalone) .brand-inpact.hs-dragging img{filter:drop-shadow(0 16px 18px rgba(11,42,69,.3)) drop-shadow(0 0 0 rgba(0,0,0,0))}
+html:not(.hdr-shrinkable):not(.map-standalone) .hs-returning .brand-inpact{transition:translate .45s cubic-bezier(.2,.8,.2,1)}
 html:not(.hdr-shrinkable):not(.map-standalone) .brand-inpact::after{display:none}
 html:not(.hdr-shrinkable):not(.map-standalone) .brand-inpact img{height:112px;filter:drop-shadow(0 12px 12px rgba(11,42,69,.22)) drop-shadow(0 2px 2px rgba(11,42,69,.12))}
-@keyframes hsLogo3d{
-  0%,100%{--idle-ry:-14deg;--idle-rx:4deg;--idle-y:0px}
-  50%{--idle-ry:14deg;--idle-rx:-4deg;--idle-y:-5px}
-}
 html:not(.hdr-shrinkable):not(.map-standalone) .brand:hover{background:rgba(255,255,255,.4);box-shadow:inset 0 -2px 0 rgba(0,132,61,.45)}
 html:not(.hdr-shrinkable):not(.map-standalone) .brand:hover .brand-inpact{box-shadow:none}
 html:not(.hdr-shrinkable):not(.map-standalone) .header-text{border-left:2px solid rgba(11,42,69,.22);padding-top:.2rem;padding-bottom:.2rem}
@@ -109,18 +104,14 @@ html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder img{height:56px;fil
 /* ---------- The sections as floating cards under the title (transparent, light border) ---------- */
 .hs-menu{position:absolute;left:var(--hs-text-x,300px);right:var(--hs-right,0px);top:130px;z-index:2;max-width:780px;
   grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem}
-@property --bob{syntax:"<length>";inherits:false;initial-value:0px}
-/* Each card floats gently, tilts towards the pointer (--tx/--ty) and can be dragged (--dx/--dy, hero.js) */
+/* Each card stays still until it is dragged (--dx/--dy, hero.js); a soft highlight follows the pointer (--gx/--gy) */
 .hs-card{position:relative;display:flex;align-items:center;gap:.55rem;min-width:0;border:1.5px solid rgba(255,255,255,.88);border-radius:13px;
   background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.22),rgba(255,255,255,.12) 65%);
   -webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);color:#0B2A45;font:inherit;text-align:left;
   padding:.45rem .6rem;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;
   box-shadow:0 6px 16px rgba(11,42,69,.10),inset 0 0 0 1px rgba(255,255,255,.18);
   translate:var(--dx,0px) var(--dy,0px);
-  transform:perspective(600px) translateY(var(--bob)) rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg));
-  animation:hsCardFloat 6s ease-in-out infinite;animation-delay:var(--bob-delay,0s);
-  transition:transform .25s ease,scale .2s ease,box-shadow .2s ease,background .2s ease,border-color .2s ease}
-@keyframes hsCardFloat{0%,100%{--bob:0px}50%{--bob:-4px}}
+  transition:scale .2s ease,box-shadow .2s ease,background .2s ease,border-color .2s ease}
 .hs-card>i{flex:none;font-size:1.15rem;color:#0E8C8A;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;
   background:rgba(255,255,255,.6);border:1px solid rgba(255,255,255,.85);transition:background .2s,color .2s}
 .hs-card>span{min-width:0}
@@ -128,15 +119,15 @@ html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder img{height:56px;fil
   text-shadow:0 0 6px rgba(255,255,255,.95),0 1px 1px rgba(255,255,255,.9)}
 .hs-card small{display:block;font-size:.7rem;font-weight:600;color:#17344C;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   text-shadow:0 0 6px rgba(255,255,255,.95)}
-.hs-card:hover{scale:1.04;border-color:#fff;z-index:3;
+.hs-card:hover{scale:1.02;border-color:#fff;z-index:3;
   background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.62),rgba(255,255,255,.3) 70%);
   box-shadow:0 14px 26px rgba(11,42,69,.18),inset 0 0 0 1px rgba(255,255,255,.4)}
 /* Picked up: bigger, lifted, above everything; it follows the pointer with no delay */
-.hs-card.hs-dragging{cursor:grabbing;scale:1.08;z-index:60!important;animation-play-state:paused;
+.hs-card.hs-dragging{cursor:grabbing;scale:1.06;z-index:60!important;
   box-shadow:0 22px 40px rgba(11,42,69,.28),0 0 0 3px rgba(127,224,168,.55),inset 0 0 0 1px rgba(255,255,255,.5);
   background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.72),rgba(255,255,255,.4) 70%)}
 .hs-menu.hs-has-drag .hs-card:not(.hs-dragging){opacity:.85}
-.hs-menu.hs-returning .hs-card{transition:translate .45s cubic-bezier(.2,.8,.2,1),transform .25s ease}
+.hs-returning .hs-card{transition:translate .45s cubic-bezier(.2,.8,.2,1)}
 .hs-reset{position:absolute;left:var(--hs-text-x,300px);top:102px;z-index:4;display:none;align-items:center;gap:.35rem;border:1.5px solid rgba(255,255,255,.88);
   border-radius:999px;background:rgba(255,255,255,.3);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);color:#0B2A45;font:inherit;
   font-size:.74rem;font-weight:700;padding:.28rem .7rem;cursor:pointer;box-shadow:0 6px 14px rgba(11,42,69,.12);text-shadow:0 0 6px rgba(255,255,255,.9)}
@@ -168,7 +159,7 @@ html:not(.hdr-shrinkable):not(.map-standalone) .hs-hint{display:inline-flex}
 /* ---------- Glowing map of Ireland + live trend panel ---------- */
 .hs-art{position:absolute;right:215px;top:-12px;width:196px;height:262px;z-index:1;pointer-events:none}
 .hs-holo{position:absolute;inset:0}
-.hs-map{position:absolute;inset:0;width:100%;height:100%;overflow:visible;animation:hsFloat 7s ease-in-out infinite}
+.hs-map{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .hs-ire{opacity:.92}
 .hs-ire-edge{fill:none;stroke:rgba(255,255,255,.85);stroke-width:1.6}
 .hs-st circle{fill:#FFFFFF}
@@ -192,7 +183,6 @@ html:not(.hdr-shrinkable):not(.map-standalone) .hs-hint{display:inline-flex}
 .hs-p-legend{display:flex;gap:.6rem;font-size:.7rem;color:#3A566D;margin-top:.15rem}
 .hs-p-legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.25rem;vertical-align:0}
 .hs-p-legend .co2{background:#00843D}.hs-p-legend .ch4{background:#E8A33D}.hs-p-legend .n2o{background:#8E6BD8}
-@keyframes hsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
 @keyframes hsPing{0%{transform:scale(.4);opacity:.9}100%{transform:scale(2.2);opacity:0}}
 @keyframes hsOrbit{0%,100%{opacity:.85}50%{opacity:.35}}
 @keyframes hsDraw{to{stroke-dashoffset:0}}
@@ -336,3 +326,26 @@ html:not(.hdr-shrinkable):not(.map-standalone) .hs-cow,html:not(.hdr-shrinkable)
 .hs-peat.bubble .hs-pool{animation:hsBubble .9s ease}
 @keyframes hsBubble{0%,100%{fill:#6F9AB4}40%{fill:#B9E0F0}}
 @media (prefers-reduced-motion:reduce){ .hs-cow.moo .hs-bob,.hs-peat.bubble .hs-pool{animation:none} }
+
+/* ---------- Station card: "CO₂ over the years" | "Live readings" (hero-ch4.js) ---------- */
+.ch4-tabs{display:flex;gap:.3rem;margin:.35rem 0 .3rem}
+.ch4-tab{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:.3rem;border:1px solid #E1E7EC;border-radius:999px;background:#F5F7F9;
+  color:#3D4F60;font:inherit;font-size:.72rem;font-weight:700;padding:.25rem .5rem;cursor:pointer}
+.ch4-tab:hover{background:#EDF1F4}
+.ch4-tab[aria-selected="true"]{background:#0B2A45;border-color:#0B2A45;color:#fff}
+.ch4-tab:focus-visible,.ch4-t-chart:focus-visible{outline:3px solid #E8A33D;outline-offset:2px}
+.ch4-view[hidden]{display:none}
+.ch4-t-title{font-size:.86rem;font-weight:800;color:#0B2A45}
+.ch4-t-src{font-size:.68rem;font-weight:700;color:#6B7B89;margin-left:.25rem}
+.ch4-t-stats{font-size:.72rem;color:#3D4F60;margin:.1rem 0 .15rem;line-height:1.35}
+.ch4-t-stats b{color:#1F2328}
+.ch4-t-chart{display:block;width:100%;height:auto;aspect-ratio:360/112;margin:0 0 .3rem;border-radius:8px;cursor:crosshair;touch-action:pan-y}
+.ch4-t-grid{stroke:#E6EBEF;stroke-width:1}
+.ch4-t-ax{font-size:9px;fill:#7A8896;font-family:inherit}
+.ch4-t-area{fill:rgba(58,63,69,.10)}
+.ch4-t-line{fill:none;stroke:#2A2F35;stroke-width:2;stroke-linejoin:round}
+.ch4-t-peak{fill:#fff;stroke:#2A2F35;stroke-width:1.5}
+.ch4-t-cursor{stroke:#0E8C8A;stroke-width:1;stroke-dasharray:3 3}
+.ch4-t-dot{fill:#0E8C8A;stroke:#fff;stroke-width:1.5}
+.ch4-t-tipbg{fill:#0B2A45}
+.ch4-t-tip{font-size:10px;font-weight:700;fill:#fff;font-family:inherit}

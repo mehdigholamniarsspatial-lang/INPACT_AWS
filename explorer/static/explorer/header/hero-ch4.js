@@ -50,7 +50,7 @@
   tower.className = "ch4-tower";
   tower.setAttribute("aria-haspopup", "dialog");
   tower.setAttribute("aria-expanded", "false");
-  tower.setAttribute("aria-label", "Mace Head atmospheric station: carbon dioxide, methane and nitrous oxide readings. Open details");
+  tower.setAttribute("aria-label", "Mace Head atmospheric station: CO₂ over the years and live readings. Open details");
   tower.innerHTML = `
     <svg class="ch4-mast" viewBox="0 0 60 190" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
       <path class="ch4-lattice" d="M22 188L30 26L38 188M24 150H36M25.5 112H34.5M27 76H33M28.5 46H31.5M23 168L35 132M25 132L34 96M26.5 96L33 62M37 168L25 132M35 132L26 96M33.5 96L27 62"/>
@@ -82,25 +82,117 @@
   card.innerHTML = `
     <div class="ch4-c-head"><span><i class="bi bi-broadcast-pin" aria-hidden="true"></i> Mace Head atmospheric station</span>
       <button type="button" class="ch4-x" aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
-    <div class="ch4-c-tiles">${readTile("co2")}${readTile("ch4")}${readTile("n2o")}</div>
-    <p>Chimneys release <b>CO₂</b>, cattle and wet bogs <b>methane</b>, fertilised soils <b>nitrous oxide</b>. The wind carries them to <b>Mace Head</b>; <b>inverse models</b> use the CH₄ and N₂O readings to trace their sources.</p>
-    <div class="ch4-c-foot"><button type="button" class="ch4-c-go"><i class="bi bi-globe-europe-africa" aria-hidden="true"></i> See the inverse-model maps</button>
-      <span class="ch4-c-hits"><span class="ch4-c-n co2" data-gas="co2">0</span> CO₂ · <span class="ch4-c-n" data-gas="ch4">0</span> CH₄ · <span class="ch4-c-n n2o" data-gas="n2o">0</span> N₂O measured</span></div>
-    <p class="ch4-c-note" title="CO₂ about 424–428 ppm; CH₄ about 1,950–2,000 ppb; N₂O about 337–339 ppb">Illustration: simulated around typical Mace Head levels.</p>`;
+    <div class="ch4-tabs" role="tablist" aria-label="Station views">
+      <button type="button" role="tab" class="ch4-tab" data-view="trend" aria-selected="true"><i class="bi bi-graph-down" aria-hidden="true"></i> CO₂ over the years</button>
+      <button type="button" role="tab" class="ch4-tab" data-view="live" aria-selected="false"><i class="bi bi-broadcast" aria-hidden="true"></i> Live readings</button>
+    </div>
+    <div class="ch4-view" data-view="trend" role="tabpanel">
+      <div class="ch4-t-title">Ireland&rsquo;s CO₂ emissions <span class="ch4-t-src"></span></div>
+      <div class="ch4-t-stats" aria-live="polite"></div>
+      <svg class="ch4-t-chart" viewBox="0 0 360 112" tabindex="0" role="img" aria-label="Ireland's CO₂ emissions by year; use the arrow keys to read each year"></svg>
+      <div class="ch4-c-foot"><button type="button" class="ch4-c-go ch4-go-trend"><i class="bi bi-activity" aria-hidden="true"></i> Explore CO₂ in Trend Analysis</button>
+        <span class="ch4-c-hits">Source: EPA national inventory</span></div>
+    </div>
+    <div class="ch4-view" data-view="live" role="tabpanel" hidden>
+      <div class="ch4-c-tiles">${readTile("co2")}${readTile("ch4")}${readTile("n2o")}</div>
+      <p>Chimneys release <b>CO₂</b>, cattle and wet bogs <b>methane</b>, fertilised soils <b>nitrous oxide</b>. The wind carries them to <b>Mace Head</b>; <b>inverse models</b> use the CH₄ and N₂O readings to trace their sources.</p>
+      <div class="ch4-c-foot"><button type="button" class="ch4-c-go ch4-go-maps"><i class="bi bi-globe-europe-africa" aria-hidden="true"></i> See the inverse-model maps</button>
+        <span class="ch4-c-hits"><span class="ch4-c-n co2" data-gas="co2">0</span> CO₂ · <span class="ch4-c-n" data-gas="ch4">0</span> CH₄ · <span class="ch4-c-n n2o" data-gas="n2o">0</span> N₂O measured</span></div>
+      <p class="ch4-c-note" title="CO₂ about 424–428 ppm; CH₄ about 1,950–2,000 ppb; N₂O about 337–339 ppb">Illustration: simulated around typical Mace Head levels.</p>
+    </div>`;
   header.appendChild(card);
+
+  /* ---------- "CO₂ over the years": Ireland's CO₂ emissions from the EPA inventory (the page's own data) ---------- */
+  const inv = typeof REAL_DATA !== "undefined" ? REAL_DATA : {}, invYears = typeof DATA_YEARS !== "undefined" ? DATA_YEARS : [];
+  const co2Key = Object.keys(inv).find(k => /^CO2$/i.test(k));
+  const series = co2Key ? invYears.map((y, i) => [y, inv[co2Key][i]]).filter(p => p[1] != null && isFinite(p[1])).map(([y, v]) => [y, v / 1000]) : [];
+  const chart = card.querySelector(".ch4-t-chart"), statsEl = card.querySelector(".ch4-t-stats");
+  let focusI = series.length - 1;
+  function drawTrend() {
+    if (series.length < 2) { statsEl.textContent = "The inventory data could not be loaded."; return; }
+    const first = series[0], last = series[series.length - 1];
+    const peak = series.reduce((a, b) => (b[1] > a[1] ? b : a));
+    card.querySelector(".ch4-t-src").textContent = `${first[0]}–${last[0]} · Mt CO₂`;
+    const pc = (a, b) => (a / b - 1) * 100, sg = v => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(0) + "%";
+    statsEl.innerHTML = `<b>${last[1].toFixed(1)} Mt</b> in ${last[0]} · ${sg(pc(last[1], peak[1]))} since the ${peak[0]} peak (${peak[1].toFixed(1)} Mt) · ${sg(pc(last[1], first[1]))} since ${first[0]}`;
+    const L = 30, Rr = 352, T = 8, B = 94;
+    const x0 = first[0], x1 = last[0], vs = series.map(p => p[1]);
+    const y0 = Math.floor(Math.min(...vs) / 5) * 5, y1 = Math.ceil(Math.max(...vs) / 5) * 5;
+    const X = y => L + ((y - x0) / (x1 - x0)) * (Rr - L), Y = v => B - ((v - y0) / (y1 - y0)) * (B - T);
+    const line = series.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1)).join("");
+    let g = "";
+    for (let v = y0; v <= y1; v += 5) g += `<line class="ch4-t-grid" x1="${L}" x2="${Rr}" y1="${Y(v)}" y2="${Y(v)}"/><text class="ch4-t-ax" x="${L - 4}" y="${Y(v) + 3}" text-anchor="end">${v}</text>`;
+    for (let y = Math.ceil(x0 / 10) * 10; y < x1 - 2; y += 10) g += `<text class="ch4-t-ax" x="${X(y)}" y="${B + 12}" text-anchor="middle">${y}</text>`;
+    g += `<text class="ch4-t-ax" x="${X(x1)}" y="${B + 12}" text-anchor="end">${x1}</text>`;
+    chart.innerHTML = g + `<path class="ch4-t-area" d="${line}L${X(x1)} ${B}L${X(x0)} ${B}Z"/><path class="ch4-t-line" d="${line}"/>
+      <circle class="ch4-t-peak" cx="${X(peak[0])}" cy="${Y(peak[1])}" r="3.2"/>
+      <g class="ch4-t-cur"><line class="ch4-t-cursor" y1="${T}" y2="${B}"/><circle class="ch4-t-dot" r="3.6"/>
+        <rect class="ch4-t-tipbg" rx="4" height="17"/><text class="ch4-t-tip" y="0"></text></g>`;
+    chart._geo = { X, Y };
+    showYear(focusI);
+  }
+  function showYear(i) {
+    if (!chart._geo || !series.length) return;
+    focusI = Math.max(0, Math.min(series.length - 1, i));
+    const [yr, v] = series[focusI], { X, Y } = chart._geo, x = X(yr), y = Y(v);
+    const cur = chart.querySelector(".ch4-t-cur"), tip = cur.querySelector(".ch4-t-tip"), bg = cur.querySelector(".ch4-t-tipbg");
+    cur.querySelector(".ch4-t-cursor").setAttribute("x1", x); cur.querySelector(".ch4-t-cursor").setAttribute("x2", x);
+    cur.querySelector(".ch4-t-dot").setAttribute("cx", x); cur.querySelector(".ch4-t-dot").setAttribute("cy", y);
+    tip.textContent = `${yr} · ${v.toFixed(1)} Mt`;
+    const w = tip.getComputedTextLength ? tip.getComputedTextLength() + 10 : 70;
+    const tx = Math.min(352 - w, Math.max(30, x - w / 2)), ty = Math.max(2, y - 24);
+    bg.setAttribute("x", tx); bg.setAttribute("y", ty); bg.setAttribute("width", w);
+    tip.setAttribute("x", tx + 5); tip.setAttribute("y", ty + 12);
+    chart.setAttribute("aria-label", `Ireland's CO₂ emissions: ${yr}, ${v.toFixed(1)} megatonnes. Use the arrow keys to read other years`);
+  }
+  chart.addEventListener("pointermove", e => {
+    if (!chart._geo) return;
+    const r = chart.getBoundingClientRect(), vx = ((e.clientX - r.left) / r.width) * 360;
+    let best = 0; series.forEach((p, i) => { if (Math.abs(chart._geo.X(p[0]) - vx) < Math.abs(chart._geo.X(series[best][0]) - vx)) best = i; });
+    showYear(best);
+  });
+  chart.addEventListener("keydown", e => {
+    const d = { ArrowLeft: -1, ArrowRight: 1, Home: -999, End: 999 }[e.key];
+    if (d) { e.preventDefault(); showYear(d === -999 ? 0 : d === 999 ? series.length - 1 : focusI + d); }
+  });
+  card.querySelector(".ch4-go-trend").addEventListener("click", async () => {
+    openCard(false);
+    if (typeof window.activateTab !== "function") return;
+    window.activateTab("trend");                                     // then pick CO₂ once the chart is ready
+    for (let k = 0; k < 40; k++) {
+      const sel = document.getElementById("trGas");
+      const opt = sel && [...sel.options].find(o => /^CO(2|₂)$/.test(o.value));
+      if (opt) { if (sel.value !== opt.value) { sel.value = opt.value; sel.dispatchEvent(new Event("change", { bubbles: true })); } break; }
+      await new Promise(r => setTimeout(r, 150));
+    }
+  });
+
+  // Tabs: CO₂ over the years | Live readings
+  const tabs = [...card.querySelectorAll(".ch4-tab")];
+  const showView = v => {
+    tabs.forEach(t => t.setAttribute("aria-selected", String(t.dataset.view === v)));
+    card.querySelectorAll(".ch4-view").forEach(p => { p.hidden = p.dataset.view !== v; });
+    if (v === "trend") drawTrend(); else drawSparks();
+  };
+  tabs.forEach(t => t.addEventListener("click", () => showView(t.dataset.view)));
+  card.querySelector(".ch4-tabs").addEventListener("keydown", e => {
+    const i = tabs.indexOf(document.activeElement), d = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (i < 0 || !d) return;
+    e.preventDefault(); const n = tabs[(i + d + tabs.length) % tabs.length]; n.focus(); showView(n.dataset.view);
+  });
 
   const openCard = on => {
     card.hidden = !on;
     tower.setAttribute("aria-expanded", String(on));
     tower.classList.toggle("open", on);
-    if (on) { drawSparks(); card.querySelector(".ch4-c-go").focus({ preventScroll: true }); }
+    if (on) { showView("trend"); card.querySelector(".ch4-tab[aria-selected='true']").focus({ preventScroll: true }); }
   };
   tower.addEventListener("click", e => { e.stopPropagation(); openCard(card.hidden); });
   card.querySelector(".ch4-x").addEventListener("click", () => { openCard(false); tower.focus({ preventScroll: true }); });
   card.addEventListener("click", e => e.stopPropagation());
   document.addEventListener("click", () => { if (!card.hidden) openCard(false); });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !card.hidden) { openCard(false); tower.focus({ preventScroll: true }); } });
-  card.querySelector(".ch4-c-go").addEventListener("click", () => {
+  card.querySelector(".ch4-go-maps").addEventListener("click", () => {
     openCard(false);
     location.hash = "#mapping/RasterLayer?ds=inverse";             // Spatial Mapping on the PARIS inverse models
   });
