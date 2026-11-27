@@ -827,7 +827,7 @@ html.hdr-slim .tab-nav{
 .trend-adv-sec:first-child{border-top:0;margin-top:0;padding-top:.4rem}
 
 /* ============ ABOUT TAB ============ */
-.about-wrap{max-width:1180px;margin:0 auto;padding:1.6rem 1.4rem 2.5rem}
+.about-wrap{max-width:1560px;margin:0 auto;padding:1.6rem clamp(1rem,2.4vw,2.4rem) 2.5rem}
 .about-hero{
   background:linear-gradient(115deg,var(--navy) 0%,#1D4264 55%,#1B5E48 100%);
   color:#fff;border-radius:var(--radius);
@@ -1009,7 +1009,7 @@ html.hdr-slim .tab-nav{
    Five respondent groups, each with its own step-by-step questionnaire (from /api/feedback/schema/);
    four groups verify an access key first. A review page, a thank-you page, a results dashboard
    for key holders only, and a key-protected research download. */
-.fb-wrap{max-width:1020px;margin:0 auto;padding:1.6rem 1.4rem 2.5rem}
+.fb-wrap{max-width:1240px;margin:0 auto;padding:1.6rem clamp(1rem,2.4vw,2.4rem) 2.5rem}
 .fb-hero{
   display:flex;gap:1.5rem;align-items:center;justify-content:space-between;flex-wrap:wrap;
   background:linear-gradient(115deg,var(--navy) 0%,#1D4264 58%,#1B5E48 100%);
@@ -2480,7 +2480,7 @@ html.map-standalone:not(.ms-aq) #map .ov-map-legend{display:none!important}
 }
 
 /* ================= DATASETS TAB (data catalogue) ================= */
-.dc-wrap{max-width:1280px;margin:0 auto;padding:1.6rem 1.4rem 2.6rem}
+.dc-wrap{max-width:1680px;margin:0 auto;padding:1.6rem clamp(1rem,2.4vw,2.4rem) 2.6rem}
 .dc-hero{
   background:linear-gradient(115deg,var(--navy) 0%,#1D4264 55%,#1B5E48 100%);
   color:#fff;border-radius:var(--radius);padding:2rem 2rem 1.5rem;margin-bottom:1.2rem;
@@ -2498,6 +2498,7 @@ html.map-standalone:not(.ms-aq) #map .ov-map-legend{display:none!important}
 
 /* category cards */
 .dc-cats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.9rem;margin-bottom:1.1rem}
+@media (min-width:1500px){ .dc-cats{grid-template-columns:repeat(5,minmax(0,1fr))} }   /* all five categories in one row: no blank slot */
 .dc-cat{
   --c:var(--emerald);--cl:var(--emerald-light);
   text-align:left;font-family:inherit;cursor:pointer;
@@ -2705,7 +2706,7 @@ html.dc-lock{overflow:hidden}
 }
 
 /* ============ USER GUIDE TAB (interactive guide; chapter 1 = Introduction) ============ */
-.ug-wrap{max-width:1240px;margin:0 auto;padding:1.6rem 1.4rem 2.5rem;
+.ug-wrap{max-width:1640px;margin:0 auto;padding:1.6rem clamp(1rem,2.4vw,2.4rem) 2.5rem;
   display:grid;grid-template-columns:250px minmax(0,1fr);gap:1.3rem;align-items:start}
 .ug-side{position:sticky;top:calc(var(--header-h) + var(--tabnav-h, 52px) + 12px);
   background:#fff;border:1px solid var(--grey-border);border-radius:var(--radius);
@@ -2756,7 +2757,7 @@ html.dc-lock{overflow:hidden}
 
 /* Video: a light poster first; the YouTube player loads only when the viewer presses play */
 .ug-video-card{background:#fff;border:1px solid var(--grey-border);border-radius:var(--radius);
-  box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:1.4rem}
+  box-shadow:var(--shadow-sm);overflow:hidden;margin-bottom:1.4rem;max-width:1080px;margin-left:auto;margin-right:auto}   /* not taller than the screen on wide displays */
 .ug-video{position:relative;aspect-ratio:16/9;background:#0b1c2c}
 .ug-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .ug-poster{position:absolute;inset:0;width:100%;height:100%;border:0;padding:0;cursor:pointer;
@@ -2914,7 +2915,7 @@ a.ug-go.alt:hover{color:var(--navy)}
 <!-- "Atmosphere" header look (static/explorer/header/); remove this line and atmosphere.js to go back -->
 <link href="/static/explorer/header/atmosphere.css?v=20261127a" rel="stylesheet">
 <!-- Landing banner (static/explorer/header/hero.*); remove this line and hero.js to go back to the plain header -->
-<link href="/static/explorer/header/hero.css?v=20261127f" rel="stylesheet">
+<link href="/static/explorer/header/hero.css?v=20261127g" rel="stylesheet">
 <!-- Main menu as a vertical rail on the left once a section is open (static/explorer/header/menu.*) -->
 <link href="/static/explorer/header/menu.css?v=20261127c" rel="stylesheet">
 </head>
