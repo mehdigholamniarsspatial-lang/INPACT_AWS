@@ -51,10 +51,9 @@ SURVEY_TITLE = "INPACT Multi-Stakeholder Climate Policy Consultation"
 
 # ---------------------------------------------------------------------------
 # Values confirmed by the research team for the items of Section 18 (27 November 2026).
-# Only the ethics reference is still open; it appears in [square brackets] until it is set here.
+# The ethics approval line was removed from the participant information at the team's request.
 # ---------------------------------------------------------------------------
 CONFIRM = {
-    "ethics_ref": "[reference number, date]",
     "withdraw_period": "within one week of submitting",     # the survey and reference codes are then deleted
     "code_days": 7,                                         # feedback_store deletes the codes after this many days
     "team_email": "mehgholamnia@gmail.com",
@@ -262,8 +261,6 @@ INFO = {
          "how policies are seen; they are not used as proof that a policy did or did not reduce emissions. "
          "Results will be reported only in aggregated form, in INPACT reports, the dashboard and scientific "
          "publications, and may be used to plan an INPACT public workshop."),
-        ("Ethical approval",
-         "This study has been approved by the University of Galway Research Ethics Committee {ethics_ref}."),
     ],
     "data": [
         ("Who is responsible",
