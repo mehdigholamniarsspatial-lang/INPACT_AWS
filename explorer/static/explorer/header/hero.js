@@ -4,10 +4,12 @@
    banner: an Irish landscape drawn in SVG (sky, hills, coast, wind turbines,
    a power station, grazing cattle and an atmospheric measurement mast), a
    glowing map of Ireland with the measurement stations, a glass panel with
-   the live national emissions trend, and quick links to Trend Analysis, the
-   Policy Timeline and Spatial Mapping with figures read from the page's
-   own data. Choosing a tab turns it back into the slim bar (atmosphere.css).
-   Decoration is aria-hidden; the quick links are real buttons.
+   the live national emissions trend, and the dashboard's sections as
+   floating cards with figures read from the page's own data (Explorer
+   Dashboard is this page, so it has no card). Choosing a section turns the
+   header into the slim bar with the menu on the left (atmosphere.css,
+   menu.css); Explorer Dashboard brings this page back (menu.js).
+   Decoration is aria-hidden; the cards are real buttons.
    ===================================================================== */
 (function () {
   "use strict";
@@ -59,11 +61,13 @@
       <path d="M-1.4 0L-.6 -58H.6L1.4 0Z" class="hs-tower"/>
       <g class="hs-blades" style="animation-duration:${d}s"><path d="M0 -58L-2 -60L0 -92L2 -60Z"/><path d="M0 -58L-2 -60L0 -92L2 -60Z" transform="rotate(120 0 -58)"/>
       <path d="M0 -58L-2 -60L0 -92L2 -60Z" transform="rotate(240 0 -58)"/><circle cx="0" cy="-58" r="2.2"/></g></g>`;
-  const cow = (x, y, s, flip) => `<g class="hs-cow" transform="translate(${x} ${y}) scale(${flip ? -s : s} ${s})">
+  // A cow walks slowly forward, turns, walks back and grazes (hero.css); dur / delay keep the herd out of step
+  const cow = (x, y, s, flip, dur, delay) => `<g class="hs-cow" transform="translate(${x} ${y}) scale(${flip ? -s : s} ${s})">
+      <g class="hs-walk" style="animation-duration:${dur}s;animation-delay:-${delay}s"><g class="hs-bob">
       <path d="M-11 -2v8M-6 -1v7M6 -1v7M10 -2v8" class="hs-leg"/>
       <ellipse cx="0" cy="-6" rx="13" ry="6.5" class="hs-hide"/>
       <path d="M-6 -11c3 2 5 6 3 9-3 1-6-1-7-4zM4 -12c2 3 5 4 7 3l1 4c-3 2-8 1-9-2z" class="hs-patch"/>
-      <path d="M12 -9l7-1 3 5-2 3-6 0z" class="hs-head"/><path d="M-13 -7c-3 2-3 6-2 9" class="hs-tail"/></g>`;
+      <path d="M12 -9l7-1 3 5-2 3-6 0z" class="hs-head" style="animation-delay:-${(delay * 0.7).toFixed(1)}s"/><path d="M-13 -7c-3 2-3 6-2 9" class="hs-tail"/></g></g></g>`;
   const tree = (x, y, r) => `<g class="hs-tree"><circle cx="${x}" cy="${y}" r="${r}"/><circle cx="${x + r * .8}" cy="${y + r * .25}" r="${r * .75}"/><circle cx="${x - r * .8}" cy="${y + r * .3}" r="${r * .7}"/></g>`;
   const smoke = (x, y, n) => Array.from({ length: n }, (_, i) =>
     `<circle class="hs-puff" cx="${x}" cy="${y}" r="${7 + i * 2}" style="animation-delay:${(i * 1.6).toFixed(1)}s"/>`).join("");
@@ -94,7 +98,7 @@
       <path class="hs-road" d="M760 260C820 238 900 226 1000 220S1160 210 1240 214"/>
       <path class="hs-road-mid" d="M760 260C820 238 900 226 1000 220S1160 210 1240 214"/>
       <g class="hs-car"><rect x="-9" y="-6" width="18" height="7" rx="2"/><rect x="-5" y="-10" width="10" height="5" rx="2"/></g>
-      ${cow(120, 236, .95, false)}${cow(205, 230, .8, true)}${cow(330, 238, 1, false)}
+      ${cow(170, 226, .95, false, 80, 5)}${cow(250, 220, .8, true, 64, 30)}${cow(380, 228, 1, false, 96, 52)}
       ${tree(1270, 210, 13)}${tree(1310, 206, 16)}${tree(1600, 200, 22)}${tree(1560, 210, 15)}
       <g class="hs-mast" transform="translate(1556 214)">
         <path d="M-7 0L0 -150L7 0M-5 -40H5M-3 -80H3M-2 -115H2M-6 -20L4 -60M-4 -60L3 -100M6 -20L-4 -60" />
@@ -141,14 +145,16 @@
   const blurb = {
     explorer: last ? `${fmtMt(last[1])} Mt CO₂e in ${last[0]}` : "National emissions and policies",
     policy: polReal.length ? `${polReal.length} milestones, ${Math.min(...polYears)}–${Math.max(...polYears)}` : "Ireland's climate policies",
-    mapping: "3 emission maps + air quality",
+    mapping: "3 maps + air quality",
     trend: last ? `${pct(last[1], first[1]) >= 0 ? "+" : ""}${pct(last[1], first[1]).toFixed(1)}% since ${first[0]}` : "Breakpoints and trends",
     data: dsCount ? `${dsCount} sources, how to cite` : "Sources, coverage, citations",
     about: "The project and team",
-    guide: "Chapters, videos and tours",
+    guide: "Chapters and videos",
     feedback: "Share your views",
   };
-  const tabs = [...document.querySelectorAll("#mainMenu .tab-btn[data-tab]")].filter(b => !b.hidden && b.style.display !== "none");
+  // Explorer Dashboard is this page itself, so it has no card here (the left menu takes you back to it)
+  const tabs = [...document.querySelectorAll("#mainMenu .tab-btn[data-tab]")]
+    .filter(b => !b.hidden && b.style.display !== "none" && b.dataset.tab !== "explorer");
   const nav = document.createElement("nav");
   nav.className = "hs-menu";
   nav.setAttribute("aria-label", "Dashboard sections");
@@ -156,17 +162,13 @@
     const ic = (b.querySelector("i") || {}).className || "bi bi-circle";
     return `<button type="button" class="hs-card" data-tab="${b.dataset.tab}">
       <i class="${ic}" aria-hidden="true"></i><span><b>${b.textContent.trim()}</b><small>${blurb[b.dataset.tab] || ""}</small></span></button>`;
-  }).join("");
+  }).join("") + `<button type="button" class="hs-card" data-tour-picker>
+      <i class="bi bi-signpost-split" aria-hidden="true"></i><span><b>Guided tours</b><small>Step-by-step help</small></span></button>`;
   nav.addEventListener("click", e => {
-    const b = e.target.closest(".hs-card");
+    const b = e.target.closest(".hs-card[data-tab]");
     if (b && typeof window.activateTab === "function") window.activateTab(b.dataset.tab);
   });
-  // Guided tours: a small pill under the funder logo
-  const tours = document.createElement("button");
-  tours.type = "button";
-  tours.className = "hs-tours";
-  tours.setAttribute("data-tour-picker", "");
-  tours.innerHTML = `<i class="bi bi-signpost-split" aria-hidden="true"></i>Guided tours`;
+
 
   const wrap = document.createElement("div");
   wrap.className = "hero-scene";
@@ -178,7 +180,6 @@
   art.innerHTML = holo + panel;
   inner.appendChild(art);
   inner.appendChild(nav);
-  inner.appendChild(tours);
 
   // The cards line up under the title (its left edge moves with the logo size)
   const text = inner.querySelector(".header-text");

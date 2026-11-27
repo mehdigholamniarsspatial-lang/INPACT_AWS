@@ -426,7 +426,7 @@
         id: "menu", phase: "Navigation", where: "page",
         title: "The Main Menu",
         text: `<p>The Main Menu leads to every section of the platform: the <b>Explorer Dashboard</b> (national emissions), the <b>Policy Timeline</b>, <b>Spatial Mapping</b>, <b>Trend Analysis</b>, the <b>Datasets</b> catalogue and information <b>About INPACT</b>.</p>
-               <p>On this first page the sections float on the banner, each with a key figure. Once you open one, the menu moves to the <b>left side</b> of the page, so every section stays one click away.</p>`,
+               <p>On this first page, the <b>Explorer Dashboard</b>, the other sections float on the banner, each with a key figure. Once you open one, the menu moves to the <b>left side</b> of the page, so every section stays one click away; <b>Explorer Dashboard</b> at the top of that menu brings you back to this page.</p>`,
         target: [".hs-menu", "#mainMenu"], place: menuSide,
         prepare: menuPrep
       },
@@ -449,7 +449,7 @@
         id: "tours", phase: "Help", where: "page",
         title: "Guided tours",
         text: `<p>All interactive walkthroughs are listed under <b>Guided tours</b>. Each one shows you the real controls, explains them and can perform the steps for you. You can leave a tour at any time and resume it later from the same step.</p>`,
-        target: [".hs-tours", "#tourBtn"], place: menuSide,
+        target: ['.hs-menu [data-tour-picker]', "#tourBtn"], place: menuSide,
         prepare: menuPrep
       },
       {
