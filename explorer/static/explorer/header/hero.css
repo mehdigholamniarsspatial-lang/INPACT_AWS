@@ -236,3 +236,63 @@ html:not(.hdr-shrinkable):not(.map-standalone) .hs-hint{display:inline-flex}
   .hs-line{animation:none;stroke-dashoffset:0}
 }
 @media print{ .hero-scene,.hs-art,.hs-menu{display:none!important} }
+
+/* ---------- Methane from the farmland to the measurement tower (hero-ch4.js) ---------- */
+.ch4-canvas,.ch4-tower,.ch4-card{display:none}
+@media (min-width:768px){
+  html:not(.hdr-shrinkable):not(.map-standalone) .ch4-canvas{display:block;position:absolute;inset:0;pointer-events:none}
+  html:not(.hdr-shrinkable):not(.map-standalone) .ch4-tower{display:block}
+  html:not(.hdr-shrinkable):not(.map-standalone) .ch4-card:not([hidden]){display:block}
+}
+.ch4-tower{position:absolute;right:clamp(16px,2.6vw,48px);bottom:24px;width:46px;height:48%;z-index:3;
+  border:0;padding:0;background:none;cursor:pointer;color:inherit;font:inherit;filter:drop-shadow(0 4px 8px rgba(11,42,69,.18))}
+.ch4-tower:focus-visible{outline:3px solid #E8A33D;outline-offset:4px;border-radius:8px}
+.ch4-mast{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ch4-lattice,.ch4-arm{fill:none;stroke:#6E7F8B;stroke-width:1.6;stroke-linejoin:round}
+.ch4-cup{fill:#8A99A4}
+.ch4-box{fill:#F4F7F9;stroke:#93A1AB;stroke-width:.8}
+.ch4-hut{fill:#E9EEF1;stroke:#93A1AB;stroke-width:.8}
+.ch4-hut-door{fill:#9AA8B2}
+.ch4-inlet{fill:#E8A33D;stroke:#fff;stroke-width:1.2}
+.ch4-inlet-glow{fill:rgba(232,163,61,.35);transform-box:fill-box;transform-origin:center;animation:ch4Pulse 2.4s ease-out infinite}
+.ch4-tower.hit .ch4-inlet{fill:#FFD27A}
+.ch4-tower.hit .ch4-inlet-glow{fill:rgba(255,190,80,.7)}
+.ch4-tower:hover .ch4-lattice,.ch4-tower.open .ch4-lattice{stroke:#0E8C8A}
+@keyframes ch4Pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(2.2);opacity:0}}
+/* the live reading, beside the inlet */
+.ch4-chip{position:absolute;right:calc(100% + 6px);top:-2px;display:inline-flex;align-items:baseline;gap:.25rem;white-space:nowrap;
+  padding:.22rem .55rem;border-radius:999px;border:1.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.55);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);box-shadow:0 6px 14px rgba(11,42,69,.14);
+  color:#0B2A45;font-size:.74rem;font-weight:700;transition:background .2s,transform .2s}
+.ch4-chip b{color:#B26B0E}
+.ch4-chip .ch4-val{font-variant-numeric:tabular-nums;min-width:2.6em;text-align:right}
+.ch4-chip small{font-size:.64rem;font-weight:700;color:#4C6275;margin-left:.2rem}
+.ch4-dot{width:7px;height:7px;border-radius:50%;background:#E8A33D;align-self:center;box-shadow:0 0 0 0 rgba(232,163,61,.6);animation:ch4Dot 2s ease-out infinite}
+@keyframes ch4Dot{0%{box-shadow:0 0 0 0 rgba(232,163,61,.6)}100%{box-shadow:0 0 0 8px rgba(232,163,61,0)}}
+.ch4-tower:hover .ch4-chip,.ch4-tower.open .ch4-chip,.ch4-tower:focus-visible .ch4-chip{background:rgba(255,255,255,.92);transform:translateY(-1px)}
+.ch4-tower.hit .ch4-chip{background:rgba(255,236,200,.92)}
+/* the station card */
+.ch4-card{position:absolute;right:calc(clamp(16px,2.6vw,48px) + 60px);bottom:26px;z-index:8;width:min(320px,calc(100vw - 32px));
+  max-height:calc(100% - 20px);overflow:auto;padding:.7rem .85rem .6rem;border-radius:14px;background:rgba(255,255,255,.94);
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.95);
+  box-shadow:0 16px 36px rgba(11,42,69,.26);color:#1C2B3A;animation:ch4In .2s ease}
+@keyframes ch4In{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.ch4-c-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#0E8C8A}
+.ch4-x{border:0;background:transparent;color:#5C6B7A;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;cursor:pointer}
+.ch4-x:hover{background:#EEF2F5;color:#0B2A45}
+.ch4-c-read{margin:.2rem 0 .1rem;font-size:.8rem;color:#3D4F60}
+.ch4-c-read b{font-size:1.5rem;color:#0B2A45;font-variant-numeric:tabular-nums}
+.ch4-c-read span{display:block;font-size:.74rem}
+.ch4-c-spark{display:block;width:100%;height:40px;margin:.2rem 0 .35rem}
+.ch4-c-line{fill:none;stroke:#E8A33D;stroke-width:2;stroke-linejoin:round}
+.ch4-c-area{fill:rgba(232,163,61,.15)}
+.ch4-card p{font-size:.78rem;line-height:1.45;margin:0 0 .45rem}
+.ch4-c-foot{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:.35rem}
+.ch4-c-go{display:inline-flex;align-items:center;gap:.35rem;border:0;border-radius:9px;background:#0B2A45;color:#fff;font:inherit;font-size:.76rem;font-weight:700;padding:.38rem .7rem;cursor:pointer}
+.ch4-c-go:hover{background:#1D4264}
+.ch4-c-go:focus-visible,.ch4-x:focus-visible{outline:3px solid #E8A33D;outline-offset:2px}
+.ch4-c-hits{font-size:.72rem;color:#5C6B7A}
+.ch4-c-hits .ch4-c-n{font-weight:800;color:#B26B0E}
+.ch4-card p.ch4-c-note{font-size:.68rem;color:#6B7B89;margin:0}
+@media (prefers-reduced-motion:reduce){ .ch4-inlet-glow,.ch4-dot,.ch4-card{animation:none} }
+@media print{ .ch4-canvas,.ch4-tower,.ch4-card{display:none!important} }

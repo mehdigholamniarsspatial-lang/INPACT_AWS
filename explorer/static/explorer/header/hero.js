@@ -100,11 +100,7 @@
       <g class="hs-car"><rect x="-9" y="-6" width="18" height="7" rx="2"/><rect x="-5" y="-10" width="10" height="5" rx="2"/></g>
       ${cow(170, 226, .95, false, 80, 5)}${cow(250, 220, .8, true, 64, 30)}${cow(380, 228, 1, false, 96, 52)}
       ${tree(1270, 210, 13)}${tree(1310, 206, 16)}${tree(1600, 200, 22)}${tree(1560, 210, 15)}
-      <g class="hs-mast" transform="translate(1556 214)">
-        <path d="M-7 0L0 -150L7 0M-5 -40H5M-3 -80H3M-2 -115H2M-6 -20L4 -60M-4 -60L3 -100M6 -20L-4 -60" />
-        <rect x="-15" y="-46" width="10" height="16" rx="1.5"/><rect x="5" y="-96" width="8" height="12" rx="1.5"/>
-        <path d="M0 -150V-160M-10 -156H10M-10 -156v4M10 -156v4" /><circle class="hs-blink" cx="0" cy="-162" r="2.4"/>
-      </g>
+      <!-- the measurement tower is its own element now (hero-ch4.js), so it is always on screen -->
       <path d="M0 236C220 252 440 214 760 236S1300 262 1600 222V260H0Z" fill="url(#hsWaveB)"/>
       <path d="M0 246C260 262 520 232 840 248S1360 264 1600 238V260H0Z" fill="url(#hsWaveA)"/>
     </svg>
