@@ -1,0 +1,190 @@
+/* =====================================================================
+   Landing banner ("hero", hero.css) for the main dashboard.
+   On the landing page (before any tab is chosen) the header becomes a wide
+   banner: an Irish landscape drawn in SVG (sky, hills, coast, wind turbines,
+   a power station, grazing cattle and an atmospheric measurement mast), a
+   glowing map of Ireland with the measurement stations, a glass panel with
+   the live national emissions trend, and quick links to Trend Analysis, the
+   Policy Timeline and Spatial Mapping with figures read from the page's
+   own data. Choosing a tab turns it back into the slim bar (atmosphere.css).
+   Decoration is aria-hidden; the quick links are real buttons.
+   ===================================================================== */
+(function () {
+  "use strict";
+  const root = document.documentElement;
+  if (root.classList.contains("map-standalone")) return;            // /map/ keeps the compact header
+  const header = document.querySelector(".app-header");
+  const inner = header && header.querySelector(".header-inner");
+  if (!header || !inner || header.querySelector(".hero-scene")) return;
+
+  const IRELAND = "M192 32L183 38L180 52L174 59L174 64L168 64L161 68L156 65L151 69L156 75L164 76L165 78L154 85L147 84L143 90L137 92L150 108L154 110L156 117L165 118L171 124L177 126L182 124L187 127L187 123L189 122L190 126L192 119L198 116L198 113L194 109L195 105L206 97L214 104L214 111L219 118L222 120L225 118L228 121L226 131L229 134L244 132L245 127L249 128L260 137L257 141L245 137L244 145L245 150L252 152L253 172L262 183L258 192L255 192L258 194L259 198L263 199L262 201L258 199L253 203L260 209L260 215L264 227L263 237L267 242L258 256L253 271L254 283L245 297L244 303L238 302L239 300L237 301L242 309L244 305L243 308L247 314L246 318L243 320L243 316L231 320L224 316L218 316L221 312L217 314L218 319L211 325L212 320L207 309L209 320L206 324L200 325L202 321L200 320L200 322L196 324L181 325L173 329L171 328L169 331L174 332L172 338L165 340L164 343L157 342L156 340L155 345L152 346L154 349L147 352L146 355L133 357L137 352L136 348L122 349L128 351L127 355L130 355L130 361L121 368L119 366L119 370L114 367L118 368L116 376L113 373L102 373L106 374L106 380L97 378L92 384L88 381L81 381L81 384L76 385L75 389L72 387L65 390L69 384L64 387L64 383L62 381L52 388L49 385L46 390L39 393L38 389L55 376L37 383L53 372L61 369L62 365L57 365L55 361L55 365L51 369L36 372L27 378L19 378L25 374L23 370L31 367L29 366L30 364L35 361L34 363L36 363L37 360L41 361L40 359L44 354L53 350L37 357L35 355L20 363L15 359L18 356L14 352L8 359L8 353L5 353L5 349L13 347L10 342L13 339L26 333L30 329L33 331L34 325L42 325L41 324L43 322L31 323L31 327L29 324L17 327L12 324L10 325L12 326L7 325L7 326L2 328L0 322L4 318L6 320L7 315L12 311L18 309L19 314L22 314L26 311L25 307L28 307L28 312L32 314L44 313L36 310L35 308L37 309L37 307L39 307L38 300L31 297L43 292L46 289L50 290L47 286L51 280L60 282L72 280L85 275L88 276L90 273L103 270L90 268L91 260L86 263L79 275L71 279L68 278L71 274L62 277L53 271L55 274L47 277L46 280L32 282L39 278L51 265L58 263L59 258L67 245L59 244L72 223L78 227L84 226L80 222L88 223L85 221L89 220L92 223L90 220L94 216L85 216L90 214L88 213L91 212L87 210L57 215L54 212L55 209L51 214L51 206L55 204L52 202L55 199L51 200L50 205L49 199L44 207L40 208L34 206L35 202L41 199L39 198L40 196L37 199L37 195L34 195L31 200L25 197L18 197L20 193L25 193L23 190L28 190L22 189L19 184L16 184L18 183L24 181L28 184L30 182L26 178L36 176L46 178L34 173L34 162L54 159L51 156L55 152L53 151L54 148L43 148L34 152L32 150L33 143L36 142L41 147L41 143L34 136L38 127L35 127L33 131L30 130L29 128L34 126L30 120L32 120L28 116L26 122L23 122L24 129L21 129L25 116L22 115L29 108L30 111L35 112L33 116L30 114L29 116L34 118L38 111L42 113L40 110L43 110L38 106L41 105L46 107L72 108L75 111L75 116L79 124L80 118L85 109L91 109L96 112L107 111L113 118L117 118L110 113L112 110L119 111L113 108L116 106L108 105L108 102L119 95L120 91L121 94L135 88L131 86L137 76L139 78L140 74L130 78L129 74L120 82L124 78L122 74L120 78L118 75L114 78L107 76L100 72L100 69L109 62L120 63L116 60L123 62L114 57L118 53L128 55L125 53L126 50L129 51L127 48L123 50L121 46L121 44L126 44L120 38L123 38L127 32L128 35L131 23L139 23L138 26L149 16L150 18L147 21L153 20L153 23L156 22L154 25L156 25L155 17L159 13L158 19L164 22L165 29L167 24L165 18L164 17L164 21L160 17L162 13L168 11L170 19L175 27L169 33L173 34L167 43L180 33L179 24L174 17L176 10L178 10L179 8L183 10L186 7L188 10L191 10L184 0L210 15L210 17L196 24L192 32ZM31 143L33 143L31 150L25 147L24 141L13 140L17 137L20 138L30 136L32 139L31 143ZM192 32L191 33L204 34L209 19L221 21L238 14L252 18L260 17L264 22L262 31L268 34L267 40L273 44L278 56L283 60L278 54L281 53L285 59L282 66L273 71L270 75L272 78L281 70L291 70L300 92L297 102L295 105L291 98L292 87L284 81L283 85L288 87L286 88L288 94L283 103L291 100L293 108L287 115L282 113L274 115L272 128L264 135L260 135L261 133L255 129L250 128L245 127L244 132L229 134L226 131L228 121L225 118L222 120L219 118L214 111L214 104L206 97L195 105L194 109L198 113L198 116L192 119L190 126L189 122L187 124L188 127L183 126L182 124L177 126L171 124L165 118L156 117L154 110L150 108L147 103L139 95L137 92L143 90L147 84L154 85L165 78L164 76L156 75L151 69L156 65L161 68L168 64L174 64L174 59L180 52L183 38L192 32Z";                                      // island outline, viewBox 0 0 300 393 (Natural Earth)
+  const STATIONS = [                                                  // [x, y, label] on that outline
+    [34, 205, "Mace Head"], [186, 12, "Malin Head"], [240, 316, "Carnsore Point"], [251, 203, "Dublin"]
+  ];
+
+  /* ---------- Live figures from the dashboard's own data ---------- */
+  // REAL_DATA, DATA_YEARS and POLICIES_RAW are defined by the page's main script (injected by the server)
+  const data = typeof REAL_DATA !== "undefined" ? REAL_DATA : {};
+  const years = typeof DATA_YEARS !== "undefined" ? DATA_YEARS : [];
+  const pols = typeof POLICIES_RAW !== "undefined" ? POLICIES_RAW : [];
+  const key = Object.keys(data).find(k => /^all greenhouse/i.test(k)) || Object.keys(data)[0];
+  const total = key ? data[key] : [];
+  const pts = years.map((y, i) => [y, total[i]]).filter(p => p[1] != null && isFinite(p[1]));
+  const last = pts[pts.length - 1], first = pts[0];
+  const peak = pts.reduce((a, b) => (b[1] > a[1] ? b : a), pts[0] || [0, 0]);
+  const pct = (a, b) => ((a / b - 1) * 100);
+  const fmtMt = v => (v / 1000).toFixed(1);
+  const gasVal = re => { const k = Object.keys(data).find(n => re.test(n)); const a = k ? data[k] : []; return a.length ? a[years.indexOf(last && last[0])] : null; };
+  const co2 = gasVal(/^CO2$/), ch4 = gasVal(/^CH4/), n2o = gasVal(/^N2O/);
+  const polReal = pols.filter(p => String(p.level || "").toLowerCase() !== "target");
+  const polYears = polReal.map(p => +p.year).filter(isFinite);
+
+  /* Sparkline of the national total (glass panel) */
+  function sparkline(w, h) {
+    if (pts.length < 2) return "";
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys) * 0.96, y1 = Math.max(...ys) * 1.02;
+    const X = x => ((x - x0) / (x1 - x0)) * w, Y = y => h - ((y - y0) / (y1 - y0)) * h;
+    const line = pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1)).join("");
+    const bars = pts.filter((_, i) => i % 3 === 0).map(p =>
+      `<rect x="${(X(p[0]) - 2).toFixed(1)}" y="${Y(p[1]).toFixed(1)}" width="4" height="${(h - Y(p[1])).toFixed(1)}" rx="1"/>`).join("");
+    return `<svg class="hs-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+      <g class="hs-bars">${bars}</g>
+      <path class="hs-area" d="${line}L${w} ${h}L0 ${h}Z"/><path class="hs-line" d="${line}"/>
+      <circle class="hs-dot" cx="${X(last[0]).toFixed(1)}" cy="${Y(last[1]).toFixed(1)}" r="3.2"/></svg>`;
+  }
+
+  /* ---------- The landscape (viewBox 1600 x 260, anchored to the bottom) ---------- */
+  const turbine = (x, y, s, d) => `<g class="hs-turbine" transform="translate(${x} ${y}) scale(${s})">
+      <path d="M-1.4 0L-.6 -58H.6L1.4 0Z" class="hs-tower"/>
+      <g class="hs-blades" style="animation-duration:${d}s"><path d="M0 -58L-2 -60L0 -92L2 -60Z"/><path d="M0 -58L-2 -60L0 -92L2 -60Z" transform="rotate(120 0 -58)"/>
+      <path d="M0 -58L-2 -60L0 -92L2 -60Z" transform="rotate(240 0 -58)"/><circle cx="0" cy="-58" r="2.2"/></g></g>`;
+  const cow = (x, y, s, flip) => `<g class="hs-cow" transform="translate(${x} ${y}) scale(${flip ? -s : s} ${s})">
+      <path d="M-11 -2v8M-6 -1v7M6 -1v7M10 -2v8" class="hs-leg"/>
+      <ellipse cx="0" cy="-6" rx="13" ry="6.5" class="hs-hide"/>
+      <path d="M-6 -11c3 2 5 6 3 9-3 1-6-1-7-4zM4 -12c2 3 5 4 7 3l1 4c-3 2-8 1-9-2z" class="hs-patch"/>
+      <path d="M12 -9l7-1 3 5-2 3-6 0z" class="hs-head"/><path d="M-13 -7c-3 2-3 6-2 9" class="hs-tail"/></g>`;
+  const tree = (x, y, r) => `<g class="hs-tree"><circle cx="${x}" cy="${y}" r="${r}"/><circle cx="${x + r * .8}" cy="${y + r * .25}" r="${r * .75}"/><circle cx="${x - r * .8}" cy="${y + r * .3}" r="${r * .7}"/></g>`;
+  const smoke = (x, y, n) => Array.from({ length: n }, (_, i) =>
+    `<circle class="hs-puff" cx="${x}" cy="${y}" r="${7 + i * 2}" style="animation-delay:${(i * 1.6).toFixed(1)}s"/>`).join("");
+
+  const scene = `
+    <svg class="hs-land" viewBox="0 0 1600 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="hsSea" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5DB4DE"/><stop offset="1" stop-color="#2E86BD"/></linearGradient>
+        <linearGradient id="hsHillA" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#A5CF77"/><stop offset="1" stop-color="#7DB458"/></linearGradient>
+        <linearGradient id="hsHillB" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#7EBB52"/><stop offset="1" stop-color="#4F9A3C"/></linearGradient>
+        <linearGradient id="hsWaveA" x1="0" x2="1"><stop offset="0" stop-color="#0B6B6A"/><stop offset=".55" stop-color="#0E8C8A"/><stop offset="1" stop-color="#14A3A0"/></linearGradient>
+        <linearGradient id="hsWaveB" x1="0" x2="1"><stop offset="0" stop-color="#9FE3DD" stop-opacity=".9"/><stop offset="1" stop-color="#E7FAF7" stop-opacity=".9"/></linearGradient>
+      </defs>
+      <path class="hs-mtn" d="M0 176C120 150 210 158 300 148S470 128 560 146 700 134 780 150 930 120 1040 146 1180 150 1240 160V200H0Z"/>
+      <rect x="980" y="168" width="620" height="60" fill="url(#hsSea)"/>
+      <path class="hs-glint" d="M1060 186h90M1180 194h120M1330 182h80M1250 204h70"/>
+      <path d="M0 186C160 168 300 176 420 170S640 160 760 176 980 182 1100 196 1200 206 1240 214V260H0Z" fill="url(#hsHillA)"/>
+      ${turbine(250, 172, .72, 7)}${turbine(300, 168, .62, 8.5)}${turbine(345, 171, .55, 6.4)}
+      <g class="hs-plant">
+        <rect x="520" y="160" width="120" height="22" rx="1"/><rect x="545" y="148" width="34" height="14"/>
+        <rect x="650" y="166" width="46" height="16" rx="1"/>
+        <path class="hs-stack" d="M592 182V138h7v44zM612 182V130h8v52zM706 182V144h6v38z"/>
+        <path class="hs-band" d="M592 142h7v4h-7zM612 134h8v4h-8zM706 148h6v4h-6z"/>
+      </g>
+      <g class="hs-smoke">${smoke(596, 134, 4)}${smoke(616, 126, 5)}${smoke(709, 140, 3)}</g>
+      ${tree(470, 186, 7)}${tree(760, 184, 8)}${tree(820, 188, 6)}${tree(905, 190, 7)}
+      <path d="M0 214C140 198 280 206 420 202S700 196 820 206 1060 222 1200 216 1460 206 1600 214V260H0Z" fill="url(#hsHillB)"/>
+      <path class="hs-road" d="M760 260C820 238 900 226 1000 220S1160 210 1240 214"/>
+      <path class="hs-road-mid" d="M760 260C820 238 900 226 1000 220S1160 210 1240 214"/>
+      <g class="hs-car"><rect x="-9" y="-6" width="18" height="7" rx="2"/><rect x="-5" y="-10" width="10" height="5" rx="2"/></g>
+      ${cow(120, 236, .95, false)}${cow(205, 230, .8, true)}${cow(330, 238, 1, false)}
+      ${tree(1270, 210, 13)}${tree(1310, 206, 16)}${tree(1600, 200, 22)}${tree(1560, 210, 15)}
+      <g class="hs-mast" transform="translate(1556 214)">
+        <path d="M-7 0L0 -150L7 0M-5 -40H5M-3 -80H3M-2 -115H2M-6 -20L4 -60M-4 -60L3 -100M6 -20L-4 -60" />
+        <rect x="-15" y="-46" width="10" height="16" rx="1.5"/><rect x="5" y="-96" width="8" height="12" rx="1.5"/>
+        <path d="M0 -150V-160M-10 -156H10M-10 -156v4M10 -156v4" /><circle class="hs-blink" cx="0" cy="-162" r="2.4"/>
+      </g>
+      <path d="M0 236C220 252 440 214 760 236S1300 262 1600 222V260H0Z" fill="url(#hsWaveB)"/>
+      <path d="M0 246C260 262 520 232 840 248S1360 264 1600 238V260H0Z" fill="url(#hsWaveA)"/>
+    </svg>
+    <div class="hs-clouds" aria-hidden="true"><span></span><span></span><span></span><span></span></div>`;
+
+  /* ---------- Glowing map of Ireland with the live trend panel ---------- */
+  const stations = STATIONS.map(([x, y, n], i) =>
+    `<g class="hs-st" style="animation-delay:${i * .7}s"><circle class="hs-st-ring" cx="${x}" cy="${y}" r="9"/><circle cx="${x}" cy="${y}" r="3.4"/><title>${n}</title></g>`).join("");
+  const holo = `
+    <div class="hs-holo" aria-hidden="true">
+      <div class="hs-orbit"></div><div class="hs-orbit o2"></div>
+      <svg class="hs-map" viewBox="-10 -10 320 413">
+        <defs>
+          <linearGradient id="hsIre" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#5BD18B"/><stop offset=".6" stop-color="#1FA37A"/><stop offset="1" stop-color="#0E8C8A"/></linearGradient>
+          <pattern id="hsGrid" width="14" height="14" patternUnits="userSpaceOnUse"><path d="M14 0H0V14" fill="none" stroke="rgba(255,255,255,.28)" stroke-width=".6"/></pattern>
+          <filter id="hsGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <path d="${IRELAND}" class="hs-ire" fill="url(#hsIre)" filter="url(#hsGlow)"/>
+        <path d="${IRELAND}" fill="url(#hsGrid)"/>
+        <path d="${IRELAND}" class="hs-ire-edge"/>
+        ${stations}
+      </svg>
+    </div>`;
+
+  const shares = [["CO₂", co2, "co2"], ["CH₄", ch4, "ch4"], ["N₂O", n2o, "n2o"]].filter(g => g[1] != null && last);
+  const panel = last ? `
+    <div class="hs-panel" aria-hidden="true">
+      <div class="hs-p-top"><span class="hs-p-k">National GHG emissions</span><span class="hs-p-y">${first[0]}–${last[0]}</span></div>
+      <div class="hs-p-v"><b>${fmtMt(last[1])}</b> Mt CO₂e <span class="${last[1] <= peak[1] ? "dn" : "up"}">${pct(last[1], peak[1]).toFixed(0)}% vs ${peak[0]} peak</span></div>
+      ${sparkline(190, 46)}
+      <div class="hs-p-legend">${shares.map(([n, v, c]) => `<span><i class="${c}"></i>${n} ${Math.round(v / last[1] * 100)}%</span>`).join("")}</div>
+    </div>` : "";
+
+  /* ---------- Quick links into the dashboard (real buttons) ---------- */
+  const links = [
+    { tab: "trend", icon: "bi-activity", t: "Trend Analysis",
+      s: last ? `${pct(last[1], first[1]) >= 0 ? "+" : ""}${pct(last[1], first[1]).toFixed(1)}% since ${first[0]}` : "Breakpoints and trends" },
+    { tab: "policy", icon: "bi-calendar3-range", t: "Policy Timeline",
+      s: polReal.length ? `${polReal.length} milestones, ${Math.min(...polYears)}–${Math.max(...polYears)}` : "Ireland's climate policies" },
+    { tab: "mapping", icon: "bi-globe-europe-africa", t: "Spatial Mapping", s: "3 emission maps + air quality" }
+  ];
+  const nav = document.createElement("nav");
+  nav.className = "hs-links";
+  nav.setAttribute("aria-label", "Explore the dashboard");
+  nav.innerHTML = links.map(l => `<button type="button" class="hs-link" data-tab="${l.tab}">
+      <i class="bi ${l.icon}" aria-hidden="true"></i><span><b>${l.t}</b><small>${l.s}</small></span><i class="bi bi-arrow-right-short hs-go" aria-hidden="true"></i></button>`).join("");
+  nav.addEventListener("click", e => {
+    const b = e.target.closest(".hs-link");
+    if (b && typeof window.activateTab === "function") window.activateTab(b.dataset.tab);
+  });
+
+  const wrap = document.createElement("div");
+  wrap.className = "hero-scene";
+  wrap.setAttribute("aria-hidden", "true");
+  wrap.innerHTML = scene;
+  header.prepend(wrap);
+  const art = document.createElement("div");
+  art.className = "hs-art";
+  art.innerHTML = holo + panel;
+  inner.appendChild(art);
+  inner.appendChild(nav);
+
+  // The quick links line up under the title (its left edge moves with the logo size)
+  const text = inner.querySelector(".header-text");
+  const align = () => { if (text) inner.style.setProperty("--hs-text-x", (text.offsetLeft + 22) + "px"); };
+  align();
+  window.addEventListener("resize", align);
+  if (window.ResizeObserver && text) new ResizeObserver(align).observe(text);
+
+  // The car drives along the coast road
+  const car = wrap.querySelector(".hs-car"), road = wrap.querySelector(".hs-road");
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+  if (car && road && road.getTotalLength) {
+    const L = road.getTotalLength();
+    let t0 = performance.now();
+    const step = now => {
+      if (root.classList.contains("hdr-shrinkable")) return;          // banner gone: stop the animation
+      if (!still.matches) {
+        const f = ((now - t0) / 16000) % 1, p = road.getPointAtLength(L * (1 - f)), q = road.getPointAtLength(Math.max(0, L * (1 - f) - 2));
+        const a = Math.atan2(p.y - q.y, p.x - q.x) * 180 / Math.PI;
+        car.setAttribute("transform", `translate(${p.x.toFixed(1)} ${(p.y - 1).toFixed(1)}) rotate(${a.toFixed(1)}) scale(${(0.55 + 0.45 * (1 - f)).toFixed(2)})`);
+      }
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+})();
