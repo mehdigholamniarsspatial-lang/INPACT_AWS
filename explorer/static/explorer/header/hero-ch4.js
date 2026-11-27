@@ -3,7 +3,8 @@
    (hero-ch4.js + the "CH4" part of hero.css)
 
    An illustration of how atmospheric measurements see emissions from the
-   land: methane (CH4, amber) rises from the grazing cattle, the bog pools of
+   land: carbon dioxide (CO2, near-black) leaves the power station's chimneys,
+   methane (CH4, amber) rises from the grazing cattle, the bog pools of
    the peatland and the farm fields; nitrous oxide (N2O, violet) rises from
    fertilised and grazed soils. Both drift slowly with the wind across the
    banner and are drawn into the inlet of a measurement tower like the one at
@@ -13,7 +14,8 @@
    Clicking a cow releases a puff of methane; clicking the bog makes it bubble.
 
    The particles and readings are an illustration, not data: they move around
-   typical Mace Head levels (CH4 about 1,950-2,000 ppb, N2O about 337-339 ppb).
+   typical Mace Head levels (CO2 about 424-428 ppm, CH4 about 1,950-2,000 ppb,
+   N2O about 337-339 ppb).
    Runs only on the landing banner, pauses when the banner is off screen or the
    tab is hidden, and is still (no particles) for reduced motion.
    ===================================================================== */
@@ -32,10 +34,12 @@
   /* The two gases: colours of the particles, typical background level at Mace Head (illustrative),
      how much one arriving plume adds to the reading, and the number of decimals shown */
   const GAS = {
+    co2: { name: "CO₂", long: "carbon dioxide", unit: "ppm", core: "rgba(70,74,80,.95)", mid: "rgba(38,42,48,.78)", edge: "rgba(38,42,48,0)",
+           text: "#1F2328", base: 425.6, swing: 0.6, perHit: 0.12, dec: 1 },
     ch4: { name: "CH₄", long: "methane", core: "rgba(255,214,140,1)", mid: "rgba(240,168,58,.85)", edge: "rgba(240,168,58,0)",
-           text: "#8A5208", base: 1958, swing: 4, perHit: 2.0, dec: 0 },
+           text: "#8A5208", base: 1958, swing: 4, perHit: 2.0, dec: 0, unit: "ppb" },
     n2o: { name: "N₂O", long: "nitrous oxide", core: "rgba(226,212,255,1)", mid: "rgba(142,107,216,.85)", edge: "rgba(142,107,216,0)",
-           text: "#4E3592", base: 337.9, swing: 0.12, perHit: 0.07, dec: 1 },
+           text: "#4E3592", base: 337.9, swing: 0.12, perHit: 0.07, dec: 1, unit: "ppb" },
   };
   const still = window.matchMedia("(prefers-reduced-motion: reduce)");
   const fmt = (v, dec) => v.toLocaleString("en-IE", { minimumFractionDigits: dec, maximumFractionDigits: dec });
@@ -46,7 +50,7 @@
   tower.className = "ch4-tower";
   tower.setAttribute("aria-haspopup", "dialog");
   tower.setAttribute("aria-expanded", "false");
-  tower.setAttribute("aria-label", "Mace Head atmospheric station: methane and nitrous oxide readings. Open details");
+  tower.setAttribute("aria-label", "Mace Head atmospheric station: carbon dioxide, methane and nitrous oxide readings. Open details");
   tower.innerHTML = `
     <svg class="ch4-mast" viewBox="0 0 60 190" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
       <path class="ch4-lattice" d="M22 188L30 26L38 188M24 150H36M25.5 112H34.5M27 76H33M28.5 46H31.5M23 168L35 132M25 132L34 96M26.5 96L33 62M37 168L25 132M35 132L26 96M33.5 96L27 62"/>
@@ -58,6 +62,8 @@
       <rect class="ch4-hut" x="4" y="172" width="52" height="16" rx="2"/><rect class="ch4-hut-door" x="23" y="176" width="9" height="12" rx="1"/>
     </svg>
     <span class="ch4-chip"><span class="ch4-dot" aria-hidden="true"></span>
+      <b class="co2">CO₂</b> <span class="ch4-val" data-gas="co2">${fmt(GAS.co2.base, 1)}</span> ppm
+      <span class="ch4-sep" aria-hidden="true">·</span>
       <b>CH₄</b> <span class="ch4-val" data-gas="ch4">${fmt(GAS.ch4.base, 0)}</span>
       <span class="ch4-sep" aria-hidden="true">·</span>
       <b class="n2o">N₂O</b> <span class="ch4-val" data-gas="n2o">${fmt(GAS.n2o.base, 1)}</span> ppb<small>Mace Head</small></span>`;
@@ -68,18 +74,19 @@
   card.hidden = true;
   card.setAttribute("role", "dialog");
   card.setAttribute("aria-label", "Mace Head atmospheric station");
-  const readRow = g => `
-    <div class="ch4-c-read ${g}"><span class="ch4-c-gas">${GAS[g].name}</span><b class="ch4-c-val" data-gas="${g}">${fmt(GAS[g].base, GAS[g].dec)}</b> ppb
-      <span class="ch4-c-what">${GAS[g].long}</span></div>
-    <svg class="ch4-c-spark ${g}" viewBox="0 0 240 22" preserveAspectRatio="none" aria-hidden="true"><path class="ch4-c-area"/><path class="ch4-c-line"/></svg>`;
+  const readTile = g => `
+    <div class="ch4-c-tile ${g}"><span class="ch4-c-gas">${GAS[g].name}</span>
+      <div class="ch4-c-read"><b class="ch4-c-val" data-gas="${g}">${fmt(GAS[g].base, GAS[g].dec)}</b> ${GAS[g].unit}</div>
+      <span class="ch4-c-what">${GAS[g].long}</span>
+      <svg class="ch4-c-spark ${g}" viewBox="0 0 240 22" preserveAspectRatio="none" aria-hidden="true"><path class="ch4-c-area"/><path class="ch4-c-line"/></svg></div>`;
   card.innerHTML = `
     <div class="ch4-c-head"><span><i class="bi bi-broadcast-pin" aria-hidden="true"></i> Mace Head atmospheric station</span>
       <button type="button" class="ch4-x" aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
-    ${readRow("ch4")}${readRow("n2o")}
-    <p>Cattle, manure and wet bogs release <b>methane</b>; fertilised and grazed soils release <b>nitrous oxide</b>. The wind carries both to stations such as <b>Mace Head</b>, and <b>inverse models</b> use the readings to trace where they came from.</p>
+    <div class="ch4-c-tiles">${readTile("co2")}${readTile("ch4")}${readTile("n2o")}</div>
+    <p>Chimneys release <b>CO₂</b>, cattle and wet bogs <b>methane</b>, fertilised soils <b>nitrous oxide</b>. The wind carries them to <b>Mace Head</b>; <b>inverse models</b> use the CH₄ and N₂O readings to trace their sources.</p>
     <div class="ch4-c-foot"><button type="button" class="ch4-c-go"><i class="bi bi-globe-europe-africa" aria-hidden="true"></i> See the inverse-model maps</button>
-      <span class="ch4-c-hits"><span class="ch4-c-n" data-gas="ch4">0</span> CH₄ · <span class="ch4-c-n n2o" data-gas="n2o">0</span> N₂O measured</span></div>
-    <p class="ch4-c-note" title="CH₄ about 1,950–2,000 ppb; N₂O about 337–339 ppb">Illustration: simulated around typical Mace Head levels.</p>`;
+      <span class="ch4-c-hits"><span class="ch4-c-n co2" data-gas="co2">0</span> CO₂ · <span class="ch4-c-n" data-gas="ch4">0</span> CH₄ · <span class="ch4-c-n n2o" data-gas="n2o">0</span> N₂O measured</span></div>
+    <p class="ch4-c-note" title="CO₂ about 424–428 ppm; CH₄ about 1,950–2,000 ppb; N₂O about 337–339 ppb">Illustration: simulated around typical Mace Head levels.</p>`;
   header.appendChild(card);
 
   const openCard = on => {
@@ -151,7 +158,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   // Where things are, in banner coordinates (cows walk, so they are re-read now and then)
-  let cows = [], pools = [], inlet = { x: 0, y: 0 }, lastGeo = 0;
+  let cows = [], pools = [], stacks = [], inlet = { x: 0, y: 0 }, lastGeo = 0;
   const centreOf = r => ({ x: r.left - hr.left + r.width / 2, y: r.top - hr.top + r.height / 2 });
   function geometry(now) {
     if (now - lastGeo < 500 && cows.length) return;
@@ -162,12 +169,14 @@
       .map(r => ({ x: r.left - hr.left + r.width * 0.75, y: r.top - hr.top + r.height * 0.35, foot: r.bottom - hr.top }));
     pools = [...scene.querySelectorAll(".hs-pool")].map(p => p.getBoundingClientRect())
       .filter(r => r.width > 0 && r.right > hr.left && r.left < hr.right).map(centreOf);
+    stacks = [...scene.querySelectorAll(".hs-stack-top")].map(p => p.getBoundingClientRect())
+      .filter(r => r.width > 0 && r.right > hr.left && r.left < hr.right).map(centreOf);
     const t = tower.querySelector(".ch4-inlet").getBoundingClientRect();
     inlet = { x: t.left - hr.left + t.width / 2, y: t.top - hr.top + t.height / 2 };
   }
 
   const P = [];
-  const lastLabel = { ch4: 0, n2o: 0 };
+  const lastLabel = { co2: 0, ch4: 0, n2o: 0 };
   const field = () => ({ x: W * (0.03 + Math.random() * 0.55), y: H * (0.74 + Math.random() * 0.13) });
   function spawn(gas, x, y, big, now) {
     if (P.length > 260) return;
@@ -182,6 +191,7 @@
     // Emission, per second at 1440 px. Rates follow SPEED, so the amount on screen stays the same.
     // CH4: cattle (enteric fermentation), wet peatland (bog pools), farm fields (manure, slurry)
     // N2O: fertilised fields and the grazed grass around the cattle (dung and urine patches)
+    // CO2: the chimneys of the power station (fuel burnt for electricity)
     const rate = dt * (W / 1440) * SPEED;
     cows.forEach(c => {
       if (Math.random() < 0.6 * rate) spawn("ch4", c.x + (Math.random() - .5) * 6, c.y, true, now);
@@ -190,6 +200,8 @@
     pools.forEach(p => { if (Math.random() < 0.2 * rate) spawn("ch4", p.x + (Math.random() - .5) * 14, p.y - 2, false, now); });
     if (Math.random() < 0.5 * rate) { const f = field(); spawn("ch4", f.x, f.y, false, now); }
     if (Math.random() < 0.75 * rate) { const f = field(); spawn("n2o", f.x, f.y, false, now); }
+    // CO2: the power station's chimneys
+    stacks.forEach(st => { if (Math.random() < 0.45 * rate) spawn("co2", st.x + (Math.random() - .5) * 3, st.y - 2, true, now); });
 
     const wind = (30 + W * 0.03) * SPEED, reach = Math.max(300, W * 0.38), slow = 1 / SPEED;
     for (let i = P.length - 1; i >= 0; i--) {

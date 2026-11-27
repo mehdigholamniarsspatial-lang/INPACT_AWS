@@ -69,8 +69,6 @@
       <path d="M-6 -11c3 2 5 6 3 9-3 1-6-1-7-4zM4 -12c2 3 5 4 7 3l1 4c-3 2-8 1-9-2z" class="hs-patch"/>
       <path d="M12 -9l7-1 3 5-2 3-6 0z" class="hs-head" style="animation-delay:-${(delay * 0.7).toFixed(1)}s"/><path d="M-13 -7c-3 2-3 6-2 9" class="hs-tail"/></g></g></g>`;
   const tree = (x, y, r) => `<g class="hs-tree"><circle cx="${x}" cy="${y}" r="${r}"/><circle cx="${x + r * .8}" cy="${y + r * .25}" r="${r * .75}"/><circle cx="${x - r * .8}" cy="${y + r * .3}" r="${r * .7}"/></g>`;
-  const smoke = (x, y, n) => Array.from({ length: n }, (_, i) =>
-    `<circle class="hs-puff" cx="${x}" cy="${y}" r="${7 + i * 2}" style="animation-delay:${(i * 1.6).toFixed(1)}s"/>`).join("");
 
   const scene = `
     <svg class="hs-land" viewBox="0 0 1600 260" preserveAspectRatio="xMidYMax slice" role="group" aria-label="Illustration: Irish farmland, peatland and coast; the cows and the bog can be clicked">
@@ -104,7 +102,8 @@
         <path class="hs-stack" d="M592 182V138h7v44zM612 182V130h8v52zM706 182V144h6v38z"/>
         <path class="hs-band" d="M592 142h7v4h-7zM612 134h8v4h-8zM706 148h6v4h-6z"/>
       </g>
-      <g class="hs-smoke">${smoke(596, 134, 4)}${smoke(616, 126, 5)}${smoke(709, 140, 3)}</g>
+      <!-- chimney tops: where the CO2 leaves the power station (hero-ch4.js); the white smoke puffs were removed -->
+      <g class="hs-stack-tops"><circle class="hs-stack-top" cx="595.5" cy="137" r="1.5"/><circle class="hs-stack-top" cx="616" cy="129" r="1.5"/><circle class="hs-stack-top" cx="709" cy="143" r="1.5"/></g>
       ${tree(470, 186, 7)}${tree(760, 184, 8)}${tree(820, 188, 6)}${tree(905, 190, 7)}
       <path d="M0 214C140 198 280 206 420 202S700 196 820 206 1060 222 1200 216 1460 206 1600 214V260H0Z" fill="url(#hsHillB)"/>
       <path class="hs-road" d="M760 260C820 238 900 226 1000 220S1160 210 1240 214"/>

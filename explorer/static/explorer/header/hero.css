@@ -37,8 +37,7 @@ html:not(.hdr-shrinkable):not(.map-standalone) .header-inner{height:100%;align-i
 .hs-plant rect{fill:#C3CCD3}
 .hs-stack{fill:#A9B4BC}
 .hs-band{fill:#D7564A}
-.hs-puff{fill:#FFFFFF;opacity:0;animation:hsPuff 8s ease-out infinite}
-.hs-smoke{filter:blur(2.2px)}
+.hs-stack-top{fill:#5C6670}
 .hs-tree circle{fill:#3F8A3A}
 .hs-tree circle:first-child{fill:#357A33}
 .hs-road{fill:none;stroke:#8C949A;stroke-width:9;stroke-linecap:round}
@@ -73,7 +72,6 @@ html:not(.hdr-shrinkable):not(.map-standalone) .header-inner{height:100%;align-i
 .hs-clouds span:nth-child(4){width:300px;height:50px;top:44%;left:-10%;opacity:.55;animation-duration:120s;animation-delay:-80s}
 
 @keyframes hsSpin{to{transform:rotate(360deg)}}
-@keyframes hsPuff{0%{opacity:0;transform:translate(0,0) scale(.5)}15%{opacity:.7}100%{opacity:0;transform:translate(70px,-70px) scale(2.6)}}
 @keyframes hsCloud{from{transform:translateX(-30vw)}to{transform:translateX(110vw)}}
 @keyframes hsGlint{0%,100%{opacity:.25}50%{opacity:.9}}
 @keyframes hsBlink{0%,100%{opacity:.3}50%{opacity:1}}
@@ -139,7 +137,7 @@ html:not(.hdr-shrinkable):not(.map-standalone) .brand-funder img{height:56px;fil
   background:radial-gradient(circle at var(--gx,50%) var(--gy,50%),rgba(255,255,255,.72),rgba(255,255,255,.4) 70%)}
 .hs-menu.hs-has-drag .hs-card:not(.hs-dragging){opacity:.85}
 .hs-menu.hs-returning .hs-card{transition:translate .45s cubic-bezier(.2,.8,.2,1),transform .25s ease}
-.hs-reset{position:absolute;right:0;top:92px;z-index:4;display:none;align-items:center;gap:.35rem;border:1.5px solid rgba(255,255,255,.88);
+.hs-reset{position:absolute;left:var(--hs-text-x,300px);top:102px;z-index:4;display:none;align-items:center;gap:.35rem;border:1.5px solid rgba(255,255,255,.88);
   border-radius:999px;background:rgba(255,255,255,.3);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);color:#0B2A45;font:inherit;
   font-size:.74rem;font-weight:700;padding:.28rem .7rem;cursor:pointer;box-shadow:0 6px 14px rgba(11,42,69,.12);text-shadow:0 0 6px rgba(255,255,255,.9)}
 /* only on the main page's banner (it was showing in the slim header of other sections) */
@@ -230,9 +228,8 @@ html:not(.hdr-shrinkable):not(.map-standalone) .hs-hint{display:inline-flex}
 }
 
 @media (prefers-reduced-motion:reduce){
-  .hs-blades,.hs-puff,.hs-clouds span,.hs-glint,.hs-blink,.hs-map,.hs-st .hs-st-ring,.hs-orbit,.hs-walk,.hs-bob,.hs-cow .hs-head,.hs-cow .hs-tail,.hs-card{animation:none}
+  .hs-blades,.hs-clouds span,.hs-glint,.hs-blink,.hs-map,.hs-st .hs-st-ring,.hs-orbit,.hs-walk,.hs-bob,.hs-cow .hs-head,.hs-cow .hs-tail,.hs-card{animation:none}
   html:not(.hdr-shrinkable):not(.map-standalone) .brand-inpact{animation:none}
-  .hs-puff{opacity:.6}
   .hs-line{animation:none;stroke-dashoffset:0}
 }
 @media print{ .hero-scene,.hs-art,.hs-menu{display:none!important} }
@@ -260,12 +257,13 @@ html:not(.hdr-shrinkable):not(.map-standalone) .hs-hint{display:inline-flex}
 .ch4-tower:hover .ch4-lattice,.ch4-tower.open .ch4-lattice{stroke:#0E8C8A}
 @keyframes ch4Pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(2.2);opacity:0}}
 /* the live reading, beside the inlet */
-.ch4-chip{position:absolute;right:calc(100% + 6px);top:-2px;display:inline-flex;align-items:baseline;gap:.25rem;white-space:nowrap;
+.ch4-chip{position:absolute;right:calc(100% + 6px);top:-14px;display:inline-flex;align-items:baseline;gap:.25rem;white-space:nowrap;
   padding:.22rem .55rem;border-radius:999px;border:1.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.55);
   -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);box-shadow:0 6px 14px rgba(11,42,69,.14);
   color:#0B2A45;font-size:.74rem;font-weight:700;transition:background .2s,transform .2s}
 .ch4-chip b{color:#B26B0E}
 .ch4-chip b.n2o{color:#5B3FA0}
+.ch4-chip b.co2{color:#1F2328}
 .ch4-chip .ch4-sep{color:#8A99A4;margin:0 .1rem}
 .ch4-chip .ch4-val{font-variant-numeric:tabular-nums;text-align:right}
 .ch4-chip small{font-size:.64rem;font-weight:700;color:#4C6275;margin-left:.2rem}
@@ -285,13 +283,23 @@ html:not(.hdr-shrinkable):not(.map-standalone) .hs-hint{display:inline-flex}
 .ch4-c-read{display:flex;align-items:baseline;gap:.35rem;margin:.25rem 0 0;font-size:.78rem;color:#3D4F60}
 .ch4-c-read b{font-size:1.1rem;color:#0B2A45;font-variant-numeric:tabular-nums}
 .ch4-c-gas{font-size:.72rem;font-weight:800;padding:.05rem .4rem;border-radius:6px;background:#FDF1DE;color:#8A5208}
-.ch4-c-read.n2o .ch4-c-gas{background:#EFE9FB;color:#4E3592}
+.ch4-c-tile.n2o .ch4-c-gas{background:#EFE9FB;color:#4E3592}
+.ch4-c-tile.co2 .ch4-c-gas{background:#E7E9EC;color:#1F2328}
+/* the three readings side by side, each with its trace */
+.ch4-c-tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.4rem;margin:.4rem 0 .15rem}
+.ch4-c-tile{min-width:0;border:1px solid #EAEFF3;border-radius:10px;padding:.3rem .45rem .15rem;background:#FAFBFC}
+.ch4-c-tile .ch4-c-read{display:block;margin:.15rem 0 0;font-size:.66rem;white-space:nowrap}
+.ch4-c-tile .ch4-c-read b{font-size:1rem}
+.ch4-c-tile .ch4-c-what{display:block;margin:0;font-size:.62rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch4-c-tile .ch4-c-spark{height:20px;margin:.1rem 0 0}
 .ch4-c-what{font-size:.72rem;color:#6B7B89;margin-left:auto}
 .ch4-c-spark{display:block;width:100%;height:22px;margin:0 0 .1rem}
 .ch4-c-line{fill:none;stroke:#E8A33D;stroke-width:2;stroke-linejoin:round}
 .ch4-c-area{fill:rgba(232,163,61,.15)}
 .ch4-c-spark.n2o .ch4-c-line{stroke:#8E6BD8}
 .ch4-c-spark.n2o .ch4-c-area{fill:rgba(142,107,216,.14)}
+.ch4-c-spark.co2 .ch4-c-line{stroke:#3A3F45}
+.ch4-c-spark.co2 .ch4-c-area{fill:rgba(58,63,69,.12)}
 .ch4-card p:first-of-type{margin-top:.35rem}
 .ch4-card p{font-size:.76rem;line-height:1.4;margin:0 0 .4rem}
 .ch4-c-foot{display:flex;align-items:center;justify-content:space-between;gap:.5rem;flex-wrap:wrap;margin-bottom:.3rem}
@@ -301,6 +309,7 @@ html:not(.hdr-shrinkable):not(.map-standalone) .hs-hint{display:inline-flex}
 .ch4-c-hits{font-size:.7rem;color:#5C6B7A;white-space:nowrap}
 .ch4-c-hits .ch4-c-n{font-weight:800;color:#B26B0E}
 .ch4-c-hits .ch4-c-n.n2o{color:#5B3FA0}
+.ch4-c-hits .ch4-c-n.co2{color:#1F2328}
 .ch4-card p.ch4-c-note{font-size:.68rem;color:#6B7B89;margin:0}
 @media (prefers-reduced-motion:reduce){ .ch4-inlet-glow,.ch4-dot,.ch4-card{animation:none} }
 @media print{ .ch4-canvas,.ch4-tower,.ch4-card{display:none!important} }
