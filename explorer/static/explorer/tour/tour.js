@@ -35,6 +35,7 @@
   if (root.classList.contains("map-embed")) return;          // the dashboard around the frame runs tours
   const STANDALONE = root.classList.contains("map-standalone");
   const STORE_POS = "inpact.tour.pos", STORE_DONE = "inpact.tour.done", STORE_NUDGE = "inpact.tour.nudged";
+  const STORE_DELAY = "inpact.tour.delay", STORE_DL = "inpact.tour.playDownloads";
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   async function waitFor(fn, timeout = 9000, every = 120) {
@@ -457,6 +458,8 @@
      ===================================================================== */
   const ui = {};
   const st = { tour: null, id: null, steps: [], i: 0, raf: 0, busy: false, last: "", lastCheck: 0, doneNow: false, gen: 0 };
+  // Auto-play: delay in seconds (1 by default, the viewer can raise it), downloads included or not
+  const play = { on: false, token: 0, delay: Math.min(30, Math.max(1, +store.get(STORE_DELAY, 1) || 1)), dl: !!store.get(STORE_DL, false) };
   const stepsOf = t => t.steps.filter(s => !(STANDALONE && s.pageOnly));
   const available = t => !(STANDALONE && t.pageOnly);
 
@@ -478,6 +481,15 @@
           <div class="gt-tipbox"></div>
           <div class="gt-taskbox"></div>
           <p class="gt-msg" role="alert"></p>
+        </div>
+        <!-- Auto-play: performs every remaining step in turn, waiting "Delay" seconds before and after each -->
+        <div class="gt-play" hidden>
+          <button type="button" class="gt-btn play" data-a="play" aria-pressed="false"
+                  title="Run the rest of the tour automatically, step by step, to the end"><i class="bi bi-play-circle"></i><span>Auto-play</span></button>
+          <label class="gt-delay" title="How long each step stays on screen before and after it is performed">Delay
+            <input type="number" min="1" max="30" step="0.5" value="1" inputmode="decimal" aria-label="Delay for each step, in seconds"><span>s</span></label>
+          <label class="gt-dlopt" title="Also save the JPEG map and the exported image while auto-playing"><input type="checkbox">Include downloads</label>
+          <span class="gt-play-state" aria-live="polite"></span>
         </div>
         <div class="gt-foot">
           <button type="button" class="gt-btn ghost" data-a="back"><i class="bi bi-arrow-left"></i>Back</button>
@@ -504,10 +516,26 @@
     ui.back = r.querySelector('[data-a="back"]');
     ui.auto = r.querySelector('[data-a="auto"]');
     ui.next = r.querySelector('[data-a="next"]');
+    ui.playBox = r.querySelector(".gt-play");
+    ui.play = r.querySelector('[data-a="play"]');
+    ui.delay = r.querySelector(".gt-delay input");
+    ui.dl = r.querySelector(".gt-dlopt input");
+    ui.playState = r.querySelector(".gt-play-state");
+    ui.delay.value = play.delay;
+    ui.dl.checked = play.dl;
     r.querySelector(".gt-x").addEventListener("click", () => stop(false));
-    ui.back.addEventListener("click", () => go(st.i - 1));
-    ui.next.addEventListener("click", () => (st.i >= st.steps.length - 1 ? stop(true) : go(st.i + 1)));
-    ui.auto.addEventListener("click", doAuto);
+    // Any button the viewer presses pauses Auto-play
+    ui.back.addEventListener("click", () => { stopPlay(); go(st.i - 1); });
+    ui.next.addEventListener("click", () => { stopPlay(); st.i >= st.steps.length - 1 ? stop(true) : go(st.i + 1); });
+    ui.auto.addEventListener("click", () => { stopPlay(); doAuto(); });
+    ui.play.addEventListener("click", () => (play.on ? stopPlay() : runPlay()));
+    const setDelay = () => {
+      const v = Math.min(30, Math.max(1, parseFloat(ui.delay.value) || 1));
+      play.delay = v; store.set(STORE_DELAY, v);
+    };
+    ui.delay.addEventListener("input", setDelay);
+    ui.delay.addEventListener("change", () => { setDelay(); ui.delay.value = play.delay; });
+    ui.dl.addEventListener("change", () => { play.dl = ui.dl.checked; store.set(STORE_DL, play.dl); });
     // A click on the dimmed page: a gentle shake of the card, the tour stays
     ui.dims.forEach(d => d.addEventListener("click", () => {
       ui.card.animate([{ transform: "translateX(0)" }, { transform: "translateX(-6px)" }, { transform: "translateX(6px)" }, { transform: "translateX(0)" }], { duration: 260 });
@@ -663,6 +691,9 @@
     }
     st.doneNow = false;
     renderTask(step, false);
+    // Auto-play bar: for tours whose steps can be performed; hidden on the last step
+    ui.playBox.hidden = !st.tour.steps.some(s => s.auto) || last;
+    syncPlay();
     st.last = "";
   }
 
@@ -745,21 +776,81 @@
     ui.next.focus({ preventScroll: true });
   }
 
-  async function doAuto() {
-    const step = st.steps[st.i];
-    if (!step || !step.auto || st.busy) return;
+  // Perform one step's action ("Do it for me"); false when it failed (the message is shown)
+  async function runAuto(step) {
     setBusy(true);
     ui.msg.textContent = ""; ui.msg.classList.remove("info");
+    let ok = true;
     try {
       await prepareStep(step);
       await step.auto(ctx);
       await sleep(250);
-    } catch (e) { { ui.msg.classList.remove("info"); ui.msg.textContent = e.message || String(e); } }
+    } catch (e) { ok = false; ui.msg.classList.remove("info"); ui.msg.textContent = e.message || String(e); }
     setBusy(false);
     st.doneNow = null; checkDone();
+    return ok;
+  }
+  async function doAuto() {
+    const step = st.steps[st.i];
+    if (!step || !step.auto || st.busy) return;
+    const ok = await runAuto(step);
     // Steps without a "done" check (downloads) move on by themselves once performed
-    if (!step.done && !ui.msg.textContent && st.i < st.steps.length - 1) setTimeout(() => go(st.i + 1), 700);
+    if (!step.done && ok && st.i < st.steps.length - 1) setTimeout(() => go(st.i + 1), 700);
     else ui.next.focus({ preventScroll: true });
+  }
+
+  /* ---------- Auto-play: every remaining step in turn, to the end ----------
+     For each step: show it for "Delay" seconds, perform it if it has an action and is not done yet
+     (downloads only with "Include downloads"), show the result for "Delay" seconds, then move on.
+     Any button the viewer presses, Esc or an error pauses it. */
+  async function playWait(ms, t) {
+    const end = Date.now() + ms;
+    while (Date.now() < end) {
+      if (!play.on || t !== play.token || !st.tour) return false;
+      ui.playState.textContent = "Next action in " + Math.max(0, (end - Date.now()) / 1000).toFixed(1) + " s";
+      await sleep(100);
+    }
+    return play.on && t === play.token && !!st.tour;
+  }
+  async function runPlay() {
+    if (play.on || !st.tour || st.i >= st.steps.length - 1) return;
+    play.on = true;
+    const t = ++play.token;
+    syncPlay();
+    try {
+      while (play.on && t === play.token && st.tour) {
+        if (!await waitFor(() => !st.busy, 30000)) break;
+        const step = st.steps[st.i];
+        if (!await playWait(play.delay * 1000, t)) break;
+        let done = false;
+        try { done = step.done ? !!step.done(ctx) : false; } catch (e) { done = false; }
+        if (step.auto && !done && (!step.noReplay || play.dl)) {
+          ui.playState.textContent = "Performing this step…";
+          if (!await runAuto(step)) break;                 // an error stops Auto-play; its message stays
+          if (!await playWait(play.delay * 1000, t)) break;
+        }
+        if (st.i >= st.steps.length - 1) break;
+        await go(st.i + 1);
+        if (ui.msg.textContent && !ui.msg.classList.contains("info")) break;   // the next step could not be prepared
+      }
+    } finally {
+      if (t === play.token) { play.on = false; syncPlay(); }
+    }
+  }
+  function stopPlay() {
+    if (!play.on) return;
+    play.on = false; play.token++;
+    syncPlay();
+  }
+  function syncPlay() {
+    if (!ui.play) return;
+    const last = !st.tour || st.i >= st.steps.length - 1;
+    ui.play.setAttribute("aria-pressed", String(play.on));
+    ui.play.innerHTML = play.on ? `<i class="bi bi-pause-circle"></i><span>Pause</span>`
+      : `<i class="bi bi-play-circle"></i><span>${st.i > 0 ? "Auto-play the rest" : "Auto-play"}</span>`;
+    ui.play.disabled = last && !play.on;
+    ui.card.classList.toggle("playing", play.on);
+    if (!play.on) ui.playState.textContent = last ? "" : "Runs each step for you, " + play.delay + " s apart";
   }
 
   // Starting part-way through: perform the earlier steps so the workspace is ready
@@ -777,7 +868,7 @@
     }
   }
 
-  async function start(id, from) {
+  async function start(id, from, opts) {
     const tour = TOURS[id];
     if (!tour || !available(tour)) return;
     build();
@@ -795,11 +886,13 @@
       try { await fastForward(from); } catch (e) { { ui.msg.classList.remove("info"); ui.msg.textContent = e.message || String(e); } }
       setBusy(false);
     }
-    go(from);
+    await go(from);
+    if (opts && opts.autoplay) runPlay();
   }
 
   function stop(completed, silent) {
     if (!st.tour) return;
+    stopPlay();
     if (completed) {
       const done = store.get(STORE_DONE, []);
       if (!done.includes(st.id)) done.push(st.id);
@@ -843,6 +936,7 @@
             ${resume ? `<button type="button" class="gt-btn primary" data-tour-start="${id}" data-tour-step="${at}"><i class="bi bi-play-fill"></i>Resume (step ${at + 1})</button>
                         <button type="button" class="gt-btn ghost" data-tour-start="${id}">Start over</button>`
                      : `<button type="button" class="gt-btn primary" data-tour-start="${id}"><i class="bi bi-play-fill"></i>${done.includes(id) ? "Take again" : "Start"}</button>`}
+            ${t.steps.some(s => s.auto) ? `<button type="button" class="gt-btn auto" data-tour-start="${id}" data-tour-autoplay title="Watch every step being performed for you, one after another"><i class="bi bi-play-circle"></i>Auto-play</button>` : ""}
           </span></div>`;
     }).join("");
     ui.picker.hidden = false;
@@ -908,7 +1002,7 @@
   /* ---------- Launchers ---------- */
   document.addEventListener("click", e => {
     const s = e.target.closest("[data-tour-start]");
-    if (s) { e.preventDefault(); start(s.dataset.tourStart, +s.dataset.tourStep || 0); return; }
+    if (s) { e.preventDefault(); start(s.dataset.tourStart, +s.dataset.tourStep || 0, { autoplay: s.hasAttribute("data-tour-autoplay") }); return; }
     const p = e.target.closest("[data-tour-picker]");
     if (p) { e.preventDefault(); openPicker(); }
   });

@@ -53,6 +53,20 @@ started part-way through from the User Guide.
 To find a control's selector: right-click it in Chrome → **Inspect**, and use its `id`
 (e.g. `#tsAdd`), or record the action with Playwright as before and reuse the names it shows.
 
+## Auto-play
+
+The **Auto-play** button on the tour card (and on the User Guide and *Guided tours* launchers, via
+`data-tour-autoplay`) runs the rest of the tour by itself. For each step it waits **Delay** seconds
+(1 s by default, 1–30 s, remembered in the browser), performs the step's `auto` action if the step is
+not already `done`, waits **Delay** again, then moves to the next step, until the last card.
+
+* Steps without `auto` are only shown for the delay.
+* Steps with `noReplay: true` (downloads) are skipped unless **Include downloads** is ticked.
+* Pressing **Pause**, Back, Next, Do it for me or Esc stops it; an error message stops it too.
+* From the console: `inpactTour.start("mapping-timeseries", 0, { autoplay: true })`.
+
+So a new step works with Auto-play as long as its `auto` action really completes the task.
+
 ## Things to know
 
 * **Time series is a switch.** It is on when Spatial Mapping opens; clicking it again closes the

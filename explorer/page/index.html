@@ -23,7 +23,7 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="/static/explorer/trend/trend.css?v=20261128c" rel="stylesheet">
 <!-- In-app guided walkthroughs (static/explorer/tour/) -->
-<link href="/static/explorer/tour/tour.css?v=20261127g" rel="stylesheet">
+<link href="/static/explorer/tour/tour.css?v=20261127h" rel="stylesheet">
 <!-- Leaflet -->
 <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
 <!-- Google Fonts -->
@@ -4650,7 +4650,7 @@ a.ug-go.alt:hover{color:var(--navy)}
       <div class="gt-launch">
         <span class="gt-pk-ic"><i class="bi bi-signpost-split"></i></span>
         <div class="t"><b>Prefer to learn by doing? Take a guided tour.</b>
-          <span>Interactive walkthroughs highlight each control on the dashboard, explain what it does and why it matters, and can perform the step for you. You can leave a tour at any time and resume it from the same step.</span></div>
+          <span>Interactive walkthroughs highlight each control on the dashboard, explain what it does and why it matters, and can perform the step for you (<b>Do it for me</b>) or run the whole tour automatically (<b>Auto-play</b>, with a delay you choose). You can leave a tour at any time and resume it from the same step.</span></div>
         <div class="b">
           <button type="button" class="ug-go" data-tour-start="dashboard"><i class="bi bi-compass"></i>Dashboard basics (1 min)</button>
           <button type="button" class="ug-go alt" data-tour-start="mapping-timeseries"><i class="bi bi-graph-up"></i>Spatial Mapping time series</button>
@@ -5083,9 +5083,10 @@ a.ug-go.alt:hover{color:var(--navy)}
         <div class="gt-launch">
           <span class="gt-pk-ic"><i class="bi bi-signpost-split"></i></span>
           <div class="t"><b>Interactive walkthrough: your first time series, about 6 minutes</b>
-            <span>Follow a complete analysis on the live workspace using a real example, <b>methane from livestock in MapEIre</b>. Each control is highlighted and explained in turn. Use it yourself, or press <b>Do it for me</b>.</span></div>
+            <span>Follow a complete analysis on the live workspace using a real example, <b>methane from livestock in MapEIre</b>. Each control is highlighted and explained in turn. Use it yourself, press <b>Do it for me</b> for one step, or press <b>Auto-play</b> to watch every step being performed for you, one after another, to the end. Auto-play waits 1 second on each step by default; raise the <b>Delay</b> on the tour card for more reading time, and press <b>Pause</b> at any moment to take over.</span></div>
           <div class="b">
             <button type="button" class="ug-go" data-tour-start="mapping-timeseries"><i class="bi bi-play-fill"></i>Start the walkthrough</button>
+            <button type="button" class="ug-go alt" data-tour-start="mapping-timeseries" data-tour-autoplay><i class="bi bi-play-circle"></i>Auto-play it</button>
           </div>
         </div>
 
@@ -6347,7 +6348,7 @@ a.ug-go.alt:hover{color:var(--navy)}
 <script src="/static/explorer/trend/plot-style.js?v=20261128d"></script>
 <script src="/static/explorer/trend/trend-chart.js?v=20261128d"></script>
 <script src="/static/explorer/settings-io.js?v=20261128a"></script>
-<script src="/static/explorer/tour/tour.js?v=20261127g" defer></script>
+<script src="/static/explorer/tour/tour.js?v=20261127h" defer></script>
 <script>
 /* =====================================================================
    Ireland Greenhouse Gas Policy Impact Explorer
