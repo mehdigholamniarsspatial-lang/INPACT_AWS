@@ -1,19 +1,21 @@
 /* =====================================================================
-   Landing banner: methane from farmland to the measurement tower
+   Landing banner: greenhouse gases from the land to the measurement tower
    (hero-ch4.js + the "CH4" part of hero.css)
 
-   An illustration of how atmospheric measurements see farm emissions:
-   methane (CH4) rises from the grazing cattle and from the fields, drifts
-   with the wind across the banner and is drawn into the inlet of a
-   measurement tower like the one at Mace Head (Co. Galway). The tower is a
-   button: its reading rises as methane arrives, and it opens a short card
-   that explains what the station measures, with a live trace and a link
-   to the inverse-model maps in Spatial Mapping.
+   An illustration of how atmospheric measurements see emissions from the
+   land: methane (CH4, amber) rises from the grazing cattle, the bog pools of
+   the peatland and the farm fields; nitrous oxide (N2O, violet) rises from
+   fertilised and grazed soils. Both drift slowly with the wind across the
+   banner and are drawn into the inlet of a measurement tower like the one at
+   Mace Head (Co. Galway). The tower is a button: its readings rise as the gases
+   arrive, and it opens a short card that explains what the station measures,
+   with live traces and a link to the inverse-model maps in Spatial Mapping.
+   Clicking a cow releases a puff of methane; clicking the bog makes it bubble.
 
-   The particles and the reading are an illustration, not data: the reading
-   moves around typical Mace Head methane levels (about 1,950-2,000 ppb).
-   Runs only on the landing banner, pauses when the banner is off screen or
-   the tab is hidden, and is still (no particles) for reduced motion.
+   The particles and readings are an illustration, not data: they move around
+   typical Mace Head levels (CH4 about 1,950-2,000 ppb, N2O about 337-339 ppb).
+   Runs only on the landing banner, pauses when the banner is off screen or the
+   tab is hidden, and is still (no particles) for reduced motion.
    ===================================================================== */
 (function () {
   "use strict";
@@ -23,17 +25,28 @@
   const scene = header && header.querySelector(".hero-scene");
   if (!scene || header.querySelector(".ch4-tower")) return;
 
-  const BASE_PPB = 1958;                                 // typical recent Mace Head CH4 level (illustrative)
-  const still = window.matchMedia("(prefers-reduced-motion: reduce)");
-  const fmt = v => Math.round(v).toLocaleString("en-IE");
+  /* Speed of the drift: 0.25 = a quarter of the first version (asked for 27 Nov 2026); 1 = original.
+     Emission rates and lifetimes follow it, so the amount of gas on screen stays about the same. */
+  const SPEED = 0.25;
 
-  /* ---------- The tower (a button) with its reading and card ---------- */
+  /* The two gases: colours of the particles, typical background level at Mace Head (illustrative),
+     how much one arriving plume adds to the reading, and the number of decimals shown */
+  const GAS = {
+    ch4: { name: "CH₄", long: "methane", core: "rgba(255,214,140,1)", mid: "rgba(240,168,58,.85)", edge: "rgba(240,168,58,0)",
+           text: "#8A5208", base: 1958, swing: 4, perHit: 2.0, dec: 0 },
+    n2o: { name: "N₂O", long: "nitrous oxide", core: "rgba(226,212,255,1)", mid: "rgba(142,107,216,.85)", edge: "rgba(142,107,216,0)",
+           text: "#4E3592", base: 337.9, swing: 0.12, perHit: 0.07, dec: 1 },
+  };
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const fmt = (v, dec) => v.toLocaleString("en-IE", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+
+  /* ---------- The tower (a button) with its readings and card ---------- */
   const tower = document.createElement("button");
   tower.type = "button";
   tower.className = "ch4-tower";
   tower.setAttribute("aria-haspopup", "dialog");
   tower.setAttribute("aria-expanded", "false");
-  tower.setAttribute("aria-label", "Mace Head atmospheric station: methane reading. Open details");
+  tower.setAttribute("aria-label", "Mace Head atmospheric station: methane and nitrous oxide readings. Open details");
   tower.innerHTML = `
     <svg class="ch4-mast" viewBox="0 0 60 190" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
       <path class="ch4-lattice" d="M22 188L30 26L38 188M24 150H36M25.5 112H34.5M27 76H33M28.5 46H31.5M23 168L35 132M25 132L34 96M26.5 96L33 62M37 168L25 132M35 132L26 96M33.5 96L27 62"/>
@@ -44,7 +57,10 @@
       <rect class="ch4-box" x="10" y="150" width="14" height="20" rx="2"/><rect class="ch4-box" x="36" y="120" width="11" height="14" rx="2"/>
       <rect class="ch4-hut" x="4" y="172" width="52" height="16" rx="2"/><rect class="ch4-hut-door" x="23" y="176" width="9" height="12" rx="1"/>
     </svg>
-    <span class="ch4-chip"><span class="ch4-dot" aria-hidden="true"></span><b>CH₄</b> <span class="ch4-val">${fmt(BASE_PPB)}</span> ppb<small>Mace Head</small></span>`;
+    <span class="ch4-chip"><span class="ch4-dot" aria-hidden="true"></span>
+      <b>CH₄</b> <span class="ch4-val" data-gas="ch4">${fmt(GAS.ch4.base, 0)}</span>
+      <span class="ch4-sep" aria-hidden="true">·</span>
+      <b class="n2o">N₂O</b> <span class="ch4-val" data-gas="n2o">${fmt(GAS.n2o.base, 1)}</span> ppb<small>Mace Head</small></span>`;
   header.appendChild(tower);
 
   const card = document.createElement("div");
@@ -52,25 +68,25 @@
   card.hidden = true;
   card.setAttribute("role", "dialog");
   card.setAttribute("aria-label", "Mace Head atmospheric station");
+  const readRow = g => `
+    <div class="ch4-c-read ${g}"><span class="ch4-c-gas">${GAS[g].name}</span><b class="ch4-c-val" data-gas="${g}">${fmt(GAS[g].base, GAS[g].dec)}</b> ppb
+      <span class="ch4-c-what">${GAS[g].long}</span></div>
+    <svg class="ch4-c-spark ${g}" viewBox="0 0 240 22" preserveAspectRatio="none" aria-hidden="true"><path class="ch4-c-area"/><path class="ch4-c-line"/></svg>`;
   card.innerHTML = `
     <div class="ch4-c-head"><span><i class="bi bi-broadcast-pin" aria-hidden="true"></i> Mace Head atmospheric station</span>
       <button type="button" class="ch4-x" aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
-    <div class="ch4-c-read"><b class="ch4-c-val">${fmt(BASE_PPB)}</b> ppb <span>methane (CH₄) in the air</span></div>
-    <svg class="ch4-c-spark" viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true"><path class="ch4-c-area"/><path class="ch4-c-line"/></svg>
-    <p>Cattle, manure, farm soils and wet peatland bogs release methane. When the wind blows from the land, it carries this methane to stations such as <b>Mace Head</b> on the Galway coast. <b>Inverse models</b> use these measurements to work out where the emissions came from.</p>
+    ${readRow("ch4")}${readRow("n2o")}
+    <p>Cattle, manure and wet bogs release <b>methane</b>; fertilised and grazed soils release <b>nitrous oxide</b>. The wind carries both to stations such as <b>Mace Head</b>, and <b>inverse models</b> use the readings to trace where they came from.</p>
     <div class="ch4-c-foot"><button type="button" class="ch4-c-go"><i class="bi bi-globe-europe-africa" aria-hidden="true"></i> See the inverse-model maps</button>
-      <span class="ch4-c-hits"><span class="ch4-c-n">0</span> plumes measured</span></div>
-    <p class="ch4-c-note">Animation for illustration: the reading is simulated around typical Mace Head levels (about 1,950–2,000 ppb).</p>`;
+      <span class="ch4-c-hits"><span class="ch4-c-n" data-gas="ch4">0</span> CH₄ · <span class="ch4-c-n n2o" data-gas="n2o">0</span> N₂O measured</span></div>
+    <p class="ch4-c-note" title="CH₄ about 1,950–2,000 ppb; N₂O about 337–339 ppb">Illustration: simulated around typical Mace Head levels.</p>`;
   header.appendChild(card);
 
-  const valEls = [tower.querySelector(".ch4-val"), card.querySelector(".ch4-c-val")];
-  const nEl = card.querySelector(".ch4-c-n");
-  const sparkLine = card.querySelector(".ch4-c-line"), sparkArea = card.querySelector(".ch4-c-area");
   const openCard = on => {
     card.hidden = !on;
     tower.setAttribute("aria-expanded", String(on));
     tower.classList.toggle("open", on);
-    if (on) { drawSpark(); card.querySelector(".ch4-c-go").focus({ preventScroll: true }); }
+    if (on) { drawSparks(); card.querySelector(".ch4-c-go").focus({ preventScroll: true }); }
   };
   tower.addEventListener("click", e => { e.stopPropagation(); openCard(card.hidden); });
   card.querySelector(".ch4-x").addEventListener("click", () => { openCard(false); tower.focus({ preventScroll: true }); });
@@ -82,30 +98,34 @@
     location.hash = "#mapping/RasterLayer?ds=inverse";             // Spatial Mapping on the PARIS inverse models
   });
 
-  /* ---------- The reading: background level + methane that has arrived ---------- */
-  let enh = 0, hits = 0, shown = BASE_PPB, t0 = performance.now();
-  const hist = [];
-  function reading(now) {
-    const base = BASE_PPB + 4 * Math.sin((now - t0) / 9000) + 2 * Math.sin((now - t0) / 3100);
-    return base + enh;
-  }
-  function drawSpark() {
-    if (hist.length < 2) return;
-    const lo = Math.min(...hist) - 2, hi = Math.max(...hist) + 2, W = 240, H = 40;
-    const X = i => (i / (hist.length - 1)) * W, Y = v => H - ((v - lo) / (hi - lo)) * H;
-    const d = hist.map((v, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join("");
-    sparkLine.setAttribute("d", d);
-    sparkArea.setAttribute("d", d + `L${W} ${H}L0 ${H}Z`);
+  /* ---------- The readings: background level + gas that has arrived ---------- */
+  const t0 = performance.now();
+  const R = {};
+  Object.keys(GAS).forEach(g => { R[g] = { enh: 0, hits: 0, shown: GAS[g].base, hist: [] }; });
+  const reading = (g, now) => GAS[g].base + GAS[g].swing * (Math.sin((now - t0) / 9000) + 0.5 * Math.sin((now - t0) / 3100)) + R[g].enh;
+  function drawSparks() {
+    Object.keys(GAS).forEach(g => {
+      const hist = R[g].hist; if (hist.length < 2) return;
+      const pad = GAS[g].swing * 0.6, lo = Math.min(...hist) - pad, hi = Math.max(...hist) + pad, W = 240, H = 22;
+      const X = i => (i / (hist.length - 1)) * W, Y = v => H - ((v - lo) / (hi - lo)) * H;
+      const d = hist.map((v, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join("");
+      const svg = card.querySelector(".ch4-c-spark." + g);
+      svg.querySelector(".ch4-c-line").setAttribute("d", d);
+      svg.querySelector(".ch4-c-area").setAttribute("d", d + `L${W} ${H}L0 ${H}Z`);
+    });
   }
   let lastUi = 0;
   function updateUi(now) {
     if (now - lastUi < 250) return;
     lastUi = now;
-    shown += (reading(now) - shown) * 0.35;
-    valEls.forEach(el => { el.textContent = fmt(shown); });
-    hist.push(shown); if (hist.length > 90) hist.shift();
-    nEl.textContent = fmt(hits);
-    if (!card.hidden) drawSpark();
+    Object.keys(GAS).forEach(g => {
+      const r = R[g];
+      r.shown += (reading(g, now) - r.shown) * 0.35;
+      header.querySelectorAll(`.ch4-val[data-gas="${g}"], .ch4-c-val[data-gas="${g}"]`).forEach(el => { el.textContent = fmt(r.shown, GAS[g].dec); });
+      card.querySelector(`.ch4-c-n[data-gas="${g}"]`).textContent = fmt(r.hits, 0);
+      r.hist.push(r.shown); if (r.hist.length > 120) r.hist.shift();
+    });
+    if (!card.hidden) drawSparks();
   }
 
   /* ---------- The particles (canvas behind the banner content) ---------- */
@@ -115,12 +135,13 @@
   scene.appendChild(canvas);
   const ctx = canvas.getContext("2d");
   let W = 0, H = 0, dpr = 1, hr = null;
-  const sprite = (() => {                                // a soft glowing dot, drawn once
+  const sprites = {};                                     // a soft glowing dot per gas, drawn once
+  Object.keys(GAS).forEach(g => {
     const c = document.createElement("canvas"); c.width = c.height = 32;
-    const g = c.getContext("2d"), r = g.createRadialGradient(16, 16, 0, 16, 16, 16);
-    r.addColorStop(0, "rgba(255,214,140,1)"); r.addColorStop(.35, "rgba(240,168,58,.85)"); r.addColorStop(1, "rgba(240,168,58,0)");
-    g.fillStyle = r; g.fillRect(0, 0, 32, 32); return c;
-  })();
+    const x = c.getContext("2d"), r = x.createRadialGradient(16, 16, 0, 16, 16, 16);
+    r.addColorStop(0, GAS[g].core); r.addColorStop(.35, GAS[g].mid); r.addColorStop(1, GAS[g].edge);
+    x.fillStyle = r; x.fillRect(0, 0, 32, 32); sprites[g] = c;
+  });
   function size() {
     hr = header.getBoundingClientRect();
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -138,7 +159,7 @@
     hr = header.getBoundingClientRect();
     cows = [...scene.querySelectorAll(".hs-cow")].map(c => c.getBoundingClientRect())
       .filter(r => r.width > 0 && r.right > hr.left && r.left < hr.right)
-      .map(r => ({ x: r.left - hr.left + r.width * 0.75, y: r.top - hr.top + r.height * 0.35 }));
+      .map(r => ({ x: r.left - hr.left + r.width * 0.75, y: r.top - hr.top + r.height * 0.35, foot: r.bottom - hr.top }));
     pools = [...scene.querySelectorAll(".hs-pool")].map(p => p.getBoundingClientRect())
       .filter(r => r.width > 0 && r.right > hr.left && r.left < hr.right).map(centreOf);
     const t = tower.querySelector(".ch4-inlet").getBoundingClientRect();
@@ -146,74 +167,81 @@
   }
 
   const P = [];
-  let lastLabel = 0;
-  function spawn(x, y, fromCow, now) {
+  const lastLabel = { ch4: 0, n2o: 0 };
+  const field = () => ({ x: W * (0.03 + Math.random() * 0.55), y: H * (0.74 + Math.random() * 0.13) });
+  function spawn(gas, x, y, big, now) {
     if (P.length > 260) return;
-    const label = now - lastLabel > 2600 && Math.random() < 0.5;
-    if (label) lastLabel = now;
-    P.push({ x, y, vx: 0, vy: -(8 + Math.random() * 14), r: (fromCow ? 3.2 : 2.6) + Math.random() * 2.2,
-             age: 0, life: 34 + Math.random() * 12, seed: Math.random() * 1000, label });
+    const label = now - lastLabel[gas] > 3200 && Math.random() < 0.5;
+    if (label) lastLabel[gas] = now;
+    P.push({ gas, x, y, vx: 0, vy: -(8 + Math.random() * 14) * SPEED, r: (big ? 3.2 : 2.6) + Math.random() * 2.2,
+             age: 0, life: (34 + Math.random() * 12) / SPEED * 0.85, seed: Math.random() * 1000, label });
   }
   let flashUntil = 0;
   function step(dt, now) {
     geometry(now);
-    // emission (a third of the first version): cattle (enteric fermentation), wet peatland (bog pools)
-    // and farm fields (manure, slurry, soils)
-    const rate = dt * (W / 1440);
-    cows.forEach(c => { if (Math.random() < 0.6 * rate) spawn(c.x + (Math.random() - .5) * 6, c.y, true, now); });
-    pools.forEach(p => { if (Math.random() < 0.2 * rate) spawn(p.x + (Math.random() - .5) * 14, p.y - 2, false, now); });
-    if (Math.random() < 0.5 * rate) spawn(W * (0.03 + Math.random() * 0.55), H * (0.74 + Math.random() * 0.13), false, now);
-    const wind = 30 + W * 0.03, reach = Math.max(300, W * 0.38);
+    // Emission, per second at 1440 px. Rates follow SPEED, so the amount on screen stays the same.
+    // CH4: cattle (enteric fermentation), wet peatland (bog pools), farm fields (manure, slurry)
+    // N2O: fertilised fields and the grazed grass around the cattle (dung and urine patches)
+    const rate = dt * (W / 1440) * SPEED;
+    cows.forEach(c => {
+      if (Math.random() < 0.6 * rate) spawn("ch4", c.x + (Math.random() - .5) * 6, c.y, true, now);
+      if (Math.random() < 0.2 * rate) spawn("n2o", c.x + (Math.random() - .5) * 30, c.foot - 2, false, now);
+    });
+    pools.forEach(p => { if (Math.random() < 0.2 * rate) spawn("ch4", p.x + (Math.random() - .5) * 14, p.y - 2, false, now); });
+    if (Math.random() < 0.5 * rate) { const f = field(); spawn("ch4", f.x, f.y, false, now); }
+    if (Math.random() < 0.75 * rate) { const f = field(); spawn("n2o", f.x, f.y, false, now); }
+
+    const wind = (30 + W * 0.03) * SPEED, reach = Math.max(300, W * 0.38), slow = 1 / SPEED;
     for (let i = P.length - 1; i >= 0; i--) {
       const p = P[i];
       p.age += dt;
-      const gust = Math.sin(now / 1700 + p.seed) * 0.5 + Math.sin(now / 610 + p.seed * 2) * 0.3;
+      const gust = Math.sin(now / (1700 * slow) + p.seed) * 0.5 + Math.sin(now / (610 * slow) + p.seed * 2) * 0.3;
       const dx = inlet.x - p.x, dy = inlet.y - p.y;
       // drift with the wind, rise and swirl; near the tower, the air is drawn into the inlet
-      let tvx = wind * (0.8 + 0.4 * gust), tvy = -6 + 10 * Math.sin(now / 900 + p.seed);
+      let tvx = wind * (0.8 + 0.4 * gust), tvy = (-6 + 10 * Math.sin(now / (900 * slow) + p.seed)) * SPEED;
       if (dx > -12 && dx < reach) {
         const pull = Math.pow(1 - Math.max(0, dx) / reach, 1.6);
-        tvy += (dy / Math.max(30, dx)) * wind * 1.2 * pull + dy * 1.2 * pull;
+        tvy += (dy / Math.max(30, dx)) * wind * 1.2 * pull + dy * 1.2 * pull * SPEED;
         tvx += wind * 0.6 * pull;
       }
       p.vx += (tvx - p.vx) * Math.min(1, dt * 1.8);
       p.vy += (tvy - p.vy) * Math.min(1, dt * 1.8);
       p.x += p.vx * dt; p.y += p.vy * dt;
       if (Math.hypot(dx, dy) < 12) {                    // measured
-        P.splice(i, 1); hits++; enh += 0.6; flashUntil = now + 220; continue;
+        P.splice(i, 1); R[p.gas].hits++; R[p.gas].enh += GAS[p.gas].perHit; flashUntil = now + 220; continue;
       }
       if (p.age > p.life || p.x > W + 20 || p.y < -20 || p.y > H + 20) P.splice(i, 1);
     }
-    enh *= Math.exp(-dt / 7);                            // the excess dilutes away
+    Object.keys(GAS).forEach(g => { R[g].enh *= Math.exp(-dt / 7); });   // the excess dilutes away
     tower.classList.toggle("hit", now < flashUntil);
   }
   function draw() {
     ctx.clearRect(0, 0, W, H);
+    ctx.font = "700 11px 'Source Sans 3', sans-serif";
+    ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)";
     for (const p of P) {
-      const a = Math.min(1, p.age / 1.2) * Math.min(1, (p.life - p.age) / 3);
+      const a = Math.min(1, p.age / 1.5) * Math.min(1, (p.life - p.age) / 4);
       const s = p.r * 2.6;
       ctx.globalAlpha = 0.62 * a;
-      ctx.drawImage(sprite, p.x - s, p.y - s, s * 2, s * 2);
+      ctx.drawImage(sprites[p.gas], p.x - s, p.y - s, s * 2, s * 2);
       if (p.label) {
-        ctx.globalAlpha = 0.85 * a;
-        ctx.font = "700 11px 'Source Sans 3', sans-serif";
-        ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.fillStyle = "#8A5208";
-        ctx.strokeText("CH₄", p.x + 6, p.y - 6); ctx.fillText("CH₄", p.x + 6, p.y - 6);
+        ctx.globalAlpha = 0.88 * a;
+        ctx.fillStyle = GAS[p.gas].text;
+        ctx.strokeText(GAS[p.gas].name, p.x + 6, p.y - 6); ctx.fillText(GAS[p.gas].name, p.x + 6, p.y - 6);
       }
     }
     ctx.globalAlpha = 1;
   }
 
-  /* ---------- Click a cow (puff) or the peatland (bubbles) ---------- */
+  /* ---------- Click a cow (puff of methane) or the peatland (bubbles) ---------- */
   function burst(x, y, n, spread) {
-    const now = performance.now();
     for (let k = 0; k < n; k++) {
       if (P.length > 300) break;
-      const a = -Math.PI / 2 + (Math.random() - .5) * spread;
-      P.push({ x: x + (Math.random() - .5) * 6, y, vx: Math.cos(a) * (20 + Math.random() * 30), vy: Math.sin(a) * (24 + Math.random() * 30),
-               r: 2.8 + Math.random() * 2.4, age: 0.4, life: 34 + Math.random() * 10, seed: Math.random() * 1000, label: k === 0 });
+      const a = -Math.PI / 2 + (Math.random() - .5) * spread, pop = 0.5;   // a quick pop, then the slow wind takes over
+      P.push({ gas: "ch4", x: x + (Math.random() - .5) * 6, y, vx: Math.cos(a) * (20 + Math.random() * 30) * pop, vy: Math.sin(a) * (24 + Math.random() * 30) * pop,
+               r: 2.8 + Math.random() * 2.4, age: 0.4, life: (34 + Math.random() * 10) / SPEED * 0.85, seed: Math.random() * 1000, label: k === 0 });
     }
-    lastLabel = now;
+    lastLabel.ch4 = performance.now();
     kick();
   }
   function release(el) {
@@ -242,7 +270,7 @@
     raf = 0;
     if (!active()) { ctx.clearRect(0, 0, W, H); return; }
     const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
-    if (!still.matches) { step(dt, now); draw(); } else { enh = 0; }
+    if (!still.matches) { step(dt, now); draw(); } else { Object.keys(GAS).forEach(g => { R[g].enh = 0; }); }
     updateUi(now);
     raf = requestAnimationFrame(frame);
   }
@@ -254,11 +282,13 @@
     .observe(root, { attributes: true, attributeFilter: ["class"] });
   window.addEventListener("resize", () => { size(); lastGeo = 0; kick(); });
   size();
-  // Warm-up: run the first 20 s at once, so the stream already reaches the tower when the page opens
+  // Warm-up: run the first stretch at once (longer when the drift is slow), so the streams already
+  // reach the tower when the page opens
   if (!still.matches && window.innerWidth >= 768) {
-    let t = performance.now() - 20000;
-    for (let k = 0; k < 400; k++) { step(0.05, t); t += 50; }
-    hits = 0; enh = 0.6 * enh;
+    const n = Math.round(400 / SPEED);
+    let t = performance.now() - n * 50;
+    for (let k = 0; k < n; k++) { step(0.05, t); t += 50; }
+    Object.keys(GAS).forEach(g => { R[g].hits = 0; });
   }
   kick();
 })();
