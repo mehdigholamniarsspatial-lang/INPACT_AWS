@@ -57,7 +57,7 @@
       <button type="button" class="ch4-x" aria-label="Close"><i class="bi bi-x-lg"></i></button></div>
     <div class="ch4-c-read"><b class="ch4-c-val">${fmt(BASE_PPB)}</b> ppb <span>methane (CH₄) in the air</span></div>
     <svg class="ch4-c-spark" viewBox="0 0 240 40" preserveAspectRatio="none" aria-hidden="true"><path class="ch4-c-area"/><path class="ch4-c-line"/></svg>
-    <p>Cattle, manure and farm soils release methane. When the wind blows from the land, it carries this methane to stations such as <b>Mace Head</b> on the Galway coast. <b>Inverse models</b> use these measurements to work out where the emissions came from.</p>
+    <p>Cattle, manure, farm soils and wet peatland bogs release methane. When the wind blows from the land, it carries this methane to stations such as <b>Mace Head</b> on the Galway coast. <b>Inverse models</b> use these measurements to work out where the emissions came from.</p>
     <div class="ch4-c-foot"><button type="button" class="ch4-c-go"><i class="bi bi-globe-europe-africa" aria-hidden="true"></i> See the inverse-model maps</button>
       <span class="ch4-c-hits"><span class="ch4-c-n">0</span> plumes measured</span></div>
     <p class="ch4-c-note">Animation for illustration: the reading is simulated around typical Mace Head levels (about 1,950–2,000 ppb).</p>`;
@@ -130,7 +130,8 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   // Where things are, in banner coordinates (cows walk, so they are re-read now and then)
-  let cows = [], inlet = { x: 0, y: 0 }, lastGeo = 0;
+  let cows = [], pools = [], inlet = { x: 0, y: 0 }, lastGeo = 0;
+  const centreOf = r => ({ x: r.left - hr.left + r.width / 2, y: r.top - hr.top + r.height / 2 });
   function geometry(now) {
     if (now - lastGeo < 500 && cows.length) return;
     lastGeo = now;
@@ -138,6 +139,8 @@
     cows = [...scene.querySelectorAll(".hs-cow")].map(c => c.getBoundingClientRect())
       .filter(r => r.width > 0 && r.right > hr.left && r.left < hr.right)
       .map(r => ({ x: r.left - hr.left + r.width * 0.75, y: r.top - hr.top + r.height * 0.35 }));
+    pools = [...scene.querySelectorAll(".hs-pool")].map(p => p.getBoundingClientRect())
+      .filter(r => r.width > 0 && r.right > hr.left && r.left < hr.right).map(centreOf);
     const t = tower.querySelector(".ch4-inlet").getBoundingClientRect();
     inlet = { x: t.left - hr.left + t.width / 2, y: t.top - hr.top + t.height / 2 };
   }
@@ -154,10 +157,12 @@
   let flashUntil = 0;
   function step(dt, now) {
     geometry(now);
-    // emission: the cattle (enteric fermentation) and the fields (manure, soils)
+    // emission (a third of the first version): cattle (enteric fermentation), wet peatland (bog pools)
+    // and farm fields (manure, slurry, soils)
     const rate = dt * (W / 1440);
-    cows.forEach(c => { if (Math.random() < 2.2 * rate) spawn(c.x + (Math.random() - .5) * 6, c.y, true, now); });
-    if (Math.random() < 2.8 * rate) spawn(W * (0.03 + Math.random() * 0.55), H * (0.74 + Math.random() * 0.13), false, now);
+    cows.forEach(c => { if (Math.random() < 0.6 * rate) spawn(c.x + (Math.random() - .5) * 6, c.y, true, now); });
+    pools.forEach(p => { if (Math.random() < 0.2 * rate) spawn(p.x + (Math.random() - .5) * 14, p.y - 2, false, now); });
+    if (Math.random() < 0.5 * rate) spawn(W * (0.03 + Math.random() * 0.55), H * (0.74 + Math.random() * 0.13), false, now);
     const wind = 30 + W * 0.03, reach = Math.max(300, W * 0.38);
     for (let i = P.length - 1; i >= 0; i--) {
       const p = P[i];
@@ -175,7 +180,7 @@
       p.vy += (tvy - p.vy) * Math.min(1, dt * 1.8);
       p.x += p.vx * dt; p.y += p.vy * dt;
       if (Math.hypot(dx, dy) < 12) {                    // measured
-        P.splice(i, 1); hits++; enh += 0.32; flashUntil = now + 220; continue;
+        P.splice(i, 1); hits++; enh += 0.6; flashUntil = now + 220; continue;
       }
       if (p.age > p.life || p.x > W + 20 || p.y < -20 || p.y > H + 20) P.splice(i, 1);
     }
@@ -198,6 +203,37 @@
     }
     ctx.globalAlpha = 1;
   }
+
+  /* ---------- Click a cow (puff) or the peatland (bubbles) ---------- */
+  function burst(x, y, n, spread) {
+    const now = performance.now();
+    for (let k = 0; k < n; k++) {
+      if (P.length > 300) break;
+      const a = -Math.PI / 2 + (Math.random() - .5) * spread;
+      P.push({ x: x + (Math.random() - .5) * 6, y, vx: Math.cos(a) * (20 + Math.random() * 30), vy: Math.sin(a) * (24 + Math.random() * 30),
+               r: 2.8 + Math.random() * 2.4, age: 0.4, life: 34 + Math.random() * 10, seed: Math.random() * 1000, label: k === 0 });
+    }
+    lastLabel = now;
+    kick();
+  }
+  function release(el) {
+    hr = header.getBoundingClientRect();
+    if (el.classList.contains("hs-cow")) {
+      const r = el.getBoundingClientRect();
+      burst(r.left - hr.left + r.width * 0.75, r.top - hr.top + r.height * 0.3, 14, 1.6);
+      el.classList.remove("moo"); void el.getBBox(); el.classList.add("moo");
+      setTimeout(() => el.classList.remove("moo"), 650);
+    } else {
+      [...el.querySelectorAll(".hs-pool")].forEach(p => { const c = centreOf(p.getBoundingClientRect()); burst(c.x, c.y - 2, 5, 0.8); });
+      el.classList.remove("bubble"); void el.getBBox(); el.classList.add("bubble");
+      setTimeout(() => el.classList.remove("bubble"), 900);
+    }
+  }
+  scene.addEventListener("click", e => { const t = e.target.closest(".hs-cow, .hs-peat"); if (t) { e.stopPropagation(); release(t); } });
+  scene.addEventListener("keydown", e => {
+    const t = e.target.closest && e.target.closest(".hs-cow, .hs-peat");
+    if (t && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); release(t); }
+  });
 
   /* ---------- Run only while the banner is on screen ---------- */
   let visible = true, raf = 0, last = 0;

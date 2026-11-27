@@ -296,3 +296,26 @@ html:not(.hdr-shrinkable):not(.map-standalone) .hs-hint{display:inline-flex}
 .ch4-card p.ch4-c-note{font-size:.68rem;color:#6B7B89;margin:0}
 @media (prefers-reduced-motion:reduce){ .ch4-inlet-glow,.ch4-dot,.ch4-card{animation:none} }
 @media print{ .ch4-canvas,.ch4-tower,.ch4-card{display:none!important} }
+
+/* ---------- Peatland, and the cows / bog as buttons (hero-ch4.js) ---------- */
+.hs-bog{fill:#A08664}
+.hs-bog-dark{fill:#8E7656;opacity:.85}
+.hs-heather{fill:#9A6F96;opacity:.7}
+.hs-pool{fill:#6F9AB4;stroke:rgba(255,255,255,.7);stroke-width:.6}
+.hs-turf{fill:#4F3626}
+.hs-turf-bank{fill:#3E2A1E;opacity:.8}
+.hs-cotton circle{fill:#FFFFFF;opacity:.9}
+/* the banner's text block lets clicks through to the landscape behind it; its own parts stay clickable */
+html:not(.hdr-shrinkable):not(.map-standalone) .header-inner{pointer-events:none}
+html:not(.hdr-shrinkable):not(.map-standalone) .header-inner>*{pointer-events:auto}
+html:not(.hdr-shrinkable):not(.map-standalone) .header-inner>.hs-art,html:not(.hdr-shrinkable):not(.map-standalone) .header-inner>.hs-hint{pointer-events:none}
+html:not(.hdr-shrinkable):not(.map-standalone) .hs-cow,html:not(.hdr-shrinkable):not(.map-standalone) .hs-peat{pointer-events:auto;cursor:pointer;outline:none}
+.hs-cow:hover .hs-hide,.hs-cow:focus-visible .hs-hide{fill:#FFF6E4}
+.hs-cow:hover,.hs-cow:focus-visible{filter:drop-shadow(0 0 3px rgba(232,163,61,.95))}
+.hs-peat:hover .hs-pool,.hs-peat:focus-visible .hs-pool{fill:#8FC0DA}
+.hs-peat:hover,.hs-peat:focus-visible{filter:drop-shadow(0 0 2px rgba(232,163,61,.8))}
+.hs-cow.moo .hs-bob{animation:hsMoo .6s ease}
+@keyframes hsMoo{0%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}60%{transform:translateY(0)}80%{transform:translateY(-2px)}}
+.hs-peat.bubble .hs-pool{animation:hsBubble .9s ease}
+@keyframes hsBubble{0%,100%{fill:#6F9AB4}40%{fill:#B9E0F0}}
+@media (prefers-reduced-motion:reduce){ .hs-cow.moo .hs-bob,.hs-peat.bubble .hs-pool{animation:none} }

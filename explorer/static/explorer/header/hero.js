@@ -62,7 +62,7 @@
       <g class="hs-blades" style="animation-duration:${d}s"><path d="M0 -58L-2 -60L0 -92L2 -60Z"/><path d="M0 -58L-2 -60L0 -92L2 -60Z" transform="rotate(120 0 -58)"/>
       <path d="M0 -58L-2 -60L0 -92L2 -60Z" transform="rotate(240 0 -58)"/><circle cx="0" cy="-58" r="2.2"/></g></g>`;
   // A cow walks slowly forward, turns, walks back and grazes (hero.css); dur / delay keep the herd out of step
-  const cow = (x, y, s, flip, dur, delay) => `<g class="hs-cow" transform="translate(${x} ${y}) scale(${flip ? -s : s} ${s})">
+  const cow = (x, y, s, flip, dur, delay) => `<g class="hs-cow" role="button" tabindex="0" aria-label="Cow: release a puff of methane" transform="translate(${x} ${y}) scale(${flip ? -s : s} ${s})"><title>Cattle: click to release a puff of methane</title>
       <g class="hs-walk" style="animation-duration:${dur}s;animation-delay:-${delay}s"><g class="hs-bob">
       <path d="M-11 -2v8M-6 -1v7M6 -1v7M10 -2v8" class="hs-leg"/>
       <ellipse cx="0" cy="-6" rx="13" ry="6.5" class="hs-hide"/>
@@ -73,7 +73,7 @@
     `<circle class="hs-puff" cx="${x}" cy="${y}" r="${7 + i * 2}" style="animation-delay:${(i * 1.6).toFixed(1)}s"/>`).join("");
 
   const scene = `
-    <svg class="hs-land" viewBox="0 0 1600 260" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false">
+    <svg class="hs-land" viewBox="0 0 1600 260" preserveAspectRatio="xMidYMax slice" role="group" aria-label="Illustration: Irish farmland, peatland and coast; the cows and the bog can be clicked">
       <defs>
         <linearGradient id="hsSea" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5DB4DE"/><stop offset="1" stop-color="#2E86BD"/></linearGradient>
         <linearGradient id="hsHillA" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#A5CF77"/><stop offset="1" stop-color="#7DB458"/></linearGradient>
@@ -85,6 +85,18 @@
       <rect x="980" y="168" width="620" height="60" fill="url(#hsSea)"/>
       <path class="hs-glint" d="M1060 186h90M1180 194h120M1330 182h80M1250 204h70"/>
       <path d="M0 186C160 168 300 176 420 170S640 160 760 176 980 182 1100 196 1200 206 1240 214V260H0Z" fill="url(#hsHillA)"/>
+      <g class="hs-peat" role="button" tabindex="0" aria-label="Peatland: release methane bubbles from the bog pools">
+        <title>Peatland: wet bogs release methane. Click to see the bog pools bubble</title>
+        <path class="hs-bog" d="M24 184C70 176 120 181 170 178S260 175 300 178 380 175 440 179L446 204H18Z"/>
+        <path class="hs-bog-dark" d="M40 190C90 186 140 191 190 188S290 186 330 189 400 187 436 190L440 204H30Z"/>
+        <ellipse class="hs-heather" cx="70" cy="184" rx="22" ry="3.4"/><ellipse class="hs-heather" cx="205" cy="182" rx="26" ry="3.2"/>
+        <ellipse class="hs-heather" cx="330" cy="183" rx="20" ry="3"/><ellipse class="hs-heather" cx="415" cy="185" rx="16" ry="2.6"/>
+        <ellipse class="hs-pool" cx="96" cy="190" rx="13" ry="2.6"/><ellipse class="hs-pool" cx="168" cy="194" rx="9" ry="2.1"/>
+        <ellipse class="hs-pool" cx="278" cy="189" rx="12" ry="2.4"/><ellipse class="hs-pool" cx="388" cy="193" rx="9" ry="2"/>
+        <path class="hs-turf" d="M124 189l4-5 4 5zM131 189l4-5 4 5zM127.5 185l4-4.5 4 4.5zM222 191l4-5 4 5zM229 191l4-5 4 5zM346 189l3.5-4.5 3.5 4.5zM352 189l3.5-4.5 3.5 4.5z"/>
+        <path class="hs-turf-bank" d="M110 196h52v2.4h-52zM300 196h46v2.2h-46z"/>
+        <g class="hs-cotton"><circle cx="52" cy="182" r="1.3"/><circle cx="61" cy="184" r="1.3"/><circle cx="118" cy="186" r="1.3"/><circle cx="150" cy="182" r="1.3"/><circle cx="190" cy="184" r="1.3"/><circle cx="212" cy="186" r="1.3"/><circle cx="246" cy="182" r="1.3"/><circle cx="262" cy="184" r="1.3"/><circle cx="309" cy="186" r="1.3"/><circle cx="322" cy="182" r="1.3"/><circle cx="360" cy="184" r="1.3"/><circle cx="402" cy="186" r="1.3"/><circle cx="428" cy="182" r="1.3"/></g>
+      </g>
       ${turbine(250, 172, .72, 7)}${turbine(300, 168, .62, 8.5)}${turbine(345, 171, .55, 6.4)}
       <g class="hs-plant">
         <rect x="520" y="160" width="120" height="22" rx="1"/><rect x="545" y="148" width="34" height="14"/>
@@ -167,8 +179,7 @@
 
 
   const wrap = document.createElement("div");
-  wrap.className = "hero-scene";
-  wrap.setAttribute("aria-hidden", "true");
+  wrap.className = "hero-scene";               // decorative, except the cows and the bog (buttons, hero-ch4.js)
   wrap.innerHTML = scene;
   header.prepend(wrap);
   const art = document.createElement("div");
