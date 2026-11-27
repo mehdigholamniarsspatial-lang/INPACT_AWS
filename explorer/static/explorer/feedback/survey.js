@@ -800,16 +800,18 @@
     const m = s / n, sd = n > 1 ? Math.sqrt(Math.max(0, (ss - n * m * m) / (n - 1))) : 0;
     return { m, n, lo: Math.max(sc.min, m - 1.96 * sd / Math.sqrt(n)), hi: Math.min(sc.max, m + 1.96 * sd / Math.sqrt(n)) };
   }
+  // scale points in numeric order (object keys put "-3" after "3")
+  const keysOf = scale => Object.keys(scale.labels).sort((a, b) => a - b);
   function legendHtml(scale, na){
     const pal = palFor(scale);
-    return `<div class="fb-legend">${Object.keys(scale.labels).map((k, i) => `<span><i style="background:${pal[i]}"></i>${E(scale.labels[k] || k)}</span>`).join("")}${
+    return `<div class="fb-legend">${keysOf(scale).map((k, i) => `<span><i style="background:${pal[i]}"></i>${E(scale.labels[k] || k)}</span>`).join("")}${
       na ? `<span><i style="background:${DK}"></i>Non-substantive (don't know, cannot judge ...)</span>` : ""}</div>`;
   }
   function likRow(label, a, scale, dot){
     const lab = `<span class="l">${dot ? `<i class="dot" style="--gc:${gCol(dot)}"></i>` : ""}<span>${label}</span></span>`;
     const ns = nsSum(a);
     if (!a || !(sum(a.c) + ns)) return lab + '<span class="na">No answers yet</span>';
-    const keys = Object.keys(scale.labels), tot = sum(a.c) + ns, pal = palFor(scale), mid = (keys.length - 1) / 2;
+    const keys = keysOf(scale), tot = sum(a.c) + ns, pal = palFor(scale), mid = (keys.length - 1) / 2;
     const parts = keys.map((k, i) => [scale.labels[k] || k, (a.c || {})[k] || 0, pal[i], i === mid]).concat(ns ? [["Non-substantive answers", ns, DK, true]] : []);
     const segsH = parts.filter(p => p[1]).map(([l, n, col, light]) => {
       const w = 100 * n / tot;
