@@ -678,8 +678,8 @@
       break;
     }
     return slugId
-      ? { inApp: `#policy/policies/${slugId}/`, standalone: `/policy/policies/${slugId}/`, profile: true }
-      : { inApp: "#policy/timeline/", standalone: "/policy/timeline/", profile: false };
+      ? { inApp: `#policy/policies/${slugId}/`, standalone: `/#policy/policies/${slugId}/`, profile: true }   // "new tab": the dashboard, on that page
+      : { inApp: "#policy/timeline/", standalone: "/#policy/timeline/", profile: false };
   }
 
   function togglePin(key, on) {

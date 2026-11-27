@@ -14,6 +14,14 @@
     (function () {
       var embedded = false;
       try { embedded = window.self !== window.top && window.parent.location.origin === location.origin; } catch (e) {}
+      /* Opened on its own (a bookmark, a shared link, "open in new tab"): show the same page inside the
+         dashboard instead, which has the current layout (27 Nov 2026). /policy/timeline/?x=1 opens
+         /#policy/timeline/?x=1. Add ?standalone=1 to see the page on its own (e.g. for printing). */
+      if (!embedded && window.self === window.top && !/[?&]standalone=1(&|$)/.test(location.search)) {
+        var rest = location.pathname.replace(/^\/policy\/?/, "") + location.search + location.hash;
+        location.replace("/#policy" + (rest ? "/" + rest : ""));
+        return;
+      }
       if (!embedded) return;
       document.documentElement.classList.add("embedded");
       /* kind: "load" for a new page, "state" for filter changes kept in the URL */

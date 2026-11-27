@@ -5,6 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ireland Greenhouse Gas Policy Impact Explorer</title>
 <script>
+/* /map/ opened on its own (a bookmark, a shared link, the old "New window" address): show the map in
+   the dashboard's Spatial Mapping tab instead, which has the current layout (27 Nov 2026). The view is
+   kept: /map/?lat=..&lng=..&z=..&ds=..&mode=AirQuality opens /#mapping/AirQuality?lat=..&lng=..&z=..&ds=..
+   The dashboard itself shows /map/?embed=1 in its frame, which is left alone. Add ?standalone=1 to
+   see the map window on its own. */
+(function(){
+  var root = document.documentElement;
+  if (!root.classList.contains("map-standalone") || root.classList.contains("map-embed")) return;
+  if (window.self !== window.top) return;
+  var q = new URLSearchParams(location.search);
+  if (q.get("standalone") === "1") return;
+  var mode = q.get("mode") === "AirQuality" ? "AirQuality" : "RasterLayer";
+  q.delete("mode"); q.delete("embed");
+  var rest = q.toString();
+  location.replace("/#mapping/" + mode + (rest ? "?" + rest : ""));
+})();
+</script>
+<script>
 /* Map page text size (the A / a buttons): apply the viewer's saved size before the page draws.
    100% is the default and the smallest; nearly all text is in rem, so it follows the root size. */
 (function(){
@@ -3184,8 +3202,8 @@ a.ug-go.alt:hover{color:var(--navy)}
             <span class="panel-num">2B</span>
             <h2 class="panel-title">Spatial Environmental Mapping</h2>
             <span class="ms-auto text-muted" style="font-size:.72rem">EPA MapEIre, EDGAR and PARIS inverse-model emissions · ICOS stations · Esri World Imagery</span>
-            <a class="pt-tool map-popout" id="mapPopout" href="/map/" target="_blank" rel="noopener"
-               title="Open the map on its own in a new browser window, keeping the current view and dataset">
+            <a class="pt-tool map-popout" id="mapPopout" href="/#mapping/RasterLayer" target="_blank" rel="noopener"
+               title="Open this map in Spatial Mapping in a new tab, keeping the current view and dataset">
               <i class="bi bi-box-arrow-up-right"></i><span class="lbl">New window</span>
             </a>
           </div>
@@ -6353,7 +6371,7 @@ a.ug-go.alt:hover{color:var(--navy)}
 <!-- Trend Analysis tab (Plotly itself is loaded on first visit to the tab) -->
 <script src="/static/explorer/trend/stats.js"></script>
 <script src="/static/explorer/trend/plot-style.js?v=20261128e"></script>
-<script src="/static/explorer/trend/trend-chart.js?v=20261128e"></script>
+<script src="/static/explorer/trend/trend-chart.js?v=20261128f"></script>
 <script src="/static/explorer/settings-io.js?v=20261128a"></script>
 <script src="/static/explorer/tour/tour.js?v=20261127k" defer></script>
 <script src="/static/explorer/header/atmosphere.js?v=20261127a" defer></script>
@@ -8463,20 +8481,31 @@ document.documentElement.style.setProperty("--tabnav-h", navStack.offsetHeight +
 const SM_MODES = ["RasterLayer", "AirQuality"];
 let smMode = "RasterLayer";                                  // last mode shown in the frame
 const smModeFromHash = () => (location.hash.match(/^#mapping\/(\w+)/) || [])[1];
+// A map view carried in the link, e.g. #mapping/RasterLayer?lat=53.47&lng=-8.05&z=7&ds=inverse
+// (the old /map/?... addresses and the "New window" button lead here)
+const smViewFromHash = () => {
+  const m = location.hash.match(/^#mapping\/\w+\?(.+)$/);
+  if (!m) return "";
+  const q = new URLSearchParams(m[1]), keep = new URLSearchParams();
+  ["lat", "lng", "z", "ds"].forEach(k => { if (q.has(k)) keep.set(k, q.get(k)); });
+  return keep.toString();
+};
 function smActivate(){
   syncNavMetrics();
   const asked = smModeFromHash();
+  const view = smViewFromHash();
   const mode = SM_MODES.find(m => m.toLowerCase() === (asked || "").toLowerCase()) || (asked ? "RasterLayer" : smMode);
   smMode = mode;
   if (location.hash !== "#mapping/" + mode) history.replaceState(null, "", location.pathname + location.search + "#mapping/" + mode);
   const frame = document.getElementById("smFrame");
-  if (frame.dataset.loaded){                                 // already open: switch its mode
+  if (frame.dataset.loaded && !view){                        // already open: switch its mode
     try { frame.contentWindow.postMessage({ setInpactMapMode: mode }, location.origin); } catch (e) { /* not ready */ }
     return;
   }
   frame.dataset.loaded = "1";
   let q = "";
-  try { q = "&" + mapStateQuery(); } catch (e) { /* dashboard map not ready yet */ }
+  if (view) q = "&" + view;                                  // the view asked for in the link
+  else try { q = "&" + new URLSearchParams([...new URLSearchParams(mapStateQuery())].filter(([k]) => k !== "mode")).toString(); } catch (e) { /* dashboard map not ready yet */ }
   frame.addEventListener("load", () => { document.getElementById("smLoading").hidden = true; }, { once: true });
   frame.src = "/map/?embed=1" + q + (mode === "AirQuality" ? "&mode=AirQuality" : "");
 }
@@ -8792,8 +8821,11 @@ function mapStateQuery(){
   return q.toString();
 }
 
+// "New window": the dashboard's Spatial Mapping tab in a new tab, on this map's view
 document.getElementById("mapPopout").addEventListener("click", e => {
-  e.currentTarget.href = "/map/?" + mapStateQuery();
+  const q = new URLSearchParams(mapStateQuery()), mode = q.get("mode") === "AirQuality" ? "AirQuality" : "RasterLayer";
+  q.delete("mode");
+  e.currentTarget.href = "/#mapping/" + mode + "?" + q.toString();
 });
 
 if (MAP_STANDALONE) (function mapWindow(){
